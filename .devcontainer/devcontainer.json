@@ -1,0 +1,26 @@
+{
+	"name": "AtCoder",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "atcoder",
+	"workspaceFolder": "/atcoder",
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"terminal.integrated.shell.linux": "/bin/bash",
+		"rust.target_dir": "${containerWorkspaceFolder}/target/rls"
+	},
+	"remoteEnv": {
+		"RUST_BACKTRACE": "1"
+	},
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-vscode.cpptools",
+		"ms-azuretools.vscode-docker",
+		"rust-lang.rust",
+	],
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "sudo chown vscode target",
+	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode"
+}

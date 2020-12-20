@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  atcoder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    volumes:
+      - ..:/atcoder:cached
+      - ~/.vimrc:/home/vscode/.vimrc
+      - rust-target:/atcoder/target
+    
+    command: sleep infinity
+
+    environment:
+      - TZ=Asia/Tokyo
+
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+
+volumes:
+  rust-target:
