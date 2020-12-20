@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -88,4 +88,65 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-fn main() {}
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+trait ToString {
+    fn to_string(self: Self) -> String;
+}
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
+    }
+}
+
+fn decrypt(c: char) -> Option<char> {
+    let c = c.to_ascii_lowercase();
+
+    match c {
+        'b' | 'c' => Some('1'),
+        'd' | 'w' => Some('2'),
+        't' | 'j' => Some('3'),
+        'f' | 'q' => Some('4'),
+        'l' | 'v' => Some('5'),
+        's' | 'x' => Some('6'),
+        'p' | 'm' => Some('7'),
+        'h' | 'k' => Some('8'),
+        'n' | 'g' => Some('9'),
+        'z' | 'r' => Some('0'),
+        _ => None,
+    }
+}
+
+fn main() {
+    let _n: usize = read();
+
+    let w = read_row::<String>();
+
+    let ans = w
+        .into_iter()
+        .map(|ww| ww.chars().flat_map(|c| decrypt(c)).to_string())
+        .filter(|ww| !ww.is_empty())
+        .join(" ");
+    println!("{}", ans);
+}
