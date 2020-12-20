@@ -1,0 +1,35 @@
+[package]
+name = "arc091-rs"
+version = "0.1.0"
+authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+num = "0.2.1"
+rustc-hash = "1.1.0"
+
+[[bin]]
+name = "arc091-a"
+path = "src/a.rs"
+
+[[bin]]
+name = "arc091-b"
+path = "src/b.rs"
+
+[[bin]]
+name = "arc091-c"
+path = "src/c.rs"
+
+[[bin]]
+name = "arc091-d"
+path = "src/d.rs"
+
+[[bin]]
+name = "arc091-e"
+path = "src/e.rs"
+
+[[bin]]
+name = "arc091-f"
+path = "src/f.rs"

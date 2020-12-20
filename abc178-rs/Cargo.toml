@@ -1,0 +1,35 @@
+[package]
+name = "abc178"
+version = "0.1.0"
+authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rustc-hash = "=1.1.0"
+proconio = { version = "0.3.6", features = ["derive"] }
+
+[[bin]]
+name = "abc178-a"
+path = "src/a.rs"
+
+[[bin]]
+name = "abc178-b"
+path = "src/b.rs"
+
+[[bin]]
+name = "abc178-c"
+path = "src/c.rs"
+
+[[bin]]
+name = "abc178-d"
+path = "src/d.rs"
+
+[[bin]]
+name = "abc178-e"
+path = "src/e.rs"
+
+[[bin]]
+name = "abc178-f"
+path = "src/f.rs"
