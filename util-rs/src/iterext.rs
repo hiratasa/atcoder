@@ -9,6 +9,10 @@ trait IteratorExt: Iterator + Sized {
     fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
     where
         F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
+
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T;
 }
 
 #[snippet("iteratorext")]
@@ -34,6 +38,17 @@ where
         self.fold(init, |mut v, item| {
             let (idx, t) = f(&v, item);
             v[idx] = t;
+            v
+        })
+    }
+
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T,
+    {
+        self.fold(init, |mut v, item| {
+            let t = f(&v, item);
+            v.push(t);
             v
         })
     }
