@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -88,4 +88,35 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-fn main() {}
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+fn main() {
+    let c: usize = read();
+
+    let nml = read_vec(c, || read_row::<usize>());
+
+    let nml = nml
+        .into_iter()
+        .map(|row| row.into_iter().sorted().collect_vec())
+        .collect_vec();
+
+    let ans = (0..3)
+        .map(|i| nml.iter().map(|row| row[i]).max().unwrap())
+        .product::<usize>();
+
+    println!("{}", ans);
+}

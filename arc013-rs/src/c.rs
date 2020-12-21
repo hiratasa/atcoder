@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -33,6 +33,19 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
 }
 
 #[allow(unused_macros)]
@@ -88,4 +101,47 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-fn main() {}
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+fn main() {
+    let n: usize = read();
+
+    let tofu = read_vec(n, || {
+        let xyz = read_row::<usize>();
+
+        let m: usize = read();
+        let haba = read_vec(m, || read_row::<usize>());
+
+        (xyz, haba)
+    });
+
+    let g = tofu
+        .into_iter()
+        .flat_map(|(xyz, haba)| {
+            (0..3).flat_map(move |i| {
+                let (mi, ma) = haba.iter().map(|a| a[i]).minmax().into_option().unwrap();
+
+                it![mi, xyz[i] - 1 - ma]
+            })
+        })
+        .fold(0usize, |g, a| g ^ a);
+    if g == 0 {
+        println!("LOSE");
+    } else {
+        println!("WIN");
+    }
+}
