@@ -192,6 +192,16 @@ impl std::iter::Sum for Mod {
 }
 
 #[snippet("modulo")]
+impl<T> std::convert::From<T> for Mod
+where
+    usize: std::convert::From<T>,
+{
+    fn from(v: T) -> Mod {
+        Mod::new(usize::from(v))
+    }
+}
+
+#[snippet("modulo")]
 impl num::Zero for Mod {
     fn zero() -> Self {
         Mod::new(0)
