@@ -49,6 +49,24 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let mut c = $c;
+        c.push($x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! read_tuple {
     ($($t:ty),+) => {{
         let mut line = String::new();
