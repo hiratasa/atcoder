@@ -1,5 +1,8 @@
 use cargo_snippet::snippet;
 
+#[snippet("modulo")]
+use num::{One, Zero};
+
 // for dynamic modulus
 // use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -27,14 +30,6 @@ struct Mod(usize);
 impl Mod {
     fn new(n: usize) -> Self {
         Mod(n % modulus())
-    }
-
-    fn zero() -> Self {
-        Mod::new(0)
-    }
-
-    fn one() -> Self {
-        Mod::new(1)
     }
 
     fn pow(self, p: usize) -> Self {
@@ -193,6 +188,28 @@ impl std::iter::Sum for Mod {
         I: Iterator<Item = Self>,
     {
         iter.fold(Mod::zero(), |p, a| p + a)
+    }
+}
+
+#[snippet("modulo")]
+impl num::Zero for Mod {
+    fn zero() -> Self {
+        Mod::new(0)
+    }
+
+    fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+}
+
+#[snippet("modulo")]
+impl num::One for Mod {
+    fn one() -> Self {
+        Mod::new(1)
+    }
+
+    fn is_one(&self) -> bool {
+        self.0 == 1
     }
 }
 
