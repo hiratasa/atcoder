@@ -54,6 +54,92 @@ where
     }
 }
 
+#[snippet("iteratorpick")]
+trait Pick0 {
+    type Output;
+
+    fn pick0(self) -> Self::Output;
+}
+
+#[snippet("iteratorpick")]
+impl<T, T2> Pick0 for (T, T2) {
+    type Output = T;
+
+    fn pick0(self) -> Self::Output {
+        self.0
+    }
+}
+
+#[snippet("iteratorpick")]
+impl<T, T2, T3> Pick0 for (T, T2, T3) {
+    type Output = T;
+
+    fn pick0(self) -> Self::Output {
+        self.0
+    }
+}
+
+#[snippet("iteratorpick")]
+trait IteratorPick0Ext<T>: std::iter::Iterator<Item = T> + std::marker::Sized
+where
+    T: Pick0,
+{
+    fn pick0(self) -> std::iter::Map<Self, fn(T) -> T::Output> {
+        self.map(Pick0::pick0)
+    }
+}
+
+#[snippet("iteratorpick")]
+impl<T, I> IteratorPick0Ext<T> for I
+where
+    I: std::iter::Iterator<Item = T>,
+    T: Pick0,
+{
+}
+
+#[snippet("iteratorpick")]
+trait Pick1 {
+    type Output;
+
+    fn pick1(self) -> Self::Output;
+}
+
+#[snippet("iteratorpick")]
+impl<T, T2> Pick1 for (T, T2) {
+    type Output = T2;
+
+    fn pick1(self) -> Self::Output {
+        self.1
+    }
+}
+
+#[snippet("iteratorpick")]
+impl<T, T2, T3> Pick1 for (T, T2, T3) {
+    type Output = T2;
+
+    fn pick1(self) -> Self::Output {
+        self.1
+    }
+}
+
+#[snippet("iteratorpick")]
+trait IteratorPick1Ext<T>: std::iter::Iterator<Item = T> + std::marker::Sized
+where
+    T: Pick1,
+{
+    fn pick1(self) -> std::iter::Map<Self, fn(T) -> T::Output> {
+        self.map(Pick1::pick1)
+    }
+}
+
+#[snippet("iteratorpick")]
+impl<T, I> IteratorPick1Ext<T> for I
+where
+    I: std::iter::Iterator<Item = T>,
+    T: Pick1,
+{
+}
+
 #[test]
 fn test_fold_vec() {
     let t = vec![3, 0, 2];
