@@ -135,25 +135,31 @@ where
 {
 }
 
+use bitset_fixed::BitSet;
+
 fn main() {
-    let (n, k) = read_tuple!(usize, usize);
+    let (n, m) = read_tuple!(usize, usize);
 
-    let a = read_vec(n, || read::<usize>());
-
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .tuple_windows()
-        .scan(0usize, |c, (current, next)| {
-            if current < next {
-                Some(replace(c, *c + 1))
-            } else {
-                Some(replace(c, 0))
-            }
+    let xy = read_vec(m, || read_tuple!(usize, usize));
+    let adj = (0..n)
+        .map(|i| {
+            (0..n)
+                .map(|j| i == j || xy.contains(&(i + 1, j + 1)) || xy.contains(&(j + 1, i + 1)))
+                .collect_vec()
         })
-        // .inspect(|&c| println!("{}", c))
-        .filter(|&c| c >= k - 1)
-        .count();
+        .collect_vec();
 
+    let ans = (0..1 << n)
+        .map(|s| {
+            let mut bs = BitSet::new(n);
+            bs.buffer_mut()[0] = s;
+            bs
+        })
+        .filter(|bs| {
+            iproduct!((0..n).filter(|&i| bs[i]), (0..n).filter(|&i| bs[i])).all(|(i, j)| adj[i][j])
+        })
+        .map(|bs| bs.count_ones())
+        .max()
+        .unwrap();
     println!("{}", ans);
 }

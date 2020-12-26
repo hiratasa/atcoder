@@ -136,24 +136,15 @@ where
 }
 
 fn main() {
-    let (n, k) = read_tuple!(usize, usize);
+    let m: usize = read();
 
-    let a = read_vec(n, || read::<usize>());
-
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .tuple_windows()
-        .scan(0usize, |c, (current, next)| {
-            if current < next {
-                Some(replace(c, *c + 1))
-            } else {
-                Some(replace(c, 0))
-            }
-        })
-        // .inspect(|&c| println!("{}", c))
-        .filter(|&c| c >= k - 1)
-        .count();
+    let ans = match m {
+        0..=99 => String::from("00"),
+        100..=5000 => format!("{:02}", m / 100),
+        6000..=30000 => format!("{}", m / 1000 + 50),
+        35000..=70000 => format!("{}", (m / 1000 - 30) / 5 + 80),
+        _ => String::from("89"),
+    };
 
     println!("{}", ans);
 }

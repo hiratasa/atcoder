@@ -136,24 +136,20 @@ where
 }
 
 fn main() {
-    let (n, k) = read_tuple!(usize, usize);
+    let n: usize = read();
 
-    let a = read_vec(n, || read::<usize>());
+    let x = read_vec(n, || read_str());
 
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .tuple_windows()
-        .scan(0usize, |c, (current, next)| {
-            if current < next {
-                Some(replace(c, *c + 1))
-            } else {
-                Some(replace(c, 0))
-            }
+    let ans = (0..9)
+        .map(|i| {
+            x.iter()
+                .map(|row| row[i])
+                .enumerate()
+                .group_by(|&(i, c)| if c == 'x' { (i, c) } else { (n, c) })
+                .into_iter()
+                .filter(|((_i, c), _it)| *c != '.')
+                .count()
         })
-        // .inspect(|&c| println!("{}", c))
-        .filter(|&c| c >= k - 1)
-        .count();
-
+        .sum::<usize>();
     println!("{}", ans);
 }

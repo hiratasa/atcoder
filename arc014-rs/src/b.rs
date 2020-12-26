@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -33,6 +33,37 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let mut c = $c;
+        c.push($x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -88,4 +119,46 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-fn main() {}
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+fn main() {
+    let n: usize = read();
+
+    let w = read_vec(n, || read_str());
+
+    let ans = w.iter().try_fold(
+        (0usize, w[0][0], BTreeSet::new()),
+        |(turn, last, s), word| {
+            if word[0] != last || s.contains(&word) {
+                Err(turn)
+            } else {
+                Ok(((turn + 1) % 2, *word.last().unwrap(), inserted!(s, word)))
+            }
+        },
+    );
+
+    let ans = match ans {
+        Ok(_) => "DRAW",
+        Err(turn) => match turn {
+            0 => "LOSE",
+            1 => "WIN",
+            _ => unreachable!(),
+        },
+    };
+
+    println!("{}", ans);
+}

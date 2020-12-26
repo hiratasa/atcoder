@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -33,6 +33,37 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let mut c = $c;
+        c.push($x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -88,4 +119,91 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-fn main() {}
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+trait IteratorExt: Iterator + Sized {
+    fn fold_vec<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(Self::Item) -> (usize, T);
+    fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T;
+}
+impl<I> IteratorExt for I
+where
+    I: Iterator,
+{
+    fn fold_vec<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(Self::Item) -> (usize, T),
+    {
+        self.fold(init, |mut v, item| {
+            let (idx, t) = f(item);
+            v[idx] = t;
+            v
+        })
+    }
+    fn fold_vec2<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> (usize, T),
+    {
+        self.fold(init, |mut v, item| {
+            let (idx, t) = f(&v, item);
+            v[idx] = t;
+            v
+        })
+    }
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T,
+    {
+        self.fold(init, |mut v, item| {
+            let t = f(&v, item);
+            v.push(t);
+            v
+        })
+    }
+}
+
+fn main() {
+    let n: usize = read();
+
+    let s = read::<String>()
+        .chars()
+        .map(|c| match c {
+            'R' => 0,
+            'G' => 1,
+            'B' => 2,
+            _ => unreachable!(),
+        })
+        .collect_vec();
+
+    let ans = s
+        .citer()
+        .group_by(|&c| c)
+        .into_iter()
+        .map(|(c, it)| (c, it.count() % 2))
+        .filter(|&(_c, m)| m == 1)
+        .fold_vec2(vec![false, false, false], |a, (c, _m)| (c, !a[c]))
+        .into_iter()
+        .filter(|b| *b)
+        .count();
+    println!("{}", ans);
+}

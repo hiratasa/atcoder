@@ -1,5 +1,5 @@
 [package]
-name = "arc017-rs"
+name = "abc002-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -15,25 +15,25 @@ ordered-float = "1.0.2"
 itertools-num = "0.1.3"
 
 [[bin]]
-name = "arc017-a"
+name = "abc002-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "arc017-b"
+name = "abc002-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "arc017-c"
+name = "abc002-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "arc017-d"
+name = "abc002-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "arc017-e"
+name = "abc002-e"
 path = "src/e.rs"
 
 [[bin]]
-name = "arc017-f"
+name = "abc002-f"
 path = "src/f.rs"

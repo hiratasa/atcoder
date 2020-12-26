@@ -135,25 +135,19 @@ where
 {
 }
 
+fn dist(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
+    let dx = x1 - x2;
+    let dy = y1 - y2;
+
+    (dx * dx + dy * dy).sqrt()
+}
+
 fn main() {
-    let (n, k) = read_tuple!(usize, usize);
+    let (x1, y1, x2, y2, x3, y3) = read_tuple!(f64, f64, f64, f64, f64, f64);
 
-    let a = read_vec(n, || read::<usize>());
-
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .tuple_windows()
-        .scan(0usize, |c, (current, next)| {
-            if current < next {
-                Some(replace(c, *c + 1))
-            } else {
-                Some(replace(c, 0))
-            }
-        })
-        // .inspect(|&c| println!("{}", c))
-        .filter(|&c| c >= k - 1)
-        .count();
-
-    println!("{}", ans);
+    let a = dist(x1, y1, x2, y2);
+    let b = dist(x2, y2, x3, y3);
+    let c = dist(x3, y3, x1, y1);
+    let s = (a + b + c) / 2.0;
+    println!("{}", (s * (s - a) * (s - b) * (s - c)).sqrt());
 }

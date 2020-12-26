@@ -136,24 +136,36 @@ where
 }
 
 fn main() {
-    let (n, k) = read_tuple!(usize, usize);
+    let n: usize = read();
 
-    let a = read_vec(n, || read::<usize>());
+    let se: Vec<(usize, usize)> = read_vec(n, || {
+        read::<String>()
+            .split("-")
+            .map(|p| {
+                (
+                    p.get(0..2).unwrap().parse::<usize>().unwrap(),
+                    p.get(2..).unwrap().parse::<usize>().unwrap(),
+                )
+            })
+            .map(|(h, m)| h * 60 + m)
+            .next_tuple()
+            .unwrap()
+    });
 
-    let ans = a
+    let ans = se
         .citer()
-        .chain(once(0))
-        .tuple_windows()
-        .scan(0usize, |c, (current, next)| {
-            if current < next {
-                Some(replace(c, *c + 1))
+        .map(|(b, e)| (b / 5 * 5, (e + 4) / 5 * 5))
+        .sorted()
+        .coalesce(|(b1, e1), (b2, e2)| {
+            if b2 <= e1 {
+                Ok((b1, max(e1, e2)))
             } else {
-                Some(replace(c, 0))
+                Err(((b1, e1), (b2, e2)))
             }
         })
-        // .inspect(|&c| println!("{}", c))
-        .filter(|&c| c >= k - 1)
-        .count();
+        .collect_vec();
 
-    println!("{}", ans);
+    for (b, e) in ans {
+        println!("{:02}{:02}-{:02}{:02}", b / 60, b % 60, e / 60, e % 60);
+    }
 }

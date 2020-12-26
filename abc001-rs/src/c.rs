@@ -136,24 +136,22 @@ where
 }
 
 fn main() {
-    let (n, k) = read_tuple!(usize, usize);
+    let (deg, dis) = read_tuple!(usize, usize);
 
-    let a = read_vec(n, || read::<usize>());
+    const DIRS: [&str; 16] = [
+        "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW",
+        "NW", "NNW",
+    ];
 
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .tuple_windows()
-        .scan(0usize, |c, (current, next)| {
-            if current < next {
-                Some(replace(c, *c + 1))
-            } else {
-                Some(replace(c, 0))
-            }
-        })
-        // .inspect(|&c| println!("{}", c))
-        .filter(|&c| c >= k - 1)
-        .count();
+    let dir = DIRS[((deg * 10 + 1125) / 2250) % 16];
+    let speed = (dis + 3) / 6;
 
-    println!("{}", ans);
+    const BORDER: [usize; 12] = [3, 16, 34, 55, 80, 108, 139, 172, 208, 245, 285, 327];
+    let mag = BORDER.citer().take_while(|&b| b <= speed).count();
+
+    if mag == 0 {
+        println!("C {}", mag);
+    } else {
+        println!("{} {}", dir, mag);
+    }
 }

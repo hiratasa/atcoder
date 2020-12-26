@@ -1,23 +1,24 @@
 #[allow(unused_imports)]
-use bitset_fixed::BitSet;
-#[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
-use std::io::*;
+use std::io;
+#[allow(unused_imports)]
+use std::iter::*;
 #[allow(unused_imports)]
 use std::mem::*;
 #[allow(unused_imports)]
 use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
+
 #[allow(unused_imports)]
-use itertools::Itertools;
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -35,10 +36,41 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let mut c = $c;
+        c.push($x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! read_tuple {
     ($($t:ty),+) => {{
         let mut line = String::new();
-        stdin().read_line(&mut line).unwrap();
+        io::stdin().read_line(&mut line).unwrap();
 
         let mut it = line.trim()
             .split_whitespace();
@@ -52,7 +84,7 @@ macro_rules! read_tuple {
 #[allow(dead_code)]
 fn read<T: FromStr>() -> T {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
     line.trim().to_string().parse().ok().unwrap()
 }
 
@@ -64,7 +96,7 @@ fn read_str() -> Vec<char> {
 #[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
 
     line.trim()
         .split_whitespace()
@@ -87,16 +119,212 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-trait IteratorDpExt: Iterator + Sized {
-    fn dp<T, F: FnMut(&Vec<T>, Self::Item) -> T>(self, init: Vec<T>, mut f: F) -> Vec<T> {
-        self.fold(init, |mut dp, item| {
-            let next = f(&dp, item);
-            dp.push(next);
-            dp
-        })
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
     }
 }
 
-impl<I> IteratorDpExt for I where I: Iterator + Sized {}
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
 
-fn main() {}
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct BTreeMultiSet<T>
+where
+    T: Ord,
+{
+    length: usize,
+    m: std::collections::BTreeMap<T, usize>,
+}
+#[allow(dead_code)]
+impl<T> BTreeMultiSet<T>
+where
+    T: Ord,
+{
+    fn new() -> BTreeMultiSet<T> {
+        Self {
+            length: 0,
+            m: std::collections::BTreeMap::new(),
+        }
+    }
+    fn is_empty(&self) -> bool {
+        self.m.is_empty()
+    }
+    fn contains<Q>(&self, value: &Q) -> bool
+    where
+        Q: Ord + ?Sized,
+        T: std::borrow::Borrow<Q>,
+    {
+        self.m.contains_key(value)
+    }
+    fn len(&self) -> usize {
+        self.length
+    }
+    fn count<Q>(&self, value: &Q) -> usize
+    where
+        Q: Ord + ?Sized,
+        T: std::borrow::Borrow<Q>,
+    {
+        *self.m.get(value).unwrap_or(&0)
+    }
+    fn get<Q>(&self, value: &Q) -> Option<&T>
+    where
+        Q: Ord + ?Sized,
+        T: std::borrow::Borrow<Q>,
+    {
+        self.m.get_key_value(value).map(|(k, _v)| k)
+    }
+    fn first(&self) -> Option<&T> {
+        self.m.iter().next().map(|(k, _v)| k)
+    }
+    fn last(&self) -> Option<&T> {
+        self.m.iter().next_back().map(|(k, _v)| k)
+    }
+    fn clear(&mut self) {
+        self.length = 0;
+        self.m.clear();
+    }
+    fn insert(&mut self, value: T) {
+        self.length += 1;
+        *self.m.entry(value).or_insert(0) += 1;
+    }
+    fn append(&mut self, other: &mut BTreeMultiSet<T>) {
+        self.length += other.length;
+        other.length = 0;
+        std::mem::take(&mut other.m).into_iter().for_each(|(k, v)| {
+            *self.m.entry(k).or_insert(0) += v;
+        });
+    }
+    fn remove<Q>(&mut self, value: &Q) -> bool
+    where
+        Q: Ord + ?Sized,
+        T: std::borrow::Borrow<Q>,
+    {
+        if let Some(c) = self.m.get_mut(value) {
+            self.length -= 1;
+            *c -= 1;
+            if *c == 0 {
+                self.m.remove(value);
+            }
+            true
+        } else {
+            false
+        }
+    }
+    fn iter(&self) -> impl DoubleEndedIterator<Item = &T> {
+        self.m.iter().flat_map(|(v, m)| (0..*m).map(move |_| v))
+    }
+    fn range<'a, K, R>(&'a self, range: R) -> impl 'a + DoubleEndedIterator<Item = &T>
+    where
+        K: Ord + ?Sized,
+        R: std::ops::RangeBounds<K>,
+        T: std::borrow::Borrow<K>,
+    {
+        self.m
+            .range(range)
+            .flat_map(|(v, m)| (0..*m).map(move |_| v))
+    }
+}
+#[allow(dead_code)]
+impl<T> BTreeMultiSet<T>
+where
+    T: Ord + Clone,
+{
+    fn pop_first(&mut self) -> Option<T> {
+        if self.is_empty() {
+            return None;
+        }
+        let first = self.first().unwrap().clone();
+        self.remove(&first);
+        Some(first)
+    }
+    fn pop_last(&mut self) -> Option<T> {
+        if self.is_empty() {
+            return None;
+        }
+        let last = self.last().unwrap().clone();
+        self.remove(&last);
+        Some(last)
+    }
+}
+#[allow(dead_code)]
+impl<'a, T> Extend<&'a T> for BTreeMultiSet<T>
+where
+    T: 'a + Ord + Clone,
+{
+    fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = &'a T>,
+    {
+        for value in iter {
+            self.insert(value.clone());
+        }
+    }
+}
+#[allow(dead_code)]
+impl<T> Extend<T> for BTreeMultiSet<T>
+where
+    T: Ord,
+{
+    fn extend<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
+        for value in iter {
+            self.insert(value);
+        }
+    }
+}
+#[allow(dead_code)]
+impl<T> std::iter::FromIterator<T> for BTreeMultiSet<T>
+where
+    T: Ord,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+    {
+        let mut set = Self::new();
+        set.extend(iter);
+        set
+    }
+}
+
+fn main() {
+    let (n, x) = read_tuple!(usize, usize);
+
+    let w = read_vec(n, || read::<usize>());
+
+    let m1 = w
+        .citer()
+        .take(n / 2)
+        .fold(once(0usize).collect::<BTreeMultiSet<_>>(), |mut m, ww| {
+            let a = m.iter().map(|www| www + ww).collect_vec();
+            m.extend(a);
+            m
+        });
+
+    let m2 = w
+        .citer()
+        .skip(n / 2)
+        .fold(once(0usize).collect::<BTreeMultiSet<_>>(), |mut m, ww| {
+            let a = m.iter().map(|www| www + ww).collect_vec();
+            m.extend(a);
+            m
+        });
+
+    let ans = m1
+        .iter()
+        .copied()
+        .filter(|&ww| ww <= x)
+        .map(|ww| m2.count(&(x - ww)))
+        .sum::<usize>();
+    println!("{}", ans);
+}
