@@ -26,16 +26,16 @@ src/%.rs:
 
 .PHONY: update-cargo
 update-cargo:
-	cp -i ../template-rs/Cargo.toml.template ./Cargo.toml
+	cp ../template-rs/Cargo.toml.template ./Cargo.toml
 	sed -e "s/%TITLE%/$(shell basename $(shell pwd) | sed -e 's/-rs$$//')/" ./Cargo.toml -i
 	for f in $$(ls src); do $(MAKE) add-to-cargo TARGET_BIN=$${f%.rs} TARGET_SRC=src/$$f; done
 
 .PHONY: update
 update: update-cargo
-	cp -i ../template-rs/Makefile ./
-	grep "fn main() {}" -lr src/ | xargs -p -I{} cp ../template-rs/src/.template.rs ./{}
+	cp ../template-rs/Makefile ./
+	grep "fn main() {}" -lr src/ | xargs -I{} cp ../template-rs/src/.template.rs ./{}
 
 .PHONY: update-all
 update-all: update-cargo
-	cp -i ../template-rs/Makefile ./
+	cp ../template-rs/Makefile ./
 	ls src/*.rs | xargs -p -I{} cp ../template-rs/src/.template.rs ./{}
