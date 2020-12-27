@@ -13,9 +13,7 @@ export CARGOBIN
 
 .PHONY: add-to-cargo
 add-to-cargo:
-	# blank line
-	echo "" >> ./Cargo.toml
-	echo "$$CARGOBIN" >> ./Cargo.toml
+	grep -q "$(TITLE)-$(TARGET_BIN)" ./Cargo.toml || echo "\n$$CARGOBIN" >> ./Cargo.toml
 
 # 再生成を防ぐため、.template.rsへの依存は記載しない
 src/%.rs:
