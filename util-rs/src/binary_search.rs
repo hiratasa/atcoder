@@ -1,7 +1,7 @@
 use cargo_snippet::snippet;
 
-#[snippet("lower_bound")]
-#[snippet("lower_bound_int")]
+#[snippet("lowerbound")]
+#[snippet("lowerboundint")]
 #[allow(dead_code)]
 fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
 where
@@ -30,7 +30,7 @@ where
     begin
 }
 
-#[snippet("lower_bound_int")]
+#[snippet("lowerboundint")]
 #[allow(dead_code)]
 fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
 where
