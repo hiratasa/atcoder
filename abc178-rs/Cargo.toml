@@ -1,5 +1,5 @@
 [package]
-name = "abc178"
+name = "abc178-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -7,8 +7,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rustc-hash = "=1.1.0"
-proconio = { version = "0.3.6", features = ["derive"] }
+num = "0.2.1"
+rustc-hash = "1.1.0"
+bitset-fixed = "0.1.0"
+itertools = "0.9.0"
+ordered-float = "1.0.2"
+itertools-num = "0.1.3"
 
 [[bin]]
 name = "abc178-a"
@@ -33,3 +37,7 @@ path = "src/e.rs"
 [[bin]]
 name = "abc178-f"
 path = "src/f.rs"
+
+[[bin]]
+name = "abc178-main"
+path = "src/main.rs"

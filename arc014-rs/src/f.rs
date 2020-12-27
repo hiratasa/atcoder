@@ -16,6 +16,8 @@ use std::usize;
 #[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
 use rustc_hash::FxHashSet;

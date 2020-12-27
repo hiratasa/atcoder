@@ -16,6 +16,8 @@ use std::usize;
 #[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
 use rustc_hash::FxHashSet;
@@ -33,6 +35,37 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let mut c = $c;
+        c.push($x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -88,18 +121,20 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-trait SliceCopiedExt<T> {
-    fn citer(&self) -> std::iter::Copied<std::slice::Iter<T>>;
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
 }
 
-impl<V, T> SliceCopiedExt<T> for V
+impl<'a, T, I> IterCopyExt<'a, T> for I
 where
-    V: std::ops::Deref<Target = [T]>,
-    T: Copy,
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
 {
-    fn citer(&self) -> std::iter::Copied<std::slice::Iter<T>> {
-        self.iter().copied()
-    }
 }
 
 fn main() {}
