@@ -1,19 +1,26 @@
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
-use std::io::*;
+use std::io;
+#[allow(unused_imports)]
+use std::iter::*;
 #[allow(unused_imports)]
 use std::mem::*;
 #[allow(unused_imports)]
 use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
+
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -31,10 +38,41 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let mut c = $c;
+        c.push($x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! read_tuple {
     ($($t:ty),+) => {{
         let mut line = String::new();
-        stdin().read_line(&mut line).unwrap();
+        io::stdin().read_line(&mut line).unwrap();
 
         let mut it = line.trim()
             .split_whitespace();
@@ -48,7 +86,7 @@ macro_rules! read_tuple {
 #[allow(dead_code)]
 fn read<T: FromStr>() -> T {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
     line.trim().to_string().parse().ok().unwrap()
 }
 
@@ -60,7 +98,7 @@ fn read_str() -> Vec<char> {
 #[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
 
     line.trim()
         .split_whitespace()
@@ -83,4 +121,43 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-fn main() {}
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+fn main() {
+    let n: usize = read();
+
+    let a = read_vec(n, || read::<i64>())
+        .into_iter()
+        .sorted()
+        .collect_vec();
+
+    let ans = if n % 2 == 0 {
+        2 * a.citer().skip(n / 2 + 1).sum::<i64>() + a[n / 2]
+            - a[n / 2 - 1]
+            - 2 * a.citer().take(n / 2 - 1).sum::<i64>()
+    } else {
+        max(
+            2 * a.citer().skip(n / 2 + 2).sum::<i64>() + a[n / 2 + 1] + a[n / 2]
+                - 2 * a.citer().take(n / 2).sum::<i64>(),
+            2 * a.citer().skip(n / 2 + 1).sum::<i64>()
+                - a[n / 2]
+                - a[n / 2 - 1]
+                - 2 * a.citer().take(n / 2 - 1).sum::<i64>(),
+        )
+    };
+    println!("{}", ans);
+}
