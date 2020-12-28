@@ -168,11 +168,9 @@ impl UndirectedGraph {
 
 #[allow(dead_code)]
 fn tree_dfs(g: &UndirectedGraph, p: usize, v: usize) {
-    for &u in &g.adjs[v] {
-        if u == p {
-            continue;
-        }
-
-        tree_dfs(g, v, u);
-    }
+    g.adjs[v]
+        .iter()
+        .copied()
+        .filter(|&u| u != p)
+        .for_each(|u| tree_dfs(g, u, v));
 }
