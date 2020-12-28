@@ -76,6 +76,16 @@ impl std::fmt::Display for Mod {
 }
 
 #[snippet("modulo")]
+impl<T> std::convert::From<T> for Mod
+where
+    usize: std::convert::From<T>,
+{
+    fn from(v: T) -> Mod {
+        Mod::new(usize::from(v))
+    }
+}
+
+#[snippet("modulo")]
 impl std::str::FromStr for Mod {
     type Err = <usize as std::str::FromStr>::Err;
 
@@ -93,80 +103,89 @@ impl std::ops::Neg for Mod {
 }
 
 #[snippet("modulo")]
-impl std::ops::Add for Mod {
+impl<T> std::ops::Add<T> for Mod
+where
+    T: std::convert::Into<Mod>,
+{
     type Output = Self;
-    fn add(self, rhs: Mod) -> Self {
-        Mod::new(self.0 + rhs.0)
+    fn add(self, rhs: T) -> Self {
+        Mod::new(self.0 + rhs.into().0)
     }
 }
 
 #[snippet("modulo")]
-impl std::ops::AddAssign for Mod {
-    fn add_assign(&mut self, rhs: Mod) {
+impl<T> std::ops::AddAssign<T> for Mod
+where
+    T: std::convert::Into<Mod>,
+{
+    fn add_assign(&mut self, rhs: T) {
         *self = *self + rhs;
     }
 }
 
 #[snippet("modulo")]
-impl std::ops::Sub for Mod {
+impl<T> std::ops::Sub<T> for Mod
+where
+    T: std::convert::Into<Mod>,
+{
     type Output = Self;
-    fn sub(self, rhs: Mod) -> Self {
-        Mod::new(self.0 + modulus() - rhs.0)
+    fn sub(self, rhs: T) -> Self {
+        Mod::new(self.0 + modulus() - rhs.into().0)
     }
 }
 
 #[snippet("modulo")]
-impl std::ops::SubAssign for Mod {
-    fn sub_assign(&mut self, rhs: Mod) {
+impl<T> std::ops::SubAssign<T> for Mod
+where
+    T: std::convert::Into<Mod>,
+{
+    fn sub_assign(&mut self, rhs: T) {
         *self = *self - rhs;
     }
 }
 
 #[snippet("modulo")]
-impl std::ops::Mul for Mod {
+impl<T> std::ops::Mul<T> for Mod
+where
+    T: std::convert::Into<Mod>,
+{
     type Output = Self;
-    fn mul(self, rhs: Mod) -> Self {
-        Mod::new(self.0 * rhs.0)
+    fn mul(self, rhs: T) -> Self {
+        Mod::new(self.0 * rhs.into().0)
     }
 }
 
 #[snippet("modulo")]
-impl std::ops::MulAssign for Mod {
-    fn mul_assign(&mut self, rhs: Mod) {
+impl<T> std::ops::MulAssign<T> for Mod
+where
+    T: std::convert::Into<Mod>,
+{
+    fn mul_assign(&mut self, rhs: T) {
         *self = *self * rhs;
     }
 }
 
 #[snippet("modulo")]
-impl std::ops::Mul<usize> for Mod {
+impl<T> std::ops::Div<T> for Mod
+where
+    T: std::convert::Into<Mod>,
+{
     type Output = Self;
-    fn mul(self, rhs: usize) -> Self {
-        Mod::new(self.0 * rhs)
-    }
-}
-
-#[snippet("modulo")]
-impl std::ops::MulAssign<usize> for Mod {
-    fn mul_assign(&mut self, rhs: usize) {
-        *self = *self * rhs;
-    }
-}
-
-#[snippet("modulo")]
-impl std::ops::Div for Mod {
-    type Output = Self;
-    fn div(self, rhs: Mod) -> Self {
+    fn div(self, rhs: T) -> Self {
         if self.0 == 0 {
             self
         } else {
-            self * rhs.inv()
+            self * rhs.into().inv()
         }
     }
 }
 
 #[snippet("modulo")]
-impl std::ops::DivAssign for Mod {
-    fn div_assign(&mut self, rhs: Mod) {
+impl<T> std::ops::DivAssign<T> for Mod
+where
+    T: std::convert::Into<Mod>,
+{
+    fn div_assign(&mut self, rhs: T) {
         *self = *self / rhs;
     }
 }
@@ -188,16 +207,6 @@ impl std::iter::Sum for Mod {
         I: Iterator<Item = Self>,
     {
         iter.fold(Mod::zero(), |p, a| p + a)
-    }
-}
-
-#[snippet("modulo")]
-impl<T> std::convert::From<T> for Mod
-where
-    usize: std::convert::From<T>,
-{
-    fn from(v: T) -> Mod {
-        Mod::new(usize::from(v))
     }
 }
 
