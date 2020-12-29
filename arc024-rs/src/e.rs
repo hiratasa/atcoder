@@ -137,40 +137,4 @@ where
 {
 }
 
-#[allow(dead_code)]
-struct UndirectedGraph {
-    adjs: Vec<Vec<usize>>,
-}
-#[allow(dead_code)]
-impl UndirectedGraph {
-    fn from_stdin(n: usize, m: usize) -> UndirectedGraph {
-        let mut adjs = vec![vec![]; n];
-        for _ in 0..m {
-            let (u, v) = read_tuple!(usize, usize);
-            adjs[u - 1].push(v - 1);
-            adjs[v - 1].push(u - 1);
-        }
-        UndirectedGraph { adjs }
-    }
-}
-
-fn dfs(g: &UndirectedGraph, v: usize, p: usize) -> (usize, usize) {
-    g.adjs[v]
-        .citer()
-        .filter(|&u| u != p)
-        .map(|u| dfs(g, u, v))
-        .max()
-        .map(|(d, t)| (d + 1, t))
-        .unwrap_or((0, v))
-}
-
-fn main() {
-    let n: usize = read();
-
-    let g = UndirectedGraph::from_stdin(n, n - 1);
-
-    let (_d, v) = dfs(&g, 0, n);
-    let (_d, u) = dfs(&g, v, n);
-
-    println!("{} {}", v + 1, u + 1);
-}
+fn main() {}

@@ -137,40 +137,50 @@ where
 {
 }
 
-#[allow(dead_code)]
-struct UndirectedGraph {
-    adjs: Vec<Vec<usize>>,
+trait ToString {
+    fn to_string(self: Self) -> String;
 }
-#[allow(dead_code)]
-impl UndirectedGraph {
-    fn from_stdin(n: usize, m: usize) -> UndirectedGraph {
-        let mut adjs = vec![vec![]; n];
-        for _ in 0..m {
-            let (u, v) = read_tuple!(usize, usize);
-            adjs[u - 1].push(v - 1);
-            adjs[v - 1].push(u - 1);
-        }
-        UndirectedGraph { adjs }
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
     }
 }
 
-fn dfs(g: &UndirectedGraph, v: usize, p: usize) -> (usize, usize) {
-    g.adjs[v]
-        .citer()
-        .filter(|&u| u != p)
-        .map(|u| dfs(g, u, v))
-        .max()
-        .map(|(d, t)| (d + 1, t))
-        .unwrap_or((0, v))
-}
+use rand::distributions::Distribution;
+use rand::SeedableRng;
 
 fn main() {
-    let n: usize = read();
+    let (n, k) = read_tuple!(usize, usize);
 
-    let g = UndirectedGraph::from_stdin(n, n - 1);
+    println!("{} {}", n, k);
 
-    let (_d, v) = dfs(&g, 0, n);
-    let (_d, u) = dfs(&g, v, n);
+    let mut rng = rand::rngs::SmallRng::from_entropy();
 
-    println!("{} {}", v + 1, u + 1);
+    let dist = rand::distributions::Uniform::new(b'a', b'z' + 1);
+
+    let s = repeat_with(|| dist.sample(&mut rng)).take(n).to_string();
+    println!("{}", s);
+
+    let mut t = s.chars().collect_vec();
+    let heap = permutohedron::Heap::new(&mut t);
+    let ans = heap
+        .into_iter()
+        .filter(|u| {
+            izip!(s.chars(), u.citer())
+                .filter(|(c1, c2)| c1 != c2)
+                .count()
+                <= k
+        })
+        .min()
+        .unwrap()
+        .citer()
+        .to_string();
+    println!("{}", ans);
 }

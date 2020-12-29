@@ -137,40 +137,89 @@ where
 {
 }
 
-#[allow(dead_code)]
-struct UndirectedGraph {
-    adjs: Vec<Vec<usize>>,
+trait Pick0 {
+    type Output;
+    fn pick0(self) -> Self::Output;
 }
-#[allow(dead_code)]
-impl UndirectedGraph {
-    fn from_stdin(n: usize, m: usize) -> UndirectedGraph {
-        let mut adjs = vec![vec![]; n];
-        for _ in 0..m {
-            let (u, v) = read_tuple!(usize, usize);
-            adjs[u - 1].push(v - 1);
-            adjs[v - 1].push(u - 1);
-        }
-        UndirectedGraph { adjs }
+impl<T, T2> Pick0 for (T, T2) {
+    type Output = T;
+    fn pick0(self) -> Self::Output {
+        self.0
     }
 }
-
-fn dfs(g: &UndirectedGraph, v: usize, p: usize) -> (usize, usize) {
-    g.adjs[v]
-        .citer()
-        .filter(|&u| u != p)
-        .map(|u| dfs(g, u, v))
-        .max()
-        .map(|(d, t)| (d + 1, t))
-        .unwrap_or((0, v))
+impl<T, T2, T3> Pick0 for (T, T2, T3) {
+    type Output = T;
+    fn pick0(self) -> Self::Output {
+        self.0
+    }
+}
+trait IteratorPick0Ext<T>: std::iter::Iterator<Item = T> + std::marker::Sized
+where
+    T: Pick0,
+{
+    fn pick0(self) -> std::iter::Map<Self, fn(T) -> T::Output> {
+        self.map(Pick0::pick0)
+    }
+}
+impl<T, I> IteratorPick0Ext<T> for I
+where
+    I: std::iter::Iterator<Item = T>,
+    T: Pick0,
+{
+}
+trait Pick1 {
+    type Output;
+    fn pick1(self) -> Self::Output;
+}
+impl<T, T2> Pick1 for (T, T2) {
+    type Output = T2;
+    fn pick1(self) -> Self::Output {
+        self.1
+    }
+}
+impl<T, T2, T3> Pick1 for (T, T2, T3) {
+    type Output = T2;
+    fn pick1(self) -> Self::Output {
+        self.1
+    }
+}
+trait IteratorPick1Ext<T>: std::iter::Iterator<Item = T> + std::marker::Sized
+where
+    T: Pick1,
+{
+    fn pick1(self) -> std::iter::Map<Self, fn(T) -> T::Output> {
+        self.map(Pick1::pick1)
+    }
+}
+impl<T, I> IteratorPick1Ext<T> for I
+where
+    I: std::iter::Iterator<Item = T>,
+    T: Pick1,
+{
 }
 
 fn main() {
     let n: usize = read();
 
-    let g = UndirectedGraph::from_stdin(n, n - 1);
+    let colors = read_vec(n, || read::<usize>());
 
-    let (_d, v) = dfs(&g, 0, n);
-    let (_d, u) = dfs(&g, v, n);
+    let a = colors
+        .citer()
+        .group_by(|&c| c)
+        .into_iter()
+        .map(|(c, it)| (c, it.count()))
+        .collect_vec();
+    let b = chain(
+        once((a[0].0 + a[a.len() - 1].0 + 1) % 2 * (a[0].1 + a[a.len() - 1].1)),
+        a.citer().pick1(),
+    )
+    .max()
+    .unwrap();
 
-    println!("{} {}", v + 1, u + 1);
+    if a.len() == 1 {
+        println!("-1");
+    } else {
+        let ans = (b + 1) / 2;
+        println!("{}", ans);
+    }
 }

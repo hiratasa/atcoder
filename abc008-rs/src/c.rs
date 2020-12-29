@@ -137,4 +137,14 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let c = read_vec(n, || read::<usize>());
+
+    let ans = c
+        .citer()
+        .map(|cc| c.citer().filter(|d| cc % d == 0).count())
+        .map(|m| ((m + 1) / 2) as f64 / m as f64)
+        .sum::<f64>();
+    println!("{}", ans);
+}

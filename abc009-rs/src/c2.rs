@@ -137,6 +137,22 @@ where
 {
 }
 
+trait ToString {
+    fn to_string(self: Self) -> String;
+}
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
+    }
+}
+
 trait Pick0 {
     type Output;
     fn pick0(self) -> Self::Output;
@@ -199,65 +215,79 @@ where
 }
 
 fn main() {
-    let (w, h) = read_tuple!(usize, usize);
+    let (n, k) = read_tuple!(usize, usize);
 
-    let n: usize = read();
-    let xy = read_vec(n, || read_tuple!(usize, usize));
+    let s = read_str();
 
-    let xs = once(0)
-        .chain(xy.citer().pick0())
-        .chain(once(w + 1))
-        .sorted()
-        .collect_vec();
-    let ys = once(0)
-        .chain(xy.citer().pick1())
-        .chain(once(h + 1))
-        .sorted()
-        .collect_vec();
+    let t = s.citer().sorted().collect_vec();
 
-    let zz = xy
-        .citer()
-        .map(|(x, y)| {
-            (
-                xs.citer().find_position(|&xx| xx == x).unwrap().0,
-                ys.citer().find_position(|&yy| yy == y).unwrap().0,
-            )
-        })
-        .collect_vec();
+    let ans = (0..=n)
+        .filter_map(|i| {
+            let d = izip!(s.citer(), t.citer())
+                .take(i)
+                .enumerate()
+                .filter(|&(_i, (c1, c2))| c1 != c2)
+                .collect_vec();
 
-    let ww = xs.len() - 2;
-    let hh = ys.len() - 2;
+            let t2 = s
+                .citer()
+                .enumerate()
+                .sorted_by_key(|&(idx, c)| (c, i <= idx, Reverse(idx)))
+                .collect_vec();
+            let (idxs0, idxs1): (FxHashSet<_>, FxHashSet<_>) = t2
+                .citer()
+                .take(i)
+                .filter(|&(idx, c)| idx >= i || t[idx] != c)
+                .pick0()
+                .partition(|&idx| idx < i);
+            assert!(d.len() == idxs0.len() + idxs1.len());
+            let k2 = d.len() + idxs1.len();
 
-    let dp = iproduct!((1..=ww), (1..=hh)).fold(
-        vec![vec![vec![vec![0; hh + 1]; ww + 1]; hh + 1]; ww + 1],
-        |dp, (iww, ihh)| {
-            iproduct!((0..=ww - iww), (0..=hh - ihh)).fold(dp, |mut dp, (cx, cy)| {
-                let dx = cx + iww + 1;
-                let dy = cy + ihh + 1;
-
-                let iw = xs[dx] - xs[cx] - 1;
-                let ih = ys[dy] - ys[cy] - 1;
-
-                let t = zz
-                    .citer()
-                    .filter(|&(x, y)| cx < x && x < dx && cy < y && y < dy)
-                    // .inspect(|(x, y)| eprintln!("{},{},{},{} : {},{}", iww, ihh, cx, cy, x, y))
-                    .map(|(x, y)| {
-                        iw + ih - 1
-                            + dp[x - cx - 1][y - cy - 1][cx][cy]
-                            + dp[dx - x - 1][y - cy - 1][x][cy]
-                            + dp[x - cx - 1][dy - y - 1][cx][y]
-                            + dp[dx - x - 1][dy - y - 1][x][y]
+            let e = d
+                .citer()
+                .filter(|(idx, _)| !idxs0.contains(idx))
+                .pick1()
+                .pick0()
+                .collect_vec();
+            if k2 > k {
+                None
+            } else if k >= k2 + 1 {
+                (i..=n)
+                    .filter(|idx| !idxs1.contains(&idx))
+                    .map(|idx| {
+                        let e = e.citer().chain(s.get(idx).copied()).sorted().collect_vec();
+                        chain(
+                            t.citer().take(i),
+                            s.citer().enumerate().skip(i).scan(0usize, |next, (j, c)| {
+                                if j == idx || idxs1.contains(&j) {
+                                    Some(e[replace(next, *next + 1)])
+                                } else {
+                                    Some(c)
+                                }
+                            }),
+                        )
+                        .to_string()
                     })
-                    // .inspect(|tt| eprintln!("{},{},{},{} => {}", iww, ihh, cx, cy, tt))
-                    .max()
-                    .unwrap_or(0);
-                dp[iww][ihh][cx][cy] = t;
-                dp
-            })
-        },
-    );
-    let ans = dp[ww][hh][0][0];
+                    .min()
+            } else {
+                let e = e.citer().sorted().collect_vec();
+                Some(
+                    chain(
+                        t.citer().take(i),
+                        s.citer().enumerate().skip(i).scan(0usize, |next, (j, c)| {
+                            if idxs1.contains(&j) {
+                                Some(e[replace(next, *next + 1)])
+                            } else {
+                                Some(c)
+                            }
+                        }),
+                    )
+                    .to_string(),
+                )
+            }
+        })
+        .min()
+        .unwrap();
 
     println!("{}", ans);
 }
