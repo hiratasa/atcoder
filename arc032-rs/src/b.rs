@@ -137,4 +137,44 @@ where
 {
 }
 
-fn main() {}
+struct UnionFind {
+    g: Vec<usize>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        UnionFind {
+            g: (0..n).collect(),
+        }
+    }
+    fn root(&mut self, v: usize) -> usize {
+        if self.g[v] != v {
+            self.g[v] = self.root(self.g[v]);
+        }
+        self.g[v]
+    }
+    fn unite(&mut self, v: usize, u: usize) {
+        let rv = self.root(v);
+        let ru = self.root(u);
+        self.g[rv] = ru;
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+}
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+
+    let ab = read_vec(m, || read_tuple!(usize, usize));
+
+    let mut uf = ab.citer().fold(UnionFind::new(n), |mut uf, (a, b)| {
+        let a = a - 1;
+        let b = b - 1;
+        uf.unite(a, b);
+        uf
+    });
+
+    let ans = (0..n).filter(|&a| uf.root(a) == a).count() - 1;
+    println!("{}", ans);
+}

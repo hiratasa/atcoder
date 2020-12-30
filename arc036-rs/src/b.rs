@@ -137,4 +137,27 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let h = read_vec(n, || read::<usize>());
+
+    let ans = h
+        .citer()
+        .tuple_windows()
+        .map(|(a, b)| a < b)
+        .scan((0usize, false), |(m, last), current| {
+            if !*last && current {
+                *m = 1;
+            } else {
+                *m += 1;
+            }
+            *last = current;
+
+            Some(*m)
+        })
+        .max()
+        .unwrap_or(0)
+        + 1;
+    println!("{}", ans);
+}

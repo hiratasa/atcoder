@@ -138,14 +138,20 @@ where
 }
 
 fn main() {
-    let x: String = read();
+    let s = read_str();
 
-    let y = x.replace("ch", "#");
-
-    let ans = y.find(|c| !"#oku".contains(c)).is_none();
-    if ans {
-        println!("YES");
-    } else {
-        println!("NO");
-    }
+    let ans = (0..=1)
+        .map(|d| {
+            s.citer()
+                .skip(d)
+                .tuples()
+                .group_by(|&(a, b)| (a, b))
+                .into_iter()
+                .map(|(t, it)| (t, it.count()))
+                .filter(|&(t, _)| t == ('2', '5'))
+                .map(|(_, m)| m * (m + 1) / 2)
+                .sum::<usize>()
+        })
+        .sum::<usize>();
+    println!("{}", ans);
 }

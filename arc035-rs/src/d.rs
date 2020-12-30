@@ -137,15 +137,4 @@ where
 {
 }
 
-fn main() {
-    let x: String = read();
-
-    let y = x.replace("ch", "#");
-
-    let ans = y.find(|c| !"#oku".contains(c)).is_none();
-    if ans {
-        println!("YES");
-    } else {
-        println!("NO");
-    }
-}
+fn main() {}

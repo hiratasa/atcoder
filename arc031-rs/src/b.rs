@@ -137,15 +137,76 @@ where
 {
 }
 
-fn main() {
-    let x: String = read();
-
-    let y = x.replace("ch", "#");
-
-    let ans = y.find(|c| !"#oku".contains(c)).is_none();
-    if ans {
-        println!("YES");
-    } else {
-        println!("NO");
+struct UnionFind {
+    g: Vec<usize>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        UnionFind {
+            g: (0..n).collect(),
+        }
     }
+    fn root(&mut self, v: usize) -> usize {
+        if self.g[v] != v {
+            self.g[v] = self.root(self.g[v]);
+        }
+        self.g[v]
+    }
+    fn unite(&mut self, v: usize, u: usize) {
+        let rv = self.root(v);
+        let ru = self.root(u);
+        self.g[rv] = ru;
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+}
+
+fn is_one(a: &Vec<Vec<bool>>) -> bool {
+    let mut uf = UnionFind::new(100);
+
+    for i in 0..9 {
+        for j in 0..10 {
+            if a[i][j] && a[i + 1][j] {
+                uf.unite(10 * i + j, 10 * (i + 1) + j);
+            }
+        }
+    }
+
+    for i in 0..10 {
+        for j in 0..9 {
+            if a[i][j] && a[i][j + 1] {
+                uf.unite(10 * i + j, 10 * i + j + 1);
+            }
+        }
+    }
+
+    a.iter()
+        .enumerate()
+        .flat_map(|(i, row)| {
+            let rs = row
+                .citer()
+                .enumerate()
+                .filter(|&(_j, c)| c)
+                .map(|(j, _c)| uf.root(10 * i + j))
+                .collect_vec();
+            rs
+        })
+        .all_equal()
+}
+
+fn main() {
+    let a = read_vec(10, || {
+        read::<String>().chars().map(|c| c == 'o').collect_vec()
+    });
+
+    let ans = iproduct!((0..10), (0..10)).any(|(i, j)| {
+        let mut a2 = a.clone();
+        a2[i][j] = true;
+
+        is_one(&a2)
+    });
+
+    println!("{}", if ans { "YES" } else { "NO" });
 }

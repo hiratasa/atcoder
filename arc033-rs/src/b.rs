@@ -138,14 +138,11 @@ where
 }
 
 fn main() {
-    let x: String = read();
+    let (_na, _nb) = read_tuple!(usize, usize);
 
-    let y = x.replace("ch", "#");
+    let a = read_row::<usize>().into_iter().collect::<FxHashSet<_>>();
+    let b = read_row::<usize>().into_iter().collect::<FxHashSet<_>>();
 
-    let ans = y.find(|c| !"#oku".contains(c)).is_none();
-    if ans {
-        println!("YES");
-    } else {
-        println!("NO");
-    }
+    let ans = a.intersection(&b).count() as f64 / a.union(&b).count() as f64;
+    println!("{}", ans);
 }

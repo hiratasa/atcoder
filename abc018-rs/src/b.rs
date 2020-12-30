@@ -137,15 +137,41 @@ where
 {
 }
 
-fn main() {
-    let x: String = read();
-
-    let y = x.replace("ch", "#");
-
-    let ans = y.find(|c| !"#oku".contains(c)).is_none();
-    if ans {
-        println!("YES");
-    } else {
-        println!("NO");
+trait ToString {
+    fn to_string(self: Self) -> String;
+}
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
     }
+}
+
+fn main() {
+    let s = read_str();
+    let n: usize = read();
+
+    let lr = read_vec(n, || read_tuple!(usize, usize));
+
+    let ans = lr
+        .citer()
+        .fold(s, |s, (l, r)| {
+            chain(
+                s.citer().take(l - 1),
+                chain(
+                    s.citer().skip(l - 1).take(r - l + 1).rev(),
+                    s.citer().skip(r),
+                ),
+            )
+            .collect_vec()
+        })
+        .citer()
+        .to_string();
+    println!("{}", ans);
 }

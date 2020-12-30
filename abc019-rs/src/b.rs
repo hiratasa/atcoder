@@ -138,14 +138,11 @@ where
 }
 
 fn main() {
-    let x: String = read();
-
-    let y = x.replace("ch", "#");
-
-    let ans = y.find(|c| !"#oku".contains(c)).is_none();
-    if ans {
-        println!("YES");
-    } else {
-        println!("NO");
-    }
+    let ans = read::<String>()
+        .chars()
+        .group_by(|&c| c)
+        .into_iter()
+        .map(|(c, it)| format!("{}{}", c, it.count()))
+        .join("");
+    println!("{}", ans);
 }

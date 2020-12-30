@@ -137,4 +137,26 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_str();
+    let t = read_str();
+
+    if s.len() != t.len() {
+        println!("-1");
+        return;
+    }
+
+    let ans = (0..s.len()).find(|&i| {
+        s.citer()
+            .cycle()
+            .skip(s.len() - i)
+            .take(s.len())
+            .eq(t.citer())
+    });
+
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}

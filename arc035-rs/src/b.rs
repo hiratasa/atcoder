@@ -138,14 +138,24 @@ where
 }
 
 fn main() {
-    let x: String = read();
+    let n: usize = read();
 
-    let y = x.replace("ch", "#");
+    let t = read_vec(n, || read::<usize>())
+        .into_iter()
+        .sorted()
+        .collect_vec();
 
-    let ans = y.find(|c| !"#oku".contains(c)).is_none();
-    if ans {
-        println!("YES");
-    } else {
-        println!("NO");
-    }
+    let ans = izip!(t.citer(), (1..=n).rev())
+        .map(|(tt, i)| tt * i)
+        .sum::<usize>();
+    let ans2 = t
+        .citer()
+        .group_by(|&tt| tt)
+        .into_iter()
+        .map(|(tt, it)| it.count())
+        .map(|m| (1..=m).fold(1usize, |f, i| f * i % 1000000007))
+        .fold(1usize, |f, m| f * m % 1000000007);
+
+    println!("{}", ans);
+    println!("{}", ans2);
 }

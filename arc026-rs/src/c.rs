@@ -137,4 +137,208 @@ where
 {
 }
 
-fn main() {}
+trait Monoid {
+    type Item: Clone;
+
+    fn id() -> Self::Item;
+    fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
+}
+
+struct SegmentTree<M>
+where
+    M: Monoid,
+{
+    cap: usize,
+    values: Vec<M::Item>,
+}
+
+#[allow(dead_code)]
+impl<M> SegmentTree<M>
+where
+    M: Monoid,
+{
+    fn new(n: usize) -> Self {
+        let cap = n.next_power_of_two();
+        SegmentTree {
+            cap,
+            values: vec![M::id(); 2 * cap - 1],
+        }
+    }
+
+    fn with(vals: &Vec<M::Item>) -> Self {
+        let n = vals.len();
+        let cap = n.next_power_of_two();
+
+        let mut values = Vec::with_capacity(2 * cap - 1);
+        values.resize(cap - 1, M::id());
+        values.extend(vals.iter().cloned());
+        values.resize(2 * cap - 1, M::id());
+
+        let mut st = SegmentTree { cap, values };
+        for idx in (0..cap - 1).rev() {
+            st.fix_value(idx);
+        }
+        st
+    }
+
+    fn fix_value(&mut self, idx: usize) {
+        let left_idx = 2 * (idx + 1) - 1;
+        let right_idx = 2 * (idx + 1);
+        self.values[idx] = M::op(&self.values[left_idx], &self.values[right_idx]);
+    }
+
+    fn get(&self, pos: usize) -> M::Item {
+        self.values[self.cap - 1 + pos].clone()
+    }
+
+    fn set(&mut self, pos: usize, v: M::Item) {
+        let mut idx = self.cap - 1 + pos;
+
+        self.values[idx] = v;
+
+        while idx > 0 {
+            idx = (idx - 1) / 2;
+            self.fix_value(idx);
+        }
+    }
+
+    fn query(&self, a: usize, b: usize) -> M::Item {
+        self.query_impl(a, b, 0, 0, self.cap)
+    }
+
+    fn query_impl(&self, a: usize, b: usize, idx: usize, l: usize, r: usize) -> M::Item {
+        if a >= r || b <= l {
+            // no overlap
+            return M::id();
+        }
+
+        if a <= l && r <= b {
+            return self.values[idx].clone();
+        }
+
+        let left_idx = 2 * (idx + 1) - 1;
+        let right_idx = 2 * (idx + 1);
+
+        let left_v = self.query_impl(a, b, left_idx, l, (l + r) / 2);
+        let right_v = self.query_impl(a, b, right_idx, (l + r) / 2, r);
+
+        M::op(&left_v, &right_v)
+    }
+
+    // f(query(a, b)) != false となるbが存在すればその最小のものを返す
+    fn right_partition_point<F>(&self, a: usize, mut f: F) -> Option<usize>
+    where
+        F: FnMut(&M::Item) -> bool,
+    {
+        assert!(a <= self.cap);
+        if !f(&M::id()) {
+            Some(a)
+        } else if a == self.cap {
+            None
+        } else {
+            self.right_partition_point_impl(a, &mut f, 0, 0, self.cap, &M::id())
+                .ok()
+        }
+    }
+
+    fn right_partition_point_impl<F>(
+        &self,
+        a: usize,
+        f: &mut F,
+        idx: usize,
+        l: usize,
+        r: usize,
+        carry: &M::Item,
+    ) -> Result<usize, M::Item>
+    where
+        F: FnMut(&M::Item) -> bool,
+    {
+        // precondition
+        assert!(a < r);
+        assert!(f(carry));
+        // assert!(l < a || carry == query(a, l))
+
+        // postcondition
+        // when return Ok, f(query(a, ok_value - 1)) && !f(query(a, ok_value))
+        // when return Err, err_value == query(a, r) && f(err_value)
+
+        let left_idx = 2 * (idx + 1) - 1;
+        let right_idx = 2 * (idx + 1);
+        let mid = (l + r) / 2;
+
+        if a <= l {
+            let v = M::op(carry, &self.values[idx]);
+            if f(&v) {
+                Err(v.clone())
+            } else {
+                if l + 1 == r {
+                    // leaf
+                    Ok(r)
+                } else {
+                    match self.right_partition_point_impl(a, f, left_idx, l, mid, carry) {
+                        Ok(found) => Ok(found),
+                        // In this branch, expected to be always return Ok
+                        Err(q) => self.right_partition_point_impl(a, f, right_idx, mid, r, &q),
+                    }
+                }
+            }
+        } else if a < mid {
+            match self.right_partition_point_impl(a, f, left_idx, l, mid, &M::id()) {
+                Ok(found) => Ok(found),
+                Err(q) => self.right_partition_point_impl(a, f, right_idx, mid, r, &q),
+            }
+        } else if a < r {
+            self.right_partition_point_impl(a, f, right_idx, mid, r, &M::id())
+        } else {
+            unreachable!()
+        }
+    }
+}
+
+macro_rules! define_monoid {
+    ($name: ident, $t: ty, $id: expr, $op: expr) => {
+        #[derive(Clone)]
+        struct $name;
+
+        impl Monoid for $name {
+            type Item = $t;
+
+            fn id() -> Self::Item {
+                $id
+            }
+
+            fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item {
+                ($op)(*lhs, *rhs)
+            }
+        }
+    };
+}
+
+define_monoid!(Minimum, usize, 1 << 60, usize::min);
+
+type ST = SegmentTree<Minimum>;
+
+fn main() {
+    let (n, l) = read_tuple!(usize, usize);
+
+    let lrc = read_vec(n, || read_tuple!(usize, usize, usize))
+        .into_iter()
+        .sorted_by_key(|&(_, right, _)| right)
+        .collect_vec();
+
+    let ans = lrc
+        .citer()
+        .fold(
+            ST::with(&vvec![0; 1<<60; l + 1]),
+            |mut st, (left, right, cost)| {
+                let t = st.query(left, right) + cost;
+                if t < st.get(right) {
+                    st.set(right, t);
+                }
+
+                st
+            },
+        )
+        .get(l);
+    println!("{}", ans);
+}

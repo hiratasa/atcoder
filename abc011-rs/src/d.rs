@@ -138,14 +138,46 @@ where
 }
 
 fn main() {
-    let x: String = read();
+    let (n, d) = read_tuple!(usize, i64);
 
-    let y = x.replace("ch", "#");
+    let (x, y) = read_tuple!(i64, i64);
 
-    let ans = y.find(|c| !"#oku".contains(c)).is_none();
-    if ans {
-        println!("YES");
-    } else {
-        println!("NO");
+    if x.abs() % d > 0 || y.abs() % d > 0 {
+        println!("0");
+        return;
     }
+
+    let x = (x.abs() / d) as usize;
+    let y = (y.abs() / d) as usize;
+
+    let combi = iterate(vec![1.0], |prevcombi| {
+        once(1.0)
+            .chain(prevcombi.citer().tuple_windows().map(|(a, b)| a + b))
+            .chain(once(1.0))
+            .collect_vec()
+    })
+    .take(n + 1)
+    .collect_vec();
+    let invpow2 = iterate(1.0, |&p| p / 2.0).take(2 * n + 1).collect_vec();
+
+    let ans = (0..=n)
+        .filter_map(|np| np.checked_sub(x).map(|nn| (np, nn)))
+        .filter(|(np, nn)| n >= y + np + nn)
+        .filter(|(np, nn)| (n - y - np - nn) % 2 == 0)
+        .map(|(np, nn)| {
+            // np + nn + ynp + ynn = n
+            // ynp - ynn = y
+            (np, nn, (n + y - np - nn) / 2, (n - y - np - nn) / 2)
+        })
+        // C(n, np + nn) * C(np + nn, np) * C(ynp + ynn, ynp)
+        .map(|(np, nn, ynp, ynn)| {
+            combi[n][np + nn]
+                * invpow2[n]
+                * combi[np + nn][np]
+                * invpow2[np + nn]
+                * combi[ynp + ynn][ynp]
+                * invpow2[ynp + ynn]
+        })
+        .sum::<f64>();
+    println!("{}", ans);
 }

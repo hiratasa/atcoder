@@ -1,5 +1,5 @@
 [package]
-name = "abc016-rs"
+name = "arc031-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -17,25 +17,25 @@ rand = { version = "0.7.3", features = ["small_rng"] }
 permutohedron = "0.2.4"
 
 [[bin]]
-name = "abc016-a"
+name = "arc031-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "abc016-b"
+name = "arc031-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "abc016-c"
+name = "arc031-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "abc016-d"
+name = "arc031-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "abc016-e"
+name = "arc031-e"
 path = "src/e.rs"
 
 [[bin]]
-name = "abc016-f"
+name = "arc031-f"
 path = "src/f.rs"

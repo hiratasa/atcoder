@@ -137,4 +137,41 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+
+    let ab = read_vec(m, || read_tuple!(usize, usize));
+
+    (1..=n)
+        .map(|i| {
+            ab.citer()
+                .filter_map(|(a, b)| {
+                    if a == i {
+                        Some(b)
+                    } else if b == i {
+                        Some(a)
+                    } else {
+                        None
+                    }
+                })
+                .flat_map(|f| {
+                    ab.citer().filter_map(move |(a, b)| {
+                        if a == f {
+                            Some(b)
+                        } else if b == f {
+                            Some(a)
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .unique()
+                .filter(|&ff| ff != i)
+                .filter(|&ff| {
+                    !ab.citer()
+                        .any(|(a, b)| (a, b) == (i, ff) || (a, b) == (ff, i))
+                })
+                .count()
+        })
+        .for_each(|ff| println!("{}", ff));
+}

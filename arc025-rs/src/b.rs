@@ -185,31 +185,51 @@ where
 }
 
 fn main() {
-    let (n, k) = read_tuple!(usize, usize);
+    let (h, w) = read_tuple!(usize, usize);
 
-    let s = read_str()
-        .into_iter()
-        .map(|c| c as usize - 'a' as usize)
-        .collect_vec();
+    let c = read_mat::<usize>(h);
 
-    let f = s
-        .citer()
-        .take(k)
-        .fold_vec2(vec![0; 26], |f, c| (c, f[c] + 1));
-
-    let words = once(f.clone())
-        .chain(izip!(s.citer(), s.citer().skip(k)).scan(f, |f, (c0, c1)| {
-            f[c0] -= 1;
-            f[c1] += 1;
-
-            Some(f.clone())
-        }))
-        .collect_vec();
-    let ans = izip!(words.iter(), words.iter().skip(k))
-        .scan(FxHashSet::default(), |hs, (word0, word1)| {
-            hs.insert(word0);
-            Some(hs.contains(word1))
+    let ans = iproduct!((0..h), (0..w))
+        .map(|(ci, cj)| {
+            let sums = (0..2)
+                .map(|e| {
+                    let rowsum = c
+                        .iter()
+                        .skip(ci)
+                        .enumerate()
+                        .map(|(i, row)| {
+                            row.citer()
+                                .skip(cj)
+                                .enumerate()
+                                .map(|(j, m)| if (i + j) % 2 == e { m } else { 0 })
+                                .cumsum::<usize>()
+                                .collect_vec()
+                        })
+                        .collect_vec();
+                    rowsum
+                        .iter()
+                        .scan(vec![0; w - cj], |prev, r| {
+                            *prev = izip!(prev.citer(), r.citer(),)
+                                .map(|(m1, m2)| m1 + m2)
+                                .collect_vec();
+                            Some(prev.clone())
+                        })
+                        .collect_vec()
+                })
+                .collect_vec();
+            izip!(sums[0].iter(), sums[1].iter(),)
+                .enumerate()
+                .flat_map(|(i, (row0, row1))| {
+                    izip!(row0.citer(), row1.citer())
+                        .enumerate()
+                        .map(move |(j, (s1, s2))| (i, j, s1, s2))
+                })
+                .filter(|(i, j, s1, s2)| s1 == s2)
+                .map(|(i, j, _, _)| (i + 1) * (j + 1))
+                .max()
+                .unwrap_or(0)
         })
-        .any(|b| b);
-    println!("{}", if ans { "YES" } else { "NO" });
+        .max()
+        .unwrap_or(0);
+    println!("{}", ans);
 }

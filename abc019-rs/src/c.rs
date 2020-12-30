@@ -138,14 +138,15 @@ where
 }
 
 fn main() {
-    let x: String = read();
+    let _n: usize = read();
 
-    let y = x.replace("ch", "#");
+    let a = read_row::<usize>();
 
-    let ans = y.find(|c| !"#oku".contains(c)).is_none();
-    if ans {
-        println!("YES");
-    } else {
-        println!("NO");
-    }
+    let ans = a
+        .citer()
+        .map(|aa| iterate(aa, |aa| aa / 2).find(|&aa| aa % 2 > 0).unwrap())
+        .sorted()
+        .dedup()
+        .count();
+    println!("{}", ans);
 }
