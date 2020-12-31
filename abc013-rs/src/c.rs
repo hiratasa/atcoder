@@ -137,4 +137,34 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, h) = read_tuple!(usize, usize);
+
+    let (a, b, c, d, e) = read_tuple!(usize, usize, usize, usize, usize);
+
+    if h > n * e {
+        println!("0");
+        return;
+    }
+
+    let r = n * e - h;
+    let d = d + e;
+    let b = b + e;
+    let ans = (0..=n)
+        .map(|i| {
+            let j = if d * i > r {
+                0
+            } else {
+                // d * i + b * j > r
+                (r - (d * i)) / b + 1
+            };
+
+            assert!(i + j <= n);
+
+            i * c + j * a
+        })
+        .min()
+        .unwrap();
+
+    println!("{}", ans);
+}

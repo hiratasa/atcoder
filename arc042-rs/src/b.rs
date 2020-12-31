@@ -137,4 +137,25 @@ where
 {
 }
 
-fn main() {}
+use ordered_float::OrderedFloat;
+
+fn main() {
+    let (x, y) = read_tuple!(f64, f64);
+
+    let n: usize = read();
+
+    let vert = read_vec(n, || read_tuple!(f64, f64));
+
+    let ans = vert
+        .citer()
+        .chain(once(vert[0]))
+        .tuple_windows()
+        .map(|((x0, y0), (x1, y1))| {
+            let dx = x0 - x1;
+            let dy = y0 - y1;
+            ((x0 - x) * (y1 - y) - (x1 - x) * (y0 - y)).abs() / (dx * dx + dy * dy).sqrt()
+        })
+        .min_by_key(|&f| OrderedFloat(f))
+        .unwrap();
+    println!("{}", ans);
+}

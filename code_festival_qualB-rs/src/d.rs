@@ -137,4 +137,32 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let h = read_vec(n, || read::<usize>());
+
+    fn calc<I: Iterator<Item = usize>>(it: I) -> Vec<usize> {
+        it.enumerate()
+            .scan(vec![(usize::MAX, 0)], |t, (i, hh)| {
+                while matches!(t.last(), Some(&(h1, _)) if h1 <= hh) {
+                    t.pop();
+                }
+
+                let a = i - t.last().unwrap().1;
+
+                t.push((hh, i + 1));
+
+                Some(a)
+            })
+            .collect_vec()
+    }
+
+    let ans0 = calc(h.citer());
+    let ans1 = calc(h.citer().rev());
+
+    let ans = izip!(ans0.citer(), ans1.citer().rev())
+        .map(|(a0, a1)| a0 + a1)
+        .collect_vec();
+    println!("{}", ans.citer().join("\n"));
+}

@@ -137,4 +137,41 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+
+    let xy = read_vec(n, || read_tuple!(usize, usize));
+    let a = read_vec(m, || read::<usize>());
+
+    let b = a.citer().sorted().collect_vec();
+
+    let c = xy.citer().sorted().collect_vec();
+    let ans = b
+        .citer()
+        .fold(
+            (0usize, 0usize, BinaryHeap::new()),
+            |(next, ans, mut q), bb| {
+                (next..n)
+                    .map(|i| c[i])
+                    .take_while(|&(x, _y)| x <= bb)
+                    .for_each(|(_, y)| q.push(Reverse(y)));
+                let next = next
+                    + (next..n)
+                        .map(|i| c[i])
+                        .take_while(|&(x, _y)| x <= bb)
+                        .count();
+
+                while matches!(q.peek(), Some(&Reverse(y)) if y < bb) {
+                    q.pop();
+                }
+
+                if q.pop().is_some() {
+                    (next, ans + 1, q)
+                } else {
+                    (next, ans, q)
+                }
+            },
+        )
+        .1;
+    println!("{}", ans);
+}

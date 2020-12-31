@@ -137,4 +137,18 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let s = read_str();
+
+    if n % 2 > 0 {
+        println!("-1");
+        return;
+    }
+
+    let ans = izip!(s.citer().take(n / 2), s.citer().skip(n / 2),)
+        .filter(|(c1, c2)| c1 != c2)
+        .count();
+    println!("{}", ans);
+}

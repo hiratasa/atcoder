@@ -137,4 +137,70 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let a = read_str();
+    let b = read_str();
+
+    let (c, d): (Vec<_>, Vec<_>) = izip!(a.citer(), b.citer())
+        .filter(|(aa, bb)| aa != bb)
+        .unzip();
+
+    if c.len() > 6 {
+        println!("NO");
+        return;
+    }
+
+    let n = c.len();
+
+    let has_two = a
+        .citer()
+        .map(|aa| (aa, ()))
+        .into_group_map()
+        .into_iter()
+        .any(|(_, v)| v.len() >= 2);
+    let ans = if n == 0 {
+        has_two
+    } else if has_two {
+        let cs = (0..3).fold(vec![c.clone()], |v, _| {
+            iproduct!((0..n), (0..n), v.iter())
+                .filter(|(i, j, _c)| i < j)
+                .map(|(i, j, c)| {
+                    let mut c = c.clone();
+                    c.swap(i, j);
+                    c
+                })
+                .collect_vec()
+        });
+        let cs2 = (0..2).fold(vec![c.clone()], |v, _| {
+            iproduct!((0..n), (0..n), v.iter())
+                .filter(|(i, j, _c)| i < j)
+                .map(|(i, j, c)| {
+                    let mut c = c.clone();
+                    c.swap(i, j);
+                    c
+                })
+                .collect_vec()
+        });
+
+        cs.contains(&d) || cs2.contains(&d)
+    } else {
+        let cs = (0..3).fold(vec![c.clone()], |v, _| {
+            iproduct!((0..n), (0..n), v.iter())
+                .filter(|(i, j, _c)| i < j)
+                .map(|(i, j, c)| {
+                    let mut c = c.clone();
+                    c.swap(i, j);
+                    c
+                })
+                .collect_vec()
+        });
+
+        cs.contains(&d)
+    };
+
+    if ans {
+        println!("YES");
+    } else {
+        println!("NO");
+    }
+}

@@ -137,4 +137,24 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+
+    let xy = read_row::<usize>();
+
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
+
+    let ans = chain(a.citer().map(|aa| (aa, 0)), b.citer().map(|bb| (bb, 1)))
+        .sorted()
+        .fold((0usize, 0usize, 0usize), |(current, t, ans), (tt, p)| {
+            if tt < t || current != p {
+                (current, t, ans)
+            } else {
+                ((current + 1) % 2, tt + xy[p], ans + 1)
+            }
+        })
+        .2
+        / 2;
+    println!("{}", ans);
+}

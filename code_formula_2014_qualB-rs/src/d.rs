@@ -137,4 +137,21 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let a = read_vec(n, || read::<usize>());
+
+    const M: usize = 1_000_000_007;
+
+    let (c, d, r) = a.citer().fold((1usize, 1usize, 0usize), |(c, d, r), aa| {
+        if aa + d >= 10 {
+            (10 * c % M, (aa + d) / 10, ((aa + d) % 10 * c + r) % M)
+        } else {
+            (((aa + d) * c + r) % M, 1, 0)
+        }
+    });
+    let ans = (c * d + r + M - 1) % M;
+
+    println!("{}", ans);
+}

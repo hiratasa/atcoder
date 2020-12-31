@@ -137,4 +137,41 @@ where
 {
 }
 
-fn main() {}
+fn calc(c: &Vec<usize>, d: usize) -> Vec<usize> {
+    assert!(d > 0);
+
+    if d == 1 {
+        c.clone()
+    } else {
+        let c2 = calc(c, d / 2);
+        let cc = c2.citer().map(|i| c2[i]).collect_vec();
+
+        if d % 2 == 0 {
+            cc
+        } else {
+            cc.citer().map(|i| c[i]).collect_vec()
+        }
+    }
+}
+
+fn main() {
+    let (n, m, d) = read_tuple!(usize, usize, usize);
+
+    let a = read_row::<usize>();
+
+    let b = a.citer().fold((0..n).collect_vec(), |mut b, aa| {
+        b.swap(aa - 1, aa);
+        b
+    });
+
+    let c = b.citer().enumerate().fold(vec![0; n], |mut c, (i, bb)| {
+        c[bb] = i;
+        c
+    });
+
+    let ans = calc(&c, d);
+
+    for aa in ans {
+        println!("{}", aa + 1);
+    }
+}

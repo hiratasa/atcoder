@@ -137,4 +137,51 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_str();
+
+    let ans = s
+        .citer()
+        .enumerate()
+        .scan(
+            (0i64, 5i64, vec![0i64; 1000010], vec![0i64; 1000010], 0usize),
+            |(combos, kab, inc_combos, inc_kab, charging), (i, c)| {
+                *combos += inc_combos[i];
+                *kab += inc_kab[i];
+
+                if *charging > 0 {
+                    *charging -= 1;
+                    return Some(0);
+                }
+
+                match c {
+                    'N' => {
+                        if *kab >= 1 {
+                            *kab -= 1;
+                            inc_combos[i + 2] += 1;
+                            inc_kab[i + 7] += 1;
+                            Some(10 + *combos / 10)
+                        } else {
+                            Some(0)
+                        }
+                    }
+                    'C' => {
+                        if *kab >= 3 {
+                            *kab -= 3;
+                            inc_combos[i + 4] += 1;
+                            inc_kab[i + 9] += 3;
+                            *charging = 2;
+                            Some(50 + *combos / 10 * 5)
+                        } else {
+                            Some(0)
+                        }
+                    }
+                    _ => Some(0),
+                }
+            },
+        )
+        // .inspect(|d| eprintln!("{}", d))
+        .sum::<i64>();
+
+    println!("{}", ans);
+}

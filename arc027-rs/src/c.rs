@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -137,4 +137,38 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (x, y) = read_tuple!(usize, usize);
+
+    let n: usize = read();
+
+    let th = read_vec(n, || read_tuple!(usize, usize));
+
+    let z = x + y;
+
+    let ans = th
+        .citer()
+        .fold(vec![vec![0; z + 1]; x + 1], |dp, (t, h)| {
+            chain(
+                once(vec![0; z + 1]),
+                dp.iter().tuple_windows().map(|(prev_row, row)| {
+                    izip!(
+                        repeat_n(0, t)
+                            .chain(prev_row.citer().map(|hh| hh + h))
+                            .take(z + 1),
+                        row.citer()
+                    )
+                    .map(|(hh1, hh2)| max(hh1, hh2))
+                    .collect_vec()
+                }),
+            )
+            .take(x + 1)
+            .collect_vec()
+        })
+        .into_iter()
+        .map(|row| row.citer().max().unwrap())
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
+}

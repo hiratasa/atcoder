@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -137,4 +137,97 @@ where
 {
 }
 
-fn main() {}
+trait ToString {
+    fn to_string(self: Self) -> String;
+}
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
+    }
+}
+
+fn main() {
+    let (a, k) = read_tuple!(String, usize);
+
+    let aa = a.parse::<i64>().unwrap();
+
+    let n = a.len();
+
+    const EXTRA: usize = 2;
+
+    let ans = repeat_n('#', EXTRA)
+        .chain(a.chars())
+        .scan(
+            (BTreeSet::<char>::new(), String::new()),
+            |(digits, b), c| {
+                if c.is_digit(10) {
+                    digits.insert(c);
+                    b.push(c);
+                } else {
+                    b.push('0');
+                }
+
+                if k >= 2 && digits.len() <= k - 2 {
+                    iproduct!((b'0'..=b'9'), (b'0'..=b'9'))
+                        .map(|(d1, d2)| {
+                            b.chars()
+                                .chain(once(d1 as char))
+                                .chain(repeat(d2 as char))
+                                .take(n + EXTRA)
+                                .to_string()
+                                .parse::<i64>()
+                                .unwrap()
+                        })
+                        .map(|x| (x - aa).abs())
+                        .min()
+                } else if digits.len() == k - 1 {
+                    iproduct!((b'0'..=b'9'), (b'0'..=b'9'))
+                        .map(|(d1, d2)| (d1 as char, d2 as char))
+                        .filter(|&(d1, d2)| {
+                            digits.contains(&d1) || digits.contains(&d2) || d1 == d2
+                        })
+                        .map(|(d1, d2)| {
+                            b.chars()
+                                .chain(once(d1))
+                                .chain(repeat(d2))
+                                .take(n + EXTRA)
+                                .to_string()
+                                .parse::<i64>()
+                                .unwrap()
+                        })
+                        .map(|x| (x - aa).abs())
+                        .min()
+                } else if digits.len() == k {
+                    iproduct!(digits.citer(), digits.citer())
+                        .map(|(d1, d2)| {
+                            b.chars()
+                                .chain(once(d1))
+                                .chain(repeat(d2))
+                                .take(n + EXTRA)
+                                .to_string()
+                                .parse::<i64>()
+                                .unwrap()
+                        })
+                        .map(|x| (x - aa).abs())
+                        .min()
+                } else {
+                    None
+                }
+            },
+        )
+        .min()
+        .unwrap();
+
+    let ans = min(
+        ans,
+        (aa - repeat(9).take(n - 1).fold(0i64, |x, y| x * 10 + y)).abs(),
+    );
+    println!("{}", ans);
+}

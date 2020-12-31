@@ -137,4 +137,59 @@ where
 {
 }
 
-fn main() {}
+struct UnionFind {
+    g: Vec<usize>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        UnionFind {
+            g: (0..n).collect(),
+        }
+    }
+    fn root(&mut self, v: usize) -> usize {
+        if self.g[v] != v {
+            self.g[v] = self.root(self.g[v]);
+        }
+        self.g[v]
+    }
+    fn unite(&mut self, v: usize, u: usize) {
+        let rv = self.root(v);
+        let ru = self.root(u);
+        self.g[rv] = ru;
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+}
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+
+    let c = read_vec(n, || read::<usize>());
+
+    let abr = read_vec(m, || read_tuple!(usize, usize, usize));
+
+    let edges = chain(
+        c.citer().enumerate().map(|(i, cc)| (i, n, cc)),
+        abr.citer().map(|(a, b, r)| (a - 1, b - 1, r)),
+    )
+    .sorted_by_key(|&edge| edge.2)
+    .collect_vec();
+
+    let ans = edges
+        .citer()
+        .fold(
+            (UnionFind::new(n + 1), 0usize),
+            |(mut uf, ans), (a, b, w)| {
+                if uf.same(a, b) {
+                    (uf, ans)
+                } else {
+                    uf.unite(a, b);
+                    (uf, ans + w)
+                }
+            },
+        )
+        .1;
+    println!("{}", ans);
+}
