@@ -13,6 +13,7 @@ use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
 
+use bitset_fixed::BitSet;
 #[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
@@ -137,100 +138,50 @@ where
 {
 }
 
-trait IteratorExt: Iterator + Sized {
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(Self::Item) -> (usize, T);
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
-    fn fold_vec3<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> T;
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
-impl<I> IteratorExt for I
-where
-    I: Iterator,
-{
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(item);
-            v[idx] = t;
-            v
-        })
-    }
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(&v, item);
-            v[idx] = t;
-            v
-        })
-    }
-    fn fold_vec3<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> T,
-    {
-        self.fold(init, |mut v, item| {
-            let t = f(&v, item);
-            v.push(t);
-            v
-        })
+
+fn calc(n: usize, a: usize, b: usize) -> Box<dyn Iterator<Item = usize>> {
+    assert!(n > 0);
+    assert!(a != b);
+
+    let bs_a = bitset!(n, a);
+    let bs_b = bitset!(n, b);
+
+    assert!(bs_a.count_ones() % 2 != bs_b.count_ones() % 2);
+
+    if n == 1 {
+        Box::new(it!(a, b))
+    } else if bs_a[n - 1] == bs_b[n - 1] {
+        Box::new(
+            izip!(
+                calc(n - 1, a, b).flat_map(|x| it!(x, x)),
+                it!(0, 1 << (n - 1), 1 << (n - 1), 0).cycle()
+            )
+            .map(|(x, y)| x ^ y),
+        )
+    } else {
+        let c = a ^ 1;
+        Box::new(chain(calc(n - 1, a, c), calc(n - 1, c ^ (1 << (n - 1)), b)))
     }
 }
 
 fn main() {
-    let (r, c, k) = read_tuple!(usize, usize, usize);
-    let w = max(r, c);
+    let (n, a, b) = read_tuple!(usize, usize, usize);
 
-    let mut s = read_vec(r, || {
-        read::<String>()
-            .chars()
-            .map(|ch| if ch == 'x' { 1 } else { 0 })
-            .chain(repeat(1))
-            .take(w)
-            .collect_vec()
-    });
+    let bs_a = bitset!(n, a);
+    let bs_b = bitset!(n, b);
 
-    s.resize(w, vec![1; w]);
+    if bs_a.count_ones() % 2 == bs_b.count_ones() % 2 {
+        println!("NO");
+        return;
+    }
 
-    let t = s
-        .iter()
-        .enumerate()
-        .fold(vec![vec![0; 2 * w - 1]; 2 * w - 1], |t, (i, row)| {
-            row.citer().enumerate().fold(t, |mut t, (j, ss)| {
-                t[i + j][w - 1 + i - j] = ss;
-                t
-            })
-        });
-
-    let cs = t
-        .iter()
-        .map(|row| once(0).chain(row.citer()).cumsum::<usize>())
-        .fold_vec3(vec![vec![0; 2 * w]], |cs, row| {
-            izip!(cs.last().unwrap().citer(), row)
-                .map(|(s0, s1)| s0 + s1)
-                .collect_vec()
-        });
-    // eprintln!("{:?}", t);
-    // eprintln!("{:?}", cs);
-
-    let ans = iproduct!((2 * (k - 1)..w), (k - 1..w - (k - 1)))
-        // .inspect(|t| eprintln!("{:?}", t))
-        .map(|(i, j)| (i + j, w - 1 + i - j))
-        // .inspect(|t| eprintln!("{:?}", t))
-        .map(|(x, y)| {
-            cs[x + 1][y + 1] + cs[x - 2 * (k - 1)][y - 2 * (k - 1)]
-                - cs[x + 1][y - 2 * (k - 1)]
-                - cs[x - 2 * (k - 1)][y + 1]
-        })
-        // .inspect(|t| eprintln!("{:?}", t))
-        .filter(|&z| z == 0)
-        .count();
-    println!("{}", ans);
+    println!("YES");
+    println!("{}", calc(n, a, b).join(" "));
 }

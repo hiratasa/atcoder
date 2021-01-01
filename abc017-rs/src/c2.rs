@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,100 +148,43 @@ where
 {
 }
 
-trait IteratorExt: Iterator + Sized {
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(Self::Item) -> (usize, T);
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
-    fn fold_vec3<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> T;
-}
-impl<I> IteratorExt for I
-where
-    I: Iterator,
-{
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(item);
-            v[idx] = t;
-            v
-        })
-    }
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(&v, item);
-            v[idx] = t;
-            v
-        })
-    }
-    fn fold_vec3<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> T,
-    {
-        self.fold(init, |mut v, item| {
-            let t = f(&v, item);
-            v.push(t);
-            v
-        })
-    }
-}
-
 fn main() {
-    let (r, c, k) = read_tuple!(usize, usize, usize);
-    let w = max(r, c);
+    let (n, m) = read_tuple!(usize, usize);
 
-    let mut s = read_vec(r, || {
-        read::<String>()
-            .chars()
-            .map(|ch| if ch == 'x' { 1 } else { 0 })
-            .chain(repeat(1))
-            .take(w)
-            .collect_vec()
-    });
+    let lrs = read_vec(n, || read_tuple!(usize, usize, usize));
 
-    s.resize(w, vec![1; w]);
-
-    let t = s
-        .iter()
-        .enumerate()
-        .fold(vec![vec![0; 2 * w - 1]; 2 * w - 1], |t, (i, row)| {
-            row.citer().enumerate().fold(t, |mut t, (j, ss)| {
-                t[i + j][w - 1 + i - j] = ss;
-                t
-            })
-        });
-
-    let cs = t
-        .iter()
-        .map(|row| once(0).chain(row.citer()).cumsum::<usize>())
-        .fold_vec3(vec![vec![0; 2 * w]], |cs, row| {
-            izip!(cs.last().unwrap().citer(), row)
-                .map(|(s0, s1)| s0 + s1)
-                .collect_vec()
-        });
-    // eprintln!("{:?}", t);
-    // eprintln!("{:?}", cs);
-
-    let ans = iproduct!((2 * (k - 1)..w), (k - 1..w - (k - 1)))
-        // .inspect(|t| eprintln!("{:?}", t))
-        .map(|(i, j)| (i + j, w - 1 + i - j))
-        // .inspect(|t| eprintln!("{:?}", t))
-        .map(|(x, y)| {
-            cs[x + 1][y + 1] + cs[x - 2 * (k - 1)][y - 2 * (k - 1)]
-                - cs[x + 1][y - 2 * (k - 1)]
-                - cs[x - 2 * (k - 1)][y + 1]
+    let cumsum_l = once((0, 0))
+        .chain(lrs.citer().sorted_by_key(|t| t.0).map(|t| (t.0, t.2)))
+        .scan(0usize, |acc, (l, s)| {
+            *acc += s;
+            Some((l, *acc))
         })
-        // .inspect(|t| eprintln!("{:?}", t))
-        .filter(|&z| z == 0)
-        .count();
+        .collect_vec();
+    let cumsum_r = once((0, 0))
+        .chain(lrs.citer().sorted_by_key(|t| t.1).map(|t| (t.1, t.2)))
+        .scan(0usize, |acc, (r, s)| {
+            *acc += s;
+            Some((r, *acc))
+        })
+        .collect_vec();
+
+    let ans = (0..m)
+        .map(|i| {
+            let p0 = cumsum_r[cumsum_r
+                .binary_search_by(|&(r, _s)| r.cmp(&(i + 1)).then(Ordering::Greater))
+                .unwrap_err()
+                - 1]
+            .1;
+            let p1 = cumsum_l[n].1
+                - cumsum_l[cumsum_l
+                    .binary_search_by(|&(l, _s)| l.cmp(&(i + 1)).then(Ordering::Less))
+                    .unwrap_err()
+                    - 1]
+                .1;
+
+            p0 + p1
+        })
+        .max()
+        .unwrap();
     println!("{}", ans);
 }

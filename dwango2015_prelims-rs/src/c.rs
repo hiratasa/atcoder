@@ -137,4 +137,93 @@ where
 {
 }
 
-fn main() {}
+trait IteratorExt: Iterator + Sized {
+    fn fold_vec<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(Self::Item) -> (usize, T);
+    fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T;
+}
+impl<I> IteratorExt for I
+where
+    I: Iterator,
+{
+    fn fold_vec<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(Self::Item) -> (usize, T),
+    {
+        self.fold(init, |mut v, item| {
+            let (idx, t) = f(item);
+            v[idx] = t;
+            v
+        })
+    }
+    fn fold_vec2<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> (usize, T),
+    {
+        self.fold(init, |mut v, item| {
+            let (idx, t) = f(&v, item);
+            v[idx] = t;
+            v
+        })
+    }
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T,
+    {
+        self.fold(init, |mut v, item| {
+            let t = f(&v, item);
+            v.push(t);
+            v
+        })
+    }
+}
+
+fn main() {
+    let n: usize = read();
+
+    let combi = iterate(vec![1.0], |prev| {
+        chain(
+            once(1.0),
+            chain(
+                prev.citer().tuple_windows().map(|(c0, c1)| c0 + c1),
+                once(1.0),
+            ),
+        )
+        .collect_vec()
+    })
+    .take(n + 1)
+    .collect_vec();
+
+    let ans = (2..=n).fold_vec3(vec![0.0, 0.0], |dp, m| {
+        let dp2 = (0..=m).fold(vec![0.0; m + 1], |dp2, i| {
+            (0..=m - i).fold_vec2(dp2, |dp2, j| {
+                let k = m - i - j;
+
+                let mi = it!(i, j, k).filter(|&ii| ii > 0).min().unwrap();
+
+                if i == j && j == k {
+                    (
+                        m,
+                        dp2[m] + combi[m][i] * combi[j + k][j] * 3.0f64.powi(-(m as i32)),
+                    )
+                } else {
+                    (
+                        mi,
+                        dp2[mi] + combi[m][i] * combi[j + k][j] * 3.0f64.powi(-(m as i32)),
+                    )
+                }
+            })
+        });
+
+        // eprintln!("{} {:?}", m, dp2);
+        ((0..m).map(|i| dp2[i] * dp[i]).sum::<f64>() + 1.0) / (1.0 - dp2[m])
+    })[n];
+
+    println!("{}", ans);
+}

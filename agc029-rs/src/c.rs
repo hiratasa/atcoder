@@ -137,4 +137,88 @@ where
 {
 }
 
-fn main() {}
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
+        }
+    }
+    begin
+}
+#[allow(dead_code)]
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
+}
+
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+
+    let ans = lower_bound_int(1, n, |m| {
+        let r = a
+            .citer()
+            .try_fold(vec![(m - 1, 0usize, 0usize)], |mut d, aa| {
+                if matches!(d.last(), Some(&(_, _, e)) if e < aa) {
+                    d.push((0, d.last().unwrap().2, aa));
+                    return Some(d);
+                }
+
+                while matches!(d.last(), Some(&(_, b, _)) if b >= aa) {
+                    d.pop();
+                }
+
+                while matches!(d.last(), Some(&(c, _, _)) if c == m - 1) {
+                    d.pop();
+                }
+
+                let (c, b, e) = d.pop()?;
+
+                let e = if e <= aa { e } else { aa };
+
+                if b + 1 == e {
+                    d.push((c + 1, b, e));
+                } else {
+                    d.push((c, b, e - 1));
+                    d.push((c + 1, e - 1, e));
+                }
+                if e < aa {
+                    d.push((0, e, aa));
+                }
+
+                Some(d)
+            });
+
+        if r.is_some() {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
+    });
+    println!("{}", ans);
+}
