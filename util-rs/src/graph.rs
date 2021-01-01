@@ -167,7 +167,7 @@ impl UndirectedGraph {
 }
 
 #[allow(dead_code)]
-fn tree_dfs(g: &UndirectedGraph, p: usize, v: usize) {
+fn tree_dfs(g: &UndirectedGraph, v: usize, p: usize) {
     g.adjs[v]
         .iter()
         .copied()
