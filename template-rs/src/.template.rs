@@ -52,6 +52,7 @@ macro_rules! it {
     }
 }
 
+#[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
