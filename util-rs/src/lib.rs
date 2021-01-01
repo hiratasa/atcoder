@@ -8,6 +8,7 @@ mod graph;
 mod iterext;
 mod modulo;
 mod multiset;
+mod point;
 mod scc;
 mod segment_tree;
 mod stringutil;
