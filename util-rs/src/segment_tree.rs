@@ -90,7 +90,7 @@ where
         M::op(&left_v, &right_v)
     }
 
-    // f(query(a, b)) != false となるbが存在すればその最小のものを返す
+    // f(query(a, b)) == false となるbが存在すればその最小のものを返す
     fn right_partition_point<F>(&self, a: usize, mut f: F) -> Option<usize>
     where
         F: FnMut(&M::Item) -> bool,
