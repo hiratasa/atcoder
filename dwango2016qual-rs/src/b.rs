@@ -137,4 +137,18 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let k = read_row::<usize>();
+
+    let ans = chain(
+        once(k[0]),
+        chain(
+            k.citer().tuple_windows().map(|(k0, k1)| min(k0, k1)),
+            once(k[n - 2]),
+        ),
+    )
+    .collect_vec();
+
+    println!("{}", ans.citer().join(" "));
+}

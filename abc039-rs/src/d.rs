@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,15 +148,70 @@ where
 {
 }
 
+trait ToString {
+    fn to_string(self: Self) -> String;
+}
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
+    }
+}
+
 fn main() {
-    let (k, t) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
+    let (h, w) = read_tuple!(usize, usize);
 
-    let m = a.citer().max().unwrap();
+    let s = read_vec(h, || {
+        read::<String>().chars().map(|c| c == '#').collect_vec()
+    });
 
-    if m > (k + 1) / 2 {
-        println!("{}", 2 * m - (k + 1));
+    let deltas = iproduct!(it!(usize::MAX, 0, 1), it!(usize::MAX, 0, 1)).collect_vec();
+    let t = (0..h)
+        .map(|i| {
+            (0..w)
+                .map(|j| {
+                    deltas
+                        .citer()
+                        .map(|(di, dj)| (i.wrapping_add(di), j.wrapping_add(dj)))
+                        .filter(|&(ni, nj)| ni < h && nj < w)
+                        .map(|(ni, nj)| s[ni][nj])
+                        .min()
+                        .unwrap()
+                })
+                .collect_vec()
+        })
+        .collect_vec();
+    let u = (0..h)
+        .map(|i| {
+            (0..w)
+                .map(|j| {
+                    deltas
+                        .citer()
+                        .map(|(di, dj)| (i.wrapping_add(di), j.wrapping_add(dj)))
+                        .filter(|&(ni, nj)| ni < h && nj < w)
+                        .map(|(ni, nj)| t[ni][nj])
+                        .max()
+                        .unwrap()
+                })
+                .collect_vec()
+        })
+        .collect_vec();
+
+    if u != s {
+        println!("impossible");
     } else {
-        println!("{}", 0);
+        println!("possible");
+        println!(
+            "{}",
+            t.iter()
+                .map(|row| row.citer().map(|b| if b { '#' } else { '.' }).to_string())
+                .join("\n")
+        );
     }
 }

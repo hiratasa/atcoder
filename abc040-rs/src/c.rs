@@ -53,8 +53,9 @@ macro_rules! it {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let y = once($x);
         let mut c = $c;
-        c.push($x);
+        c.extend(y);
         c
     }};
 }
@@ -137,4 +138,18 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a = read_row::<i64>();
+
+    let ans = a.citer().tuple_windows().enumerate().fold(
+        vec![0, (a[0] - a[1]).abs()],
+        |dp, (i, (prev2, prev, aa))| {
+            pushed!(
+                dp,
+                min(dp[i] + (prev2 - aa).abs(), dp[i + 1] + (prev - aa).abs())
+            )
+        },
+    )[n - 1];
+    println!("{}", ans);
+}

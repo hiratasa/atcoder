@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,14 +149,16 @@ where
 }
 
 fn main() {
-    let (k, t) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
+    let (l0, l1, l2) = read_tuple!(f64, f64, f64);
+    let lmax = f64::max(l0, f64::max(l1, l2));
 
-    let m = a.citer().max().unwrap();
-
-    if m > (k + 1) / 2 {
-        println!("{}", 2 * m - (k + 1));
+    let rmax = l0 + l1 + l2;
+    let rmin = if lmax <= rmax - lmax {
+        0.0
     } else {
-        println!("{}", 0);
-    }
+        lmax - (rmax - lmax)
+    };
+
+    let ans = std::f64::consts::PI * rmax * rmax - std::f64::consts::PI * rmin * rmin;
+    println!("{}", ans);
 }

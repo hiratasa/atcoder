@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,15 +148,66 @@ where
 {
 }
 
-fn main() {
-    let (k, t) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
-
-    let m = a.citer().max().unwrap();
-
-    if m > (k + 1) / 2 {
-        println!("{}", 2 * m - (k + 1));
-    } else {
-        println!("{}", 0);
+trait IteratorExt: Iterator + Sized {
+    fn fold_vec<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(Self::Item) -> (usize, T);
+    fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T;
+}
+impl<I> IteratorExt for I
+where
+    I: Iterator,
+{
+    fn fold_vec<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(Self::Item) -> (usize, T),
+    {
+        self.fold(init, |mut v, item| {
+            let (idx, t) = f(item);
+            v[idx] = t;
+            v
+        })
     }
+    fn fold_vec2<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> (usize, T),
+    {
+        self.fold(init, |mut v, item| {
+            let (idx, t) = f(&v, item);
+            v[idx] = t;
+            v
+        })
+    }
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T,
+    {
+        self.fold(init, |mut v, item| {
+            let t = f(&v, item);
+            v.push(t);
+            v
+        })
+    }
+}
+
+fn main() {
+    let (n, q) = read_tuple!(usize, usize);
+
+    let lr = read_vec(q, || read_tuple!(usize, usize));
+
+    let ans = lr
+        .citer()
+        .flat_map(|(l, r)| it!((l - 1, 1i64), (r, -1i64)))
+        .fold_vec2(vec![0i64; n + 1], |d, (p, x)| (p, d[p] + x))
+        .into_iter()
+        .take(n)
+        .cumsum::<i64>()
+        .map(|x| x % 2)
+        .join("");
+    println!("{}", ans);
 }

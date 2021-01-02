@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,14 +149,39 @@ where
 }
 
 fn main() {
-    let (k, t) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
+    let (w, h, n) = read_tuple!(usize, usize, usize);
 
-    let m = a.citer().max().unwrap();
+    let xya = read_vec(n, || read_tuple!(usize, usize, usize));
 
-    if m > (k + 1) / 2 {
-        println!("{}", 2 * m - (k + 1));
+    let maxx = xya
+        .citer()
+        .filter(|t| t.2 == 1)
+        .map(|t| t.0)
+        .max()
+        .unwrap_or(0);
+    let minx = xya
+        .citer()
+        .filter(|t| t.2 == 2)
+        .map(|t| t.0)
+        .min()
+        .unwrap_or(w);
+    let maxy = xya
+        .citer()
+        .filter(|t| t.2 == 3)
+        .map(|t| t.1)
+        .max()
+        .unwrap_or(0);
+    let miny = xya
+        .citer()
+        .filter(|t| t.2 == 4)
+        .map(|t| t.1)
+        .min()
+        .unwrap_or(h);
+
+    let ans = if maxx >= minx || maxy >= miny {
+        0
     } else {
-        println!("{}", 0);
-    }
+        (minx - maxx) * (miny - maxy)
+    };
+    println!("{}", ans);
 }

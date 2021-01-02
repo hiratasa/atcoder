@@ -137,4 +137,15 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let a = read_vec(n, || read::<usize>());
+
+    let mut idxs = a.citer().map(|aa| (aa, 0)).collect::<BTreeMap<_, _>>();
+    idxs.iter_mut().zip(0..).for_each(|(t, i)| *t.1 = i);
+
+    for aa in a {
+        println!("{}", idxs[&aa]);
+    }
+}

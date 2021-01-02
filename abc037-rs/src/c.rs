@@ -137,4 +137,20 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    let ans = a
+        .citer()
+        .enumerate()
+        .map(|(i, aa)| {
+            let lower = if i < k { 0 } else { i - k + 1 };
+
+            let upper = if i < n - k { i } else { n - k };
+
+            aa * (upper - lower + 1)
+        })
+        .sum::<usize>();
+    println!("{}", ans);
+}

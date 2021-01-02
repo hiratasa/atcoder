@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,14 +149,19 @@ where
 }
 
 fn main() {
-    let (k, t) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
+    let s = read_str();
 
-    let m = a.citer().max().unwrap();
+    const T: &str = "WBWBWWBWBWBW";
+    const L: usize = T.len();
+    const K: [&str; L] = [
+        "Do", "#", "Re", "#", "Mi", "Fa", "#", "So", "#", "La", "#", "Si",
+    ];
 
-    if m > (k + 1) / 2 {
-        println!("{}", 2 * m - (k + 1));
-    } else {
-        println!("{}", 0);
-    }
+    let ans = izip!((0..L), K.iter())
+        .find(|&(i, _)| {
+            izip!(s.citer(), T.chars().cycle().skip(i).take(s.len())).all(|(c1, c2)| c1 == c2)
+        })
+        .unwrap()
+        .1;
+    println!("{}", ans);
 }
