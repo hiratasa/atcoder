@@ -137,4 +137,41 @@ where
 {
 }
 
-fn main() {}
+fn calc_size(
+    s: &Vec<Vec<char>>,
+    visited: &mut Vec<Vec<bool>>,
+    i: usize,
+    j: usize,
+) -> (usize, usize) {
+    let h = s.len();
+    let w = s[0].len();
+
+    if visited[i][j] {
+        return (0, 0);
+    }
+
+    visited[i][j] = true;
+
+    let (num_black, num_white) = if s[i][j] == '#' { (1, 0) } else { (0, 1) };
+
+    it!((usize::MAX, 0), (0, usize::MAX), (1, 0), (0, 1))
+        .map(|(di, dj)| (i.wrapping_add(di), j.wrapping_add(dj)))
+        .filter(|&(ni, nj)| ni < h && nj < w)
+        .filter(|&(ni, nj)| s[i][j] != s[ni][nj])
+        .map(|(ni, nj)| calc_size(s, visited, ni, nj))
+        .fold((num_black, num_white), |t, t2| (t.0 + t2.0, t.1 + t2.1))
+}
+
+fn main() {
+    let (h, w) = read_tuple!(usize, usize);
+
+    let s = read_vec(h, || read_str());
+
+    let ans = iproduct!(0..h, 0..w)
+        .scan(vec![vec![false; w]; h], |visited, (i, j)| {
+            Some(calc_size(&s, visited, i, j))
+        })
+        .map(|t| t.0 * t.1)
+        .sum::<usize>();
+    println!("{}", ans);
+}

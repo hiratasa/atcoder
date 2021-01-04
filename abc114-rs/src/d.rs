@@ -137,4 +137,34 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let (a, _) = (2..=n).fold((vec![], vec![true; n + 1]), |(mut a, mut is_prime), i| {
+        if is_prime[i] {
+            a.push(
+                1 + (2..)
+                    .map(|j| j * i)
+                    .take_while(|&j| j <= n)
+                    .map(|j| iterate(j, |jj| jj / i).take_while(|jj| jj % i == 0).count())
+                    .sum::<usize>(),
+            );
+
+            (2..)
+                .map(|j| j * i)
+                .take_while(|&j| j <= n)
+                .for_each(|j| is_prime[j] = false);
+        }
+
+        (a, is_prime)
+    });
+
+    let n74 = a.citer().filter(|&m| m >= 74).count() as i64;
+    let n24 = a.citer().filter(|&m| m >= 24).count() as i64;
+    let n14 = a.citer().filter(|&m| m >= 14).count() as i64;
+    let n4 = a.citer().filter(|&m| m >= 4).count() as i64;
+    let n2 = a.citer().filter(|&m| m >= 2).count() as i64;
+
+    let ans = n74 + n24 * (n2 - 1) + n14 * (n4 - 1) + n4 * (n4 - 1) / 2 * (n2 - 2);
+    println!("{}", ans);
+}

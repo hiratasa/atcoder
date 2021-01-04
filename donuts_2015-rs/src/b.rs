@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,37 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    let combos = read_vec(m, || {
+        let r = read_row::<usize>();
+        (
+            r[0],
+            r.citer().skip(2).fold(0usize, |s, i| s | (1 << (i - 1))),
+        )
+    });
+
+    let ans = iterate((1usize << 9) - 1, |s| {
+        let z = s.trailing_zeros();
+        let y = s + (1 << z);
+        y | ((!y & s) >> (z + 1))
+    })
+    .take_while(|&s| s < 1 << n)
+    .map(|s| {
+        a.citer()
+            .enumerate()
+            .filter(|(i, _)| s & (1usize << i) > 0)
+            .map(|t| t.1)
+            .sum::<usize>()
+            + combos
+                .citer()
+                .filter(|(_, t)| (s & t).count_ones() >= 3)
+                .map(|t| t.0)
+                .sum::<usize>()
+    })
+    .max()
+    .unwrap();
+    println!("{}", ans);
+}

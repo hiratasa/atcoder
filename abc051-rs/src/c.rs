@@ -14,7 +14,9 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,22 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (sx, sy, tx, ty) = read_tuple!(i64, i64, i64, i64);
+
+    let (tx, ty) = ((tx - sx) as usize, (ty - sy) as usize);
+
+    repeat_n('R', tx)
+        .chain(repeat_n('U', ty))
+        .chain(repeat_n('L', tx))
+        .chain(repeat_n('D', ty + 1))
+        .chain(repeat_n('R', tx + 1))
+        .chain(repeat_n('U', ty + 1))
+        .chain(repeat_n('L', 1))
+        .chain(repeat_n('U', 1))
+        .chain(repeat_n('L', tx + 1))
+        .chain(repeat_n('D', ty + 1))
+        .chain(repeat_n('R', 1))
+        .for_each(|c| print!("{}", c));
+    println!("");
+}

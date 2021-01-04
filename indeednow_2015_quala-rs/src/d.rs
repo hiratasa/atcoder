@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,56 @@ where
 {
 }
 
-fn main() {}
+fn calc(
+    c: &mut Vec<usize>,
+    s: &mut FxHashMap<Vec<usize>, usize>,
+    h: usize,
+    w: usize,
+    i: usize,
+    j: usize,
+    pi: usize,
+    pj: usize,
+    r: usize,
+) {
+    assert!(c[i * w + j] == 0);
+
+    if r < 12 {
+        it!((usize::MAX, 0), (0, usize::MAX), (1, 0), (0, 1))
+            .map(|(di, dj)| (i.wrapping_add(di), j.wrapping_add(dj)))
+            .filter(|&(ni, nj)| ni < h && nj < w)
+            .filter(|&t| t != (pi, pj))
+            .for_each(|(ni, nj)| {
+                let idx = i * w + j;
+                let nidx = ni * w + nj;
+
+                c.swap(idx, nidx);
+                calc(c, s, h, w, ni, nj, i, j, r + 1);
+                c.swap(idx, nidx);
+            });
+    }
+
+    s.insert(c.clone(), r);
+}
+
+fn main() {
+    let (h, w) = read_tuple!(usize, usize);
+
+    let c = read_mat::<usize>(h);
+
+    let (i, j) = iproduct!(0..h, 0..w).find(|&(i, j)| c[i][j] == 0).unwrap();
+
+    let mut c = c.iter().flatten().copied().collect_vec();
+    let mut s1 = FxHashMap::default();
+    calc(&mut c, &mut s1, h, w, i, j, h, w, 0);
+
+    let mut d = (1..=h * w - 1).chain(once(0)).collect_vec();
+    let mut s2 = FxHashMap::default();
+    calc(&mut d, &mut s2, h, w, h - 1, w - 1, h, w, 0);
+
+    let ans = s1
+        .iter()
+        .filter_map(|(k, r1)| s2.get(k).map(|r2| r1 + r2))
+        .min()
+        .unwrap();
+    println!("{}", ans);
+}
