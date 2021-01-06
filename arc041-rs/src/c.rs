@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,41 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, l) = read_tuple!(usize, usize);
+
+    let xd = read_vec(n, || read_tuple!(usize, char));
+
+    let ans = xd
+        .citer()
+        .group_by(|&(x, d)| d)
+        .into_iter()
+        .map(|(d, it)| {
+            if d == 'L' {
+                (vec![], it.map(|t| t.0).collect_vec())
+            } else {
+                (it.map(|t| t.0).collect_vec(), vec![])
+            }
+        })
+        .coalesce(|x, y| {
+            if x.1.is_empty() {
+                Ok((x.0, y.1))
+            } else {
+                Err((x, y))
+            }
+        })
+        .map(|(s0, s1)| {
+            let p = if s0.len() < s1.len() {
+                s0.last().copied().unwrap_or(0)
+            } else {
+                s1.first().copied().map_or(l, |p| p - 1)
+            };
+            let q = p + 1;
+
+            s1.citer().sum::<usize>() - s1.len() * (2 * q + s1.len() - 1) / 2
+                + s0.len() * (2 * p - s0.len() + 1) / 2
+                - s0.citer().sum::<usize>()
+        })
+        .sum::<usize>();
+    println!("{}", ans);
+}

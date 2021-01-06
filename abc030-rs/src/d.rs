@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,40 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, a) = read_tuple!(usize, usize);
+    let k: String = read();
+    let b = read_row::<usize>();
+
+    let a = a - 1;
+    let b = b.citer().map(|bb| bb - 1).collect_vec();
+
+    let (i0, i1) = iterate(a, |&aa| b[aa])
+        .enumerate()
+        // .inspect(|t| eprintln!("{:?}", t))
+        .scan(vec![None; n], |last, (i, aa)| {
+            Some(replace(&mut last[aa], Some(i)).map(|j| (j, i)))
+        })
+        // .inspect(|t| eprintln!("{:?}", t))
+        .flatten()
+        .next()
+        .unwrap();
+    let p = i1 - i0;
+    // eprintln!("{} {} {}", i0, i1, p);
+
+    let k = if let Ok(k) = k.parse::<usize>() {
+        if k <= i0 {
+            k
+        } else {
+            (k - i0) % p + i0
+        }
+    } else {
+        let r = k.chars().fold(0usize, |kk, c| {
+            (kk * 10 + c.to_digit(10).unwrap() as usize) % p
+        });
+        (r + p - i0 % p) % p + i0
+    };
+
+    let ans = iterate(a, |&aa| b[aa]).nth(k).unwrap() + 1;
+    println!("{}", ans);
+}

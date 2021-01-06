@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,91 @@ where
 {
 }
 
-fn main() {}
+trait IteratorExt: Iterator + Sized {
+    fn fold_vec<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(Self::Item) -> (usize, T);
+    fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T;
+}
+impl<I> IteratorExt for I
+where
+    I: Iterator,
+{
+    fn fold_vec<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(Self::Item) -> (usize, T),
+    {
+        self.fold(init, |mut v, item| {
+            let (idx, t) = f(item);
+            v[idx] = t;
+            v
+        })
+    }
+    fn fold_vec2<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> (usize, T),
+    {
+        self.fold(init, |mut v, item| {
+            let (idx, t) = f(&v, item);
+            v[idx] = t;
+            v
+        })
+    }
+    fn fold_vec3<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
+    where
+        F: FnMut(&Vec<T>, Self::Item) -> T,
+    {
+        self.fold(init, |mut v, item| {
+            let t = f(&v, item);
+            v.push(t);
+            v
+        })
+    }
+}
+
+fn main() {
+    let (r, c, k) = read_tuple!(usize, usize, usize);
+    let n: usize = read();
+    let rc = read_vec(n, || read_tuple!(usize, usize));
+
+    let s0 = rc
+        .citer()
+        .fold_vec2(vec![0; r], |s0, (r, _c)| (r - 1, s0[r - 1] + 1));
+    let s1 = rc
+        .citer()
+        .fold_vec2(vec![0; c], |s1, (_r, c)| (c - 1, s1[c - 1] + 1));
+
+    let m1 = rc
+        .citer()
+        .map(|(r, c)| s0[r - 1] + s1[c - 1] - 1)
+        .filter(|&t| t == k - 1)
+        .count();
+    let m2 = rc
+        .citer()
+        .map(|(r, c)| s0[r - 1] + s1[c - 1] - 1)
+        .filter(|&t| t == k)
+        .count();
+
+    let s0 = s0.citer().sorted().collect_vec();
+    let s1 = s1.citer().sorted().collect_vec();
+
+    let ans0 = s0
+        .citer()
+        .take_while(|&t| t <= k)
+        .map(|t| {
+            let r = k - t;
+            s1.binary_search_by(|t1| t1.cmp(&r).then(Ordering::Less))
+                .unwrap_err()
+                - s1.binary_search_by(|t1| t1.cmp(&r).then(Ordering::Greater))
+                    .unwrap_err()
+        })
+        .sum::<usize>();
+    let ans = ans0 - m1 + m2;
+
+    println!("{}", ans);
+}

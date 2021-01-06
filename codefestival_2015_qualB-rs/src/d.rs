@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,53 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let sc = read_vec(n, || read_tuple!(i64, i64));
+
+    sc.citer()
+        .scan(
+            once((1 << 60, 1 << 61)).collect::<BTreeMap<_, _>>(),
+            |m, (s, c)| {
+                let mut s1 = s;
+                let mut r = c;
+                while r > 0 {
+                    // s1は塗り終わった最後のマス
+                    let current = m
+                        .range(..=s1)
+                        .next_back()
+                        .filter(|&(_, &e)| s < e)
+                        .map(|(&b, &e)| (b, e));
+                    // s2は次に塗るマス
+                    let s2 = if let Some((_, e)) = current { e } else { s1 };
+
+                    let (&b, &e) = m.range(s2..).next().unwrap();
+                    let d = b - s2;
+                    if r < d {
+                        if let Some((b0, _)) = current {
+                            *m.get_mut(&b0).unwrap() += r;
+                        } else {
+                            m.insert(s2, s2 + r);
+                        }
+                        s1 = s2 + r - 1;
+                        r = 0;
+                    } else {
+                        m.remove(&b);
+                        if let Some((b0, _)) = current {
+                            *m.get_mut(&b0).unwrap() = e;
+                        } else {
+                            m.insert(s2, e);
+                        }
+                        s1 = s2 + d - 1;
+                        r -= d;
+                    }
+                }
+
+                Some(s1)
+            },
+        )
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
+}

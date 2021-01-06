@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,215 @@ where
 {
 }
 
-fn main() {}
+use num::{One, Zero};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+static MODULUS_IMPL: AtomicUsize = AtomicUsize::new(0usize);
+
+fn update_modulus(m: usize) {
+    MODULUS_IMPL.store(m, Ordering::Relaxed);
+}
+
+fn modulus() -> usize {
+    MODULUS_IMPL.load(Ordering::Relaxed)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct Mod(usize);
+#[allow(dead_code)]
+impl Mod {
+    fn new(n: usize) -> Self {
+        Mod(n % modulus())
+    }
+    fn pow(self, p: usize) -> Self {
+        if p == 0 {
+            Mod::new(1)
+        } else if p == 1 {
+            self
+        } else {
+            let r = self.pow(p / 2);
+            if p % 2 == 0 {
+                r * r
+            } else {
+                r * r * self
+            }
+        }
+    }
+    fn inv(self) -> Self {
+        let (_zero, g, _u, v) = std::iter::successors(
+            Some((self.0 as i64, modulus() as i64, 1, 0)),
+            |&(a, b, u, v)| {
+                if a == 0 {
+                    None
+                } else {
+                    Some((b % a, a, -u * (b / a) + v, u))
+                }
+            },
+        )
+        .last()
+        .unwrap();
+        assert_eq!(g, 1, "gcd({}, {}) must be 1 but {}.", self.0, modulus(), g);
+        Mod::new((v + modulus() as i64) as usize)
+    }
+}
+impl std::fmt::Display for Mod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+impl std::str::FromStr for Mod {
+    type Err = <usize as std::str::FromStr>::Err;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        usize::from_str(s).map(|n| Mod::new(n))
+    }
+}
+impl num::Zero for Mod {
+    fn zero() -> Self {
+        Mod::new(0)
+    }
+    fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+}
+impl num::One for Mod {
+    fn one() -> Self {
+        Mod::new(1)
+    }
+    fn is_one(&self) -> bool {
+        self.0 == 1
+    }
+}
+impl std::ops::Neg for Mod {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Mod::new(modulus() - self.0)
+    }
+}
+impl std::ops::Add for Mod {
+    type Output = Self;
+    fn add(self, rhs: Mod) -> Self {
+        Mod::new(self.0 + rhs.0)
+    }
+}
+impl std::ops::AddAssign for Mod {
+    fn add_assign(&mut self, rhs: Mod) {
+        *self = *self + rhs;
+    }
+}
+impl std::ops::Sub for Mod {
+    type Output = Self;
+    fn sub(self, rhs: Mod) -> Self {
+        Mod::new(self.0 + modulus() - rhs.0)
+    }
+}
+impl std::ops::SubAssign for Mod {
+    fn sub_assign(&mut self, rhs: Mod) {
+        *self = *self - rhs;
+    }
+}
+impl std::ops::Mul for Mod {
+    type Output = Self;
+    fn mul(self, rhs: Mod) -> Self {
+        Mod::new(self.0 * rhs.0)
+    }
+}
+impl std::ops::MulAssign for Mod {
+    fn mul_assign(&mut self, rhs: Mod) {
+        *self = *self * rhs;
+    }
+}
+impl std::ops::Mul<usize> for Mod {
+    type Output = Self;
+    fn mul(self, rhs: usize) -> Self {
+        Mod::new(self.0 * rhs)
+    }
+}
+impl std::ops::MulAssign<usize> for Mod {
+    fn mul_assign(&mut self, rhs: usize) {
+        *self = *self * rhs;
+    }
+}
+impl std::ops::Div for Mod {
+    type Output = Self;
+    fn div(self, rhs: Mod) -> Self {
+        if self.0 == 0 {
+            self
+        } else {
+            self * rhs.inv()
+        }
+    }
+}
+impl std::ops::DivAssign for Mod {
+    fn div_assign(&mut self, rhs: Mod) {
+        *self = *self / rhs;
+    }
+}
+impl std::iter::Product for Mod {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.fold(Mod::one(), |p, a| p * a)
+    }
+}
+impl std::iter::Sum for Mod {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.fold(Mod::zero(), |p, a| p + a)
+    }
+}
+impl<T> std::convert::From<T> for Mod
+where
+    usize: std::convert::From<T>,
+{
+    fn from(v: T) -> Mod {
+        Mod::new(usize::from(v))
+    }
+}
+
+fn main() {
+    let (x, p, a, b) = read_tuple!(usize, usize, usize, usize);
+
+    update_modulus(p);
+
+    if a == 0 {
+        println!("1");
+        return;
+    }
+
+    if b / (p - 1) - (a - 1) / (p - 1) > 0 {
+        println!("1");
+        return;
+    }
+
+    let a = a % (p - 1);
+    let b = b % (p - 1);
+
+    let ans = if b - a < 1000000 {
+        (a..=b)
+            .scan(Mod::new(x).pow(a), |q, _| Some(replace(q, *q * x)))
+            .map(|m| m.0)
+            .min()
+            .unwrap()
+    } else {
+        let d = (1000..).find(|&d| (p - 1) % d > 0).unwrap();
+        let y = Mod::new(x).pow(d);
+        let mp = iterate((Mod::one(), 0), |&(q, i)| (q * y, i + d))
+            .take_while(|t| t.1 < p - 1)
+            .collect::<FxHashMap<_, _>>();
+        let xinv = Mod::new(x).inv();
+        (1..)
+            .find(|&z| {
+                iterate(Mod::new(z), |&zz| zz * xinv)
+                    .take(d)
+                    .enumerate()
+                    .filter_map(|(i, zz)| mp.get(&zz).map(|t| t + i))
+                    .find(|&idx| a <= idx && idx <= b)
+                    .is_some()
+            })
+            .unwrap()
+    };
+    println!("{}", ans);
+}
