@@ -13,3 +13,4 @@ mod scc;
 mod segment_tree;
 mod stringutil;
 mod union_find;
+mod z_algorithm;
