@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,31 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, q) = read_tuple!(usize, usize);
+    let xrh = read_vec(n, || read_tuple!(f64, f64, f64));
+
+    let ab = read_vec(q, || read_tuple!(f64, f64));
+
+    ab.citer()
+        .map(|(a, b)| {
+            xrh.citer()
+                .filter(|&(x, _r, h)| !(b <= x || x + h <= a))
+                .map(|(x, r, h)| {
+                    if x + h < b {
+                        let h2 = x + h - f64::max(x, a);
+
+                        std::f64::consts::PI * r * r * h / 3.0 * (h2 / h).powi(3)
+                    } else {
+                        let h2 = x + h - f64::max(x, a);
+                        let h3 = x + h - b;
+
+                        let s0 = std::f64::consts::PI * r * r * h / 3.0 * (h2 / h).powi(3);
+                        let s1 = std::f64::consts::PI * r * r * h / 3.0 * (h3 / h).powi(3);
+                        s0 - s1
+                    }
+                })
+                .sum::<f64>()
+        })
+        .for_each(|ans| println!("{}", ans));
+}

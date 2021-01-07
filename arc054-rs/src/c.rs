@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,44 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let s = read_vec(n, || {
+        read::<String>()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect_vec()
+    });
+
+    let t = (0..n).try_fold(s, |mut s, i| {
+        let k = (i..n).find(|&j| s[j][i] > 0)?;
+
+        if k != i {
+            s.swap(i, k);
+        }
+
+        Some(
+            chain(
+                s.iter().take(i + 1).cloned(),
+                s.iter().skip(i + 1).map(|row| {
+                    let a = row[i];
+                    izip!(row, &s[i])
+                        .map(|(c0, c1)| (c0 + a * c1) % 2)
+                        .collect_vec()
+                }),
+            )
+            .collect_vec(),
+        )
+    });
+    let det = if let Some(t) = t {
+        (0..n).map(|i| t[i][i]).product::<usize>()
+    } else {
+        0
+    };
+    if det % 2 == 0 {
+        println!("Even");
+    } else {
+        println!("Odd");
+    }
+}

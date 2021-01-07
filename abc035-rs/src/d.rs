@@ -148,4 +148,55 @@ where
 {
 }
 
-fn main() {}
+fn dijkstra(edges: &Vec<Vec<(usize, usize)>>, src: usize) -> Vec<usize> {
+    let n = edges.len();
+    let mut q = std::collections::BinaryHeap::new();
+    let mut costs = vec![std::usize::MAX; n];
+    q.push(std::cmp::Reverse((0, src)));
+    costs[src] = 0;
+    while let Some(std::cmp::Reverse((cost, v))) = q.pop() {
+        if cost > costs[v] {
+            continue;
+        }
+        for &edge in &edges[v] {
+            let next_cost = cost + edge.1;
+            if next_cost < costs[edge.0] {
+                q.push(std::cmp::Reverse((next_cost, edge.0)));
+                costs[edge.0] = next_cost;
+            }
+        }
+    }
+    costs
+}
+
+fn main() {
+    let (n, m, t) = read_tuple!(usize, usize, usize);
+    let a = read_row::<usize>();
+
+    let abc = read_vec(m, || read_tuple!(usize, usize, usize));
+
+    let adjs = abc.citer().fold(vec![vec![]; n], |mut adjs, (a, b, c)| {
+        adjs[a - 1].push((b - 1, c));
+        adjs
+    });
+
+    let radjs = abc.citer().fold(vec![vec![]; n], |mut radjs, (a, b, c)| {
+        radjs[b - 1].push((a - 1, c));
+        radjs
+    });
+
+    let distances = dijkstra(&adjs, 0);
+    let rdistances = dijkstra(&radjs, 0);
+
+    let ans = a
+        .citer()
+        .enumerate()
+        .filter_map(|(i, aa)| {
+            let s = distances[i].saturating_add(rdistances[i]);
+
+            t.checked_sub(s).map(|r| r * aa)
+        })
+        .max()
+        .unwrap();
+    println!("{}", ans);
+}

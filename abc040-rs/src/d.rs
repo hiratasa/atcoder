@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,73 @@ where
 {
 }
 
-fn main() {}
+struct UnionFind {
+    g: Vec<usize>,
+    size: Vec<usize>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        UnionFind {
+            g: (0..n).collect(),
+            size: vec![1; n],
+        }
+    }
+    fn root(&mut self, v: usize) -> usize {
+        if self.g[v] != v {
+            self.g[v] = self.root(self.g[v]);
+        }
+        self.g[v]
+    }
+    fn unite(&mut self, v: usize, u: usize) {
+        let rv = self.root(v);
+        let ru = self.root(u);
+        self.g[rv] = ru;
+        if rv != ru {
+            self.size[ru] += self.size[rv];
+        }
+    }
+
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+
+    fn size(&mut self, v: usize) -> usize {
+        let rv = self.root(v);
+        self.size[rv]
+    }
+}
+
+enum Item {
+    Road(usize, usize, usize),
+    Query(usize, usize, usize),
+}
+
+use Item::*;
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let aby = read_vec(m, || read_tuple!(usize, usize, usize));
+
+    let q: usize = read();
+    let vw = read_vec(q, || read_tuple!(usize, usize));
+
+    chain(
+        aby.citer().map(|(a, b, y)| Road(a - 1, b - 1, y)),
+        vw.citer().enumerate().map(|(i, (v, w))| Query(i, v - 1, w)),
+    )
+    .sorted_by_key(|item| match item {
+        &Road(_, _, y) => (Reverse(y), 1),
+        &Query(_, _, y) => (Reverse(y), 0),
+    })
+    .scan(UnionFind::new(n), |uf, item| match item {
+        Road(a, b, _y) => {
+            uf.unite(a, b);
+            Some(None)
+        }
+        Query(i, v, _w) => Some(Some((i, uf.size(v)))),
+    })
+    .flatten()
+    .sorted()
+    .for_each(|(_, ans)| println!("{}", ans));
+}

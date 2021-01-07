@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,29 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
         let mut c = $c;
         c.push($x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! assigned {
+    ($c:expr, $($i:expr),+; $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c$([$i])+ = x;
         c
     }};
 }
@@ -137,4 +158,27 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let s = read_str();
+
+    let ans = (1..n)
+        .map(|k| {
+            let (s0, s1) = s.split_at(k);
+
+            let dp =
+                iproduct!(0..k, 0..n - k).fold(vec![vec![0; n - k + 1]; k + 1], |dp, (i, j)| {
+                    let r = if s0[i] == s1[j] {
+                        dp[i][j] + 1
+                    } else {
+                        max(dp[i][j + 1], dp[i + 1][j])
+                    };
+                    assigned!(dp, i + 1, j + 1; r)
+                });
+
+            n - 2 * dp[k][n - k]
+        })
+        .min()
+        .unwrap_or(n);
+    println!("{}", ans);
+}

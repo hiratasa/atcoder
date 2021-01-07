@@ -148,4 +148,45 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let xy = read_vec(m, || read_tuple!(usize, usize))
+        .into_iter()
+        .map(|(x, y)| (x - 1, y - 1))
+        .collect_vec();
+
+    let reachable0 = xy.citer().chain((0..n).map(|i| (i, i))).fold(
+        vec![vec![false; n]; n],
+        |mut reachable, (x, y)| {
+            reachable[x][y] = true;
+            reachable
+        },
+    );
+    let reachable = iproduct!(0..n, 0..n, 0..n).fold(reachable0, |mut reachable, (k, i, j)| {
+        reachable[i][j] |= reachable[i][k] & reachable[k][j];
+        reachable
+    });
+
+    let ans = iproduct!(0..1 << n, 0..n)
+        .map(|(s, i)| (s, bitset!(n, s), i))
+        .filter(|(_s, bs, i)| {
+            bs[*i]
+                && (0..n)
+                    .filter(|&j| bs[j] && j != *i)
+                    .all(|j| !reachable[*i][j])
+        })
+        .fold(vec![vec![0; n]; 1 << n], |mut dp, (s, bs, i)| {
+            dp[s][i] = if bs.count_ones() == 1 {
+                1
+            } else {
+                (0..n)
+                    .filter(|&j| bs[j] && j != i)
+                    .map(|j| dp[s ^ (1 << i)][j])
+                    .sum::<usize>()
+            };
+            dp
+        })[(1 << n) - 1]
+        .citer()
+        .sum::<usize>();
+    println!("{}", ans);
+}

@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,139 @@ where
 {
 }
 
-fn main() {}
+fn calc<'a>(
+    v: &'a Vec<usize>,
+    w: &'a String,
+    r: usize,
+    next: usize,
+    assign: &mut Vec<Option<&'a str>>,
+    candidates: &mut FxHashSet<Vec<Option<&'a str>>>,
+) {
+    if w.len() - next < v.len() - r {
+        return;
+    }
+
+    if w.len() - next > 3 * (v.len() - r) {
+        return;
+    }
+
+    if w.len() == next {
+        assert!(v.len() == r);
+        candidates.insert(assign.clone());
+        return;
+    }
+
+    for m in (next + 1..=next + 3).take_while(|&m| m <= w.len()) {
+        if let Some(a) = assign[v[r]] {
+            if a != w.get(next..m).unwrap() {
+                continue;
+            }
+        }
+
+        let tmp = assign[v[r]];
+        assign[v[r]] = Some(w.get(next..m).unwrap());
+        calc(v, w, r + 1, m, assign, candidates);
+        assign[v[r]] = tmp;
+    }
+}
+
+fn check_intersection<'a>(
+    c0: &FxHashSet<Vec<Option<&'a str>>>,
+    c1: &FxHashSet<Vec<Option<&'a str>>>,
+) -> FxHashSet<Vec<Option<&'a str>>> {
+    assert!(!c0.is_empty());
+    assert!(!c1.is_empty());
+
+    let cc0 = c0.iter().next().unwrap();
+    let cc1 = c1.iter().next().unwrap();
+
+    let both_used = izip!(cc0, cc1)
+        .map(|(o0, o1)| o0.is_some() && o1.is_some())
+        .collect_vec();
+
+    let d1 = c1
+        .iter()
+        .map(|cc1| {
+            cc1.iter()
+                .copied()
+                .enumerate()
+                .filter(|&(i, _)| both_used[i])
+                .map(|t| t.1)
+                .collect_vec()
+        })
+        .collect::<FxHashSet<_>>();
+
+    c0.iter()
+        .filter(|cc0| {
+            let dd0 = cc0
+                .iter()
+                .copied()
+                .enumerate()
+                .filter(|&(i, _)| both_used[i])
+                .map(|t| t.1)
+                .collect_vec();
+            d1.contains(&dd0)
+        })
+        .cloned()
+        .collect()
+}
+
+fn main() {
+    let (k, n) = read_tuple!(usize, usize);
+
+    let vw = read_vec(n, || read_tuple!(String, String));
+    let vw = vw
+        .iter()
+        .map(|(v, w)| {
+            (
+                v.chars()
+                    .map(|d| d.to_digit(10).unwrap() as usize)
+                    .collect_vec(),
+                w,
+            )
+        })
+        .collect_vec();
+
+    let c = vw
+        .iter()
+        .map(|(v, w)| {
+            let mut candidates = FxHashSet::default();
+            calc(&v, &w, 0, 0, &mut vec![None; k + 1], &mut candidates);
+            candidates
+        })
+        .collect_vec();
+
+    let d = c
+        .iter()
+        .map(|cc| {
+            c.iter()
+                .fold(cc.clone(), |cc, cc1| check_intersection(&cc, &cc1))
+        })
+        .collect_vec();
+    let ans = d
+        .iter()
+        .multi_cartesian_product()
+        .find_map(|assigns| {
+            assigns.iter().copied().try_fold(
+                vec![None; k + 1],
+                |assign: Vec<Option<&str>>, next_assign: &Vec<Option<&str>>| {
+                    izip!(&assign, next_assign)
+                        .map(|(a0, a1)| {
+                            if let Some(b0) = a0 {
+                                if let Some(b1) = a1 {
+                                    if b0 != b1 {
+                                        return None;
+                                    }
+                                }
+                            }
+                            Some(a0.or(*a1))
+                        })
+                        .collect::<Option<Vec<_>>>()
+                },
+            )
+        })
+        .unwrap();
+    for ans in ans.iter().skip(1) {
+        println!("{}", ans.unwrap());
+    }
+}

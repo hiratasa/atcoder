@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,30 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (w, h) = read_tuple!(usize, usize);
+
+    const M: usize = 1_000_000_007;
+
+    let n = w + h;
+    let fact: Vec<_> = std::iter::once(1)
+        .chain((1..=n).scan(1, |f, i| {
+            *f = *f * i % M;
+            Some(*f)
+        }))
+        .collect();
+    let inv = (2..=n).fold(vec![1, 1], |mut inv, i| {
+        inv.push((M - (M / i) * inv[M % i] % M) % M);
+        inv
+    });
+    let inv_fact: Vec<_> = inv
+        .iter()
+        .scan(1, |f, i| {
+            *f = *f * i % M;
+            Some(*f)
+        })
+        .collect();
+
+    let ans = fact[w + h - 2] * inv_fact[w - 1] % M * inv_fact[h - 1] % M;
+    println!("{}", ans);
+}

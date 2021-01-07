@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,13 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let p: f64 = read();
+
+    // f(x) = x + p * exp(-x * log2/1.5)
+    // f'(x) = 1 - p * log2 / 1.5 * exp(-x * log2/1.5)
+    // f'(x) = 0 <=> x = log(p * log2 / 1.5) * 1.5 / log2
+    let x = f64::max(0.0, (p * 2.0f64.ln() / 1.5).ln() * 1.5 / 2.0f64.ln());
+    let ans = x + p * 2.0f64.powf(-x / 1.5);
+    println!("{}", ans);
+}

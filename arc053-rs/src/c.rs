@@ -148,4 +148,18 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let ab = read_vec(n, || read_tuple!(i64, i64));
+
+    let ans = ab
+        .citer()
+        .sorted_by_key(|&(a, b)| if a - b >= 0 { (1, -b, a) } else { (-1, a, b) })
+        .scan(0, |x, (a, b)| {
+            *x += a - b;
+            Some(*x + b)
+        })
+        .max()
+        .unwrap();
+    println!("{}", ans);
+}
