@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,53 @@ where
 {
 }
 
-fn main() {}
+trait ToString {
+    fn to_string(self: Self) -> String;
+}
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
+    }
+}
+
+fn main() {
+    let s = read::<String>();
+    let t = s
+        .chars()
+        .sorted()
+        .group_by(|&c| c)
+        .into_iter()
+        .map(|(c, it)| (c, it.count()))
+        .collect::<FxHashMap<_, _>>();
+
+    let ans0 = if s.len() <= 3 {
+        s.chars()
+            .permutations(s.len())
+            .map(|ss| ss.citer().to_string().parse::<usize>().unwrap())
+            .any(|x| x % 8 == 0)
+    } else {
+        false
+    };
+    let ans = ans0
+        || iterate(104, |x| x + 8).take_while(|&x| x < 1000).any(|x| {
+            x.to_string()
+                .chars()
+                .sorted()
+                .group_by(|&c| c)
+                .into_iter()
+                .map(|(c, it)| (c, it.count()))
+                .all(|(c, d)| d <= *t.get(&c).unwrap_or(&0))
+        });
+    if ans {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
+}

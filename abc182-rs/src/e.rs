@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,68 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (h, w, n, m) = read_tuple!(usize, usize, usize, usize);
+
+    let ab = read_vec(n, || read_tuple!(usize, usize));
+    let cd = read_vec(m, || read_tuple!(usize, usize));
+
+    let denkyu = ab
+        .citer()
+        .fold(vec![vec![false; w]; h], |mut denkyu, (a, b)| {
+            denkyu[a - 1][b - 1] = true;
+            denkyu
+        });
+    let block = cd
+        .citer()
+        .fold(vec![vec![false; w]; h], |mut block, (c, d)| {
+            block[c - 1][d - 1] = true;
+            block
+        });
+
+    let down = (0..h).fold(vec![vec![false; w]; h], |z, i| {
+        (0..w).fold(z, |mut z, j| {
+            z[i][j] = if i == 0 {
+                denkyu[i][j]
+            } else {
+                denkyu[i][j] || (z[i - 1][j] && !block[i][j])
+            };
+            z
+        })
+    });
+    let up = (0..h).rev().fold(vec![vec![false; w]; h], |z, i| {
+        (0..w).fold(z, |mut z, j| {
+            z[i][j] = if i == h - 1 {
+                denkyu[i][j]
+            } else {
+                denkyu[i][j] || (z[i + 1][j] && !block[i][j])
+            };
+            z
+        })
+    });
+    let right = (0..w).fold(vec![vec![false; w]; h], |z, j| {
+        (0..h).fold(z, |mut z, i| {
+            z[i][j] = if j == 0 {
+                denkyu[i][j]
+            } else {
+                denkyu[i][j] || (z[i][j - 1] && !block[i][j])
+            };
+            z
+        })
+    });
+    let left = (0..w).rev().fold(vec![vec![false; w]; h], |z, j| {
+        (0..h).fold(z, |mut z, i| {
+            z[i][j] = if j == w - 1 {
+                denkyu[i][j]
+            } else {
+                denkyu[i][j] || (z[i][j + 1] && !block[i][j])
+            };
+            z
+        })
+    });
+
+    let ans = iproduct!(0..h, 0..w)
+        .filter(|&(i, j)| down[i][j] || up[i][j] || right[i][j] || left[i][j])
+        .count();
+    println!("{}", ans);
+}

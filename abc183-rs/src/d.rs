@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,18 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, w) = read_tuple!(usize, i64);
+    let stp = read_vec(n, || read_tuple!(usize, usize, i64));
+
+    let ans = stp
+        .citer()
+        .flat_map(|(s, t, p)| it!((s, p), (t, -p)))
+        .sorted()
+        .group_by(|t| t.0)
+        .into_iter()
+        .map(|(t, it)| it.map(|t| t.1).sum::<i64>())
+        .cumsum::<i64>()
+        .all(|x| x <= w);
+    println!("{}", if ans { "Yes" } else { "No" });
+}

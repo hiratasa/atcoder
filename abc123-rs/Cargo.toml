@@ -1,5 +1,5 @@
 [package]
-name = "abc180-rs"
+name = "abc123-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,25 +18,25 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "abc180-a"
+name = "abc123-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "abc180-b"
+name = "abc123-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "abc180-c"
+name = "abc123-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "abc180-d"
+name = "abc123-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "abc180-e"
+name = "abc123-e"
 path = "src/e.rs"
 
 [[bin]]
-name = "abc180-f"
+name = "abc123-f"
 path = "src/f.rs"

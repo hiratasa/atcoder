@@ -149,37 +149,10 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let a = read_vec(5, || read::<usize>());
 
-    let h = read_row::<usize>();
-    let w = read_row::<usize>();
-
-    let h = h.citer().sorted().collect_vec();
-
-    let c = it!(0, 0)
-        .chain(h.citer())
-        .tuple_windows()
-        .scan((0usize, 0usize), |(p0, p1), (hh0, hh1)| {
-            *p0 += hh1 - hh0;
-            swap(p0, p1);
-            Some(*p1)
-        })
-        .collect_vec();
-
-    let ans = w
-        .citer()
-        .map(|ww| {
-            let idx = h
-                .binary_search_by(|hh| hh.cmp(&ww).then(Ordering::Greater))
-                .unwrap_err();
-
-            if idx % 2 == 0 {
-                c[idx] + c[n] - c[idx + 1] + h[idx] - ww
-            } else {
-                c[idx - 1] + c[n] - c[idx] + ww - h[idx - 1]
-            }
-        })
-        .min()
-        .unwrap();
+    let m = a.citer().min().unwrap();
+    let ans = 4 + (n + m - 1) / m;
     println!("{}", ans);
 }
