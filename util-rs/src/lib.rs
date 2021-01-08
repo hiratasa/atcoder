@@ -12,5 +12,6 @@ mod point;
 mod scc;
 mod segment_tree;
 mod stringutil;
+mod suffix_array;
 mod union_find;
 mod z_algorithm;
