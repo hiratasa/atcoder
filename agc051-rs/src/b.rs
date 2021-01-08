@@ -148,4 +148,45 @@ where
 {
 }
 
-fn main() {}
+fn calc(x: i64, y: i64, n: i64) -> Box<dyn Iterator<Item = (i64, i64)>> {
+    if n == 1 {
+        Box::new(it!((x, y), (x + 1, y), (x + 1, y + 1)))
+    } else {
+        // length = 3^n - (3^n - 1) / 2
+        let len_n_1 = 3i64.pow(n as u32 - 1) - (3i64.pow(n as u32 - 1)) / 2;
+        Box::new(
+            calc(x, y, n - 1)
+                .chain(calc(x + 2 * len_n_1 - 1, y, n - 1))
+                .chain(calc(x + 2 * len_n_1 - 1, y + 2 * len_n_1 - 1, n - 1)),
+        )
+    }
+}
+
+fn verify(xy: &Vec<(i64, i64)>) -> (usize, usize, usize, usize) {
+    assert!(0 < xy.len());
+    assert!(xy.len() <= 100000);
+    xy.citer().for_each(|(x, y)| {
+        assert!(0 <= x);
+        assert!(x <= 1000000000);
+        assert!(0 <= y);
+        assert!(y <= 1000000000);
+    });
+    assert!(xy.len() == xy.citer().unique().count());
+
+    let a = xy.citer().map(|(x, y)| y).unique().count();
+    let b = xy.citer().map(|(x, y)| x - y).unique().count();
+    let c = xy.citer().map(|(x, y)| x).unique().count();
+    let d = xy.citer().map(|(x, y)| x + y).unique().count();
+
+    (a, b, c, d)
+}
+
+fn main() {
+    let ans = calc(0, 0, 6).collect_vec();
+
+    // println!("{:?}", verify(&ans));
+    println!("{}", ans.len());
+    for (x, y) in ans {
+        println!("{} {}", x, y);
+    }
+}

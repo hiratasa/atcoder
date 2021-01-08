@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,25 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    const A: &[usize] = &[0, 3, 5, 7];
+
+    let ans = (0..)
+        .map(|x| {
+            iterate(x, |x| x / 4)
+                .take_while(|&x| x > 0)
+                .map(|x| A[x % 4])
+                .collect_vec()
+        })
+        // .inspect(|m| eprintln!("check {:?}", m))
+        .take_while(|m| {
+            let z = m.citer().rev().fold(0usize, |x, y| x * 10 + y);
+            z <= n
+        })
+        .filter(|m| !m.contains(&0) && m.contains(&3) && m.contains(&5) && m.contains(&7))
+        // .inspect(|m| eprintln!("ok {:?}", m))
+        .count();
+    println!("{}", ans);
+}
