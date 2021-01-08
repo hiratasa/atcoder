@@ -4,6 +4,7 @@ mod convex_hull;
 mod dijkstra;
 mod extgcd;
 mod fact;
+mod fft;
 mod graph;
 mod iterext;
 mod modulo;
