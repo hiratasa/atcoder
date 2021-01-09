@@ -116,12 +116,7 @@ fn convolution<T: Copy + num::ToPrimitive + num::FromPrimitive>(p: &Vec<T>, q: &
 
 #[test]
 fn test_fft_complex() {
-    let a = vec![
-        Complex64::new(1.0, 0.0),
-        Complex64::new(3.0, 0.0),
-        Complex64::new(5.0, 0.0),
-        Complex64::new(2.0, 0.0),
-    ];
+    let a: Vec<Complex64> = vec![1.0.into(), 3.0.into(), 5.0.into(), 2.0.into()];
 
     let mut b = a.clone();
     fft_complex(&mut b);
