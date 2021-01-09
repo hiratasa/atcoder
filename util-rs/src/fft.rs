@@ -1,3 +1,6 @@
+use super::modulo::{pow_mod, Mod, Modulus};
+use num::complex::Complex64;
+
 // Calculate fft: g[i] = sum[j=0 to n] f[j] * c^(i * j)
 // - length must be power of two
 // - c^n == 1
@@ -51,8 +54,6 @@ fn fft<
         }
     }
 }
-
-use num::complex::Complex64;
 
 #[allow(dead_code)]
 fn fft_complex(f: &mut Vec<Complex64>) {
@@ -112,8 +113,6 @@ fn convolution<T: Copy + num::ToPrimitive + num::FromPrimitive>(p: &Vec<T>, q: &
         .collect()
 }
 
-use super::modulo::{pow_mod, Mod, Modulus};
-
 // 素数mに対して、原始根を求める
 // g^k != 1 (1<=k<m-1), g^(m-1) = 1
 #[allow(dead_code)]
@@ -151,18 +150,6 @@ fn primitive_root(m: usize) -> usize {
         .find(|&g| primes.iter().all(|&p| pow_mod(g, (m - 1) / p, m) != 1))
         .unwrap()
 }
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct Modulus998244353();
-
-impl Modulus for Modulus998244353 {
-    fn modulus() -> usize {
-        998244353
-    }
-}
-
-#[allow(dead_code)]
-type Mod998244353 = Mod<Modulus998244353>;
 
 #[allow(dead_code)]
 fn fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
@@ -276,7 +263,7 @@ fn test_primitive_root() {
 
 #[test]
 fn test_convolution_mod() {
-    type Mod = Mod998244353;
+    type Mod = super::modulo::Mod998244353;
     let a: Vec<Mod> = vec![Mod::new(100000), Mod::new(200000), Mod::new(300000)];
     let b: Vec<Mod> = vec![Mod::new(400000), Mod::new(500000), Mod::new(600000)];
 

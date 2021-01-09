@@ -26,19 +26,27 @@ pub trait Modulus: Copy + Eq {
 }
 
 #[snippet("modulo")]
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct Modulus1000000007();
+macro_rules! define_static_mod {
+    ($m:expr, $modulus:ident, $mod:ident) => {
+        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        pub struct $modulus();
 
-#[snippet("modulo")]
-impl Modulus for Modulus1000000007 {
-    fn modulus() -> usize {
-        1_000_000_007
-    }
+        impl Modulus for $modulus {
+            fn modulus() -> usize {
+                $m
+            }
+        }
+
+        #[allow(dead_code)]
+        pub type $mod = Mod<$modulus>;
+    };
 }
 
 #[snippet("modulo")]
-#[allow(dead_code)]
-type Mod1000000007 = Mod<Modulus1000000007>;
+define_static_mod!(998244353, Modulus998244353, Mod998244353);
+
+#[snippet("modulo")]
+define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 
 // for dynamic modulus
 use std::sync::atomic::{AtomicUsize, Ordering};
