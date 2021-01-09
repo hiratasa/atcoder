@@ -100,15 +100,13 @@ fn convolution<T: Copy + num::ToPrimitive + num::FromPrimitive>(p: &Vec<T>, q: &
     fft_complex(&mut pf);
     fft_complex(&mut qf);
 
-    let mut r = pf
-        .iter()
-        .zip(qf.iter())
-        .map(|(x, y)| x * y)
-        .collect::<Vec<_>>();
+    for (x, y) in pf.iter_mut().zip(&qf) {
+        *x *= *y;
+    }
 
-    inv_fft_complex(&mut r);
+    inv_fft_complex(&mut pf);
 
-    r.iter()
+    pf.iter()
         .map(|x| T::from_f64(x.re.round()).unwrap())
         .take(n0 + n1 - 1)
         .collect()
