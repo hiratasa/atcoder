@@ -1,5 +1,5 @@
 [package]
-name = "tdpc-rs"
+name = "atc001-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,29 +18,25 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "tdpc-a"
+name = "atc001-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "tdpc-b"
+name = "atc001-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "tdpc-c"
+name = "atc001-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "tdpc-d"
+name = "atc001-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "tdpc-e"
+name = "atc001-e"
 path = "src/e.rs"
 
 [[bin]]
-name = "tdpc-f"
+name = "atc001-f"
 path = "src/f.rs"
-
-[[bin]]
-name = "tdpc-i"
-path = "src/i.rs"

@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,24 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (a, b) = read_tuple!(usize, usize);
+
+    let ax = read_row::<usize>();
+    let bx = read_row::<usize>();
+
+    let dp = iproduct!(0..=a, 0..=b).fold(vec![vec![(0, 0); b + 1]; a + 1], |mut dp, (i, j)| {
+        let x = i
+            .checked_sub(1)
+            .map_or((0, 0), |ii| (dp[ii][j].1 + ax[a - 1 - ii], dp[ii][j].0));
+        let y = j
+            .checked_sub(1)
+            .map_or((0, 0), |jj| (dp[i][jj].1 + bx[b - 1 - jj], dp[i][jj].0));
+
+        dp[i][j] = max(x, y);
+        dp
+    });
+    // eprintln!("{:?}", dp);
+    let ans = dp[a][b].0;
+    println!("{}", ans);
+}
