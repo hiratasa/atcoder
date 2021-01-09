@@ -33,10 +33,10 @@ fn fft<
     let cs = std::iter::successors(Some(c), |cc| Some(*cc * *cc))
         .take(d)
         .collect::<Vec<_>>();
-    for i in (0..d).rev() {
-        let b = n >> (1 + i);
-        let c = 1 << i; // b * c == n/2
-        let z = cs[i];
+    for i in 0..d {
+        let b = 1 << i;
+        let c = n >> (i + 1); // b * c == n/2
+        let z = cs[d - 1 - i];
 
         for j in 0..c {
             let mut p = T::one();
