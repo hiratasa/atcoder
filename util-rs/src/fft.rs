@@ -112,6 +112,115 @@ fn convolution<T: Copy + num::ToPrimitive + num::FromPrimitive>(p: &Vec<T>, q: &
         .collect()
 }
 
+use super::modulo::{pow_mod, Mod, Modulus};
+
+// 素数mに対して、原始根を求める
+// g^k != 1 (1<=k<m-1), g^(m-1) = 1
+#[allow(dead_code)]
+fn primitive_root(m: usize) -> usize {
+    match m {
+        2 => return 1,
+        167772161 => return 3,
+        469762049 => return 3,
+        754974721 => return 11,
+        998244353 => return 3,
+        _ => {}
+    };
+
+    // m - 1の素因数分解
+    let primes = (2..)
+        .try_fold((vec![], m - 1), |(mut primes, x), i| {
+            if i * i > x {
+                if x > 1 {
+                    primes.push(x);
+                }
+                Err(primes)
+            } else if x % i > 0 {
+                Ok((primes, x))
+            } else {
+                primes.push(i);
+                let x = itertools::iterate(x, |x| x / i)
+                    .find(|&x| x % i > 0)
+                    .unwrap();
+                Ok((primes, x))
+            }
+        })
+        .unwrap_err();
+
+    (2..)
+        .find(|&g| primes.iter().all(|&p| pow_mod(g, (m - 1) / p, m) != 1))
+        .unwrap()
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct Modulus998244353();
+
+impl Modulus for Modulus998244353 {
+    fn modulus() -> usize {
+        998244353
+    }
+}
+
+#[allow(dead_code)]
+type Mod998244353 = Mod<Modulus998244353>;
+
+#[allow(dead_code)]
+fn fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
+    let n = f.len();
+    assert!(n.is_power_of_two());
+    assert!((M::modulus() - 1) % n == 0);
+    let g = primitive_root(M::modulus());
+    let c = pow_mod(g, (M::modulus() - 1) / n, M::modulus());
+    fft(f, Mod::new(c));
+}
+
+#[allow(dead_code)]
+fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
+    let n = f.len();
+    assert!(n.is_power_of_two());
+    assert!((M::modulus() - 1) % n == 0);
+    let g = primitive_root(M::modulus());
+    // let c = pow_mod(g, (modulus() - 1) / n, modulus()).inv();
+    let c = pow_mod(g, (M::modulus() - 1) / n * (n - 1), M::modulus());
+    fft(f, Mod::new(c));
+    for x in f {
+        *x /= n;
+    }
+}
+
+#[allow(dead_code)]
+fn convolution_mod<M: Modulus>(p: &Vec<Mod<M>>, q: &Vec<Mod<M>>) -> Vec<Mod<M>> {
+    let n0 = p.len();
+    let n1 = q.len();
+
+    let n = (n0 + n1 - 1).next_power_of_two();
+
+    let mut pf = p
+        .iter()
+        .copied()
+        .chain(std::iter::repeat(Mod::new(0)))
+        .take(n)
+        .collect::<Vec<_>>();
+    let mut qf = q
+        .iter()
+        .copied()
+        .chain(std::iter::repeat(Mod::new(0)))
+        .take(n)
+        .collect::<Vec<_>>();
+
+    fft_mod(&mut pf);
+    fft_mod(&mut qf);
+
+    for (x, y) in pf.iter_mut().zip(&qf) {
+        *x *= *y;
+    }
+
+    inv_fft_mod(&mut pf);
+
+    pf.resize(n0 + n1 - 1, Mod::new(0));
+    pf
+}
+
 #[test]
 fn test_fft_complex() {
     let a: Vec<Complex64> = vec![1.0.into(), 3.0.into(), 5.0.into(), 2.0.into()];
@@ -148,4 +257,37 @@ fn test_convolution() {
     let b: Vec<usize> = vec![2, 9, 4, 10];
 
     assert_eq!(convolution(&a, &b), vec![2, 15, 41, 71, 68, 58, 20]);
+}
+
+#[test]
+fn test_primitive_root() {
+    let a = [
+        // (167772161, 3),
+        // (469762049, 3),
+        // (754974721, 11),
+        // (998244353, 3),
+        (1000000007, 5),
+    ];
+
+    for &(m, g) in &a {
+        assert_eq!(primitive_root(m), g);
+    }
+}
+
+#[test]
+fn test_convolution_mod() {
+    type Mod = Mod998244353;
+    let a: Vec<Mod> = vec![Mod::new(100000), Mod::new(200000), Mod::new(300000)];
+    let b: Vec<Mod> = vec![Mod::new(400000), Mod::new(500000), Mod::new(600000)];
+
+    assert_eq!(
+        convolution_mod(&a, &b),
+        vec![
+            Mod::new(40000000000),
+            Mod::new(130000000000),
+            Mod::new(280000000000),
+            Mod::new(270000000000),
+            Mod::new(180000000000),
+        ]
+    );
 }
