@@ -3,54 +3,84 @@ use cargo_snippet::snippet;
 #[snippet("modulo")]
 use num::{One, Zero};
 
-// for dynamic modulus
-// use std::sync::atomic::{AtomicUsize, Ordering};
-
-// static modulus_impl: AtomicUsize = AtomicUsize::new(0usize);
-
-// fn update_modulus(m: usize) {
-//     modulus_impl.store(m, Ordering::Relaxed);
-// }
-
-// fn modulus() -> usize {
-//     modulus_impl.load(Ordering::Relaxed)
-// }
-
 #[snippet("modulo")]
-fn modulus() -> usize {
-    1_000_000_007
+#[allow(dead_code)]
+pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
+    let mut y = 1;
+
+    while p > 0 {
+        if p & 1 > 0 {
+            y = y * x % m;
+        }
+
+        x = x * x % m;
+        p >>= 1;
+    }
+
+    y
 }
 
 #[snippet("modulo")]
-#[derive(Clone, Copy, Debug)]
-struct Mod(usize);
+pub trait Modulus: Copy + Eq {
+    fn modulus() -> usize;
+}
+
+#[snippet("modulo")]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct Modulus1000000007();
+
+#[snippet("modulo")]
+impl Modulus for Modulus1000000007 {
+    fn modulus() -> usize {
+        1_000_000_007
+    }
+}
 
 #[snippet("modulo")]
 #[allow(dead_code)]
-impl Mod {
-    fn new(n: usize) -> Self {
-        Mod(n % modulus())
+type Mod1000000007 = Mod<Modulus1000000007>;
+
+// for dynamic modulus
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+static DYNAMIC_MODULUS: AtomicUsize = AtomicUsize::new(0usize);
+
+#[allow(dead_code)]
+fn update_modulus(m: usize) {
+    DYNAMIC_MODULUS.store(m, Ordering::Relaxed);
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct DynamicModulus();
+
+impl Modulus for DynamicModulus {
+    fn modulus() -> usize {
+        DYNAMIC_MODULUS.load(Ordering::Relaxed)
+    }
+}
+
+#[snippet("modulo")]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+
+#[snippet("modulo")]
+#[allow(dead_code)]
+impl<M: Modulus> Mod<M> {
+    pub fn modulus() -> usize {
+        M::modulus()
     }
 
-    fn pow(self, p: usize) -> Self {
-        if p == 0 {
-            Mod::new(1)
-        } else if p == 1 {
-            self
-        } else {
-            let r = self.pow(p / 2);
-
-            if p % 2 == 0 {
-                r * r
-            } else {
-                r * r * self
-            }
-        }
+    pub fn new(n: usize) -> Self {
+        Mod(n % M::modulus(), std::marker::PhantomData)
     }
 
-    fn inv(self) -> Self {
+    pub fn pow(self, p: usize) -> Self {
+        Mod::new(pow_mod(self.0, p, M::modulus()))
+    }
+
+    pub fn inv(self) -> Self {
         let (_zero, g, _u, v) = std::iter::successors(
-            Some((self.0 as i64, modulus() as i64, 1, 0)),
+            Some((self.0 as i64, M::modulus() as i64, 1, 0)),
             |&(a, b, u, v)| {
                 if a == 0 {
                     None
@@ -62,31 +92,38 @@ impl Mod {
         .last()
         .unwrap();
 
-        assert_eq!(g, 1, "gcd({}, {}) must be 1 but {}.", self.0, modulus(), g);
+        assert_eq!(
+            g,
+            1,
+            "gcd({}, {}) must be 1 but {}.",
+            self.0,
+            M::modulus(),
+            g
+        );
         // |v| < modulus() が保障されている
-        Mod::new((v + modulus() as i64) as usize)
+        Mod::new((v + M::modulus() as i64) as usize)
     }
 }
 
 #[snippet("modulo")]
-impl std::fmt::Display for Mod {
+impl<M> std::fmt::Display for Mod<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
 #[snippet("modulo")]
-impl<T> std::convert::From<T> for Mod
+impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
     usize: std::convert::From<T>,
 {
-    fn from(v: T) -> Mod {
+    fn from(v: T) -> Self {
         Mod::new(usize::from(v))
     }
 }
 
 #[snippet("modulo")]
-impl std::str::FromStr for Mod {
+impl<M: Modulus> std::str::FromStr for Mod<M> {
     type Err = <usize as std::str::FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -95,17 +132,17 @@ impl std::str::FromStr for Mod {
 }
 
 #[snippet("modulo")]
-impl std::ops::Neg for Mod {
+impl<M: Modulus> std::ops::Neg for Mod<M> {
     type Output = Self;
     fn neg(self) -> Self {
-        Mod::new(modulus() - self.0)
+        Mod::new(M::modulus() - self.0)
     }
 }
 
 #[snippet("modulo")]
-impl<T> std::ops::Add<T> for Mod
+impl<T, M: Modulus> std::ops::Add<T> for Mod<M>
 where
-    T: std::convert::Into<Mod>,
+    T: std::convert::Into<Mod<M>>,
 {
     type Output = Self;
     fn add(self, rhs: T) -> Self {
@@ -114,9 +151,9 @@ where
 }
 
 #[snippet("modulo")]
-impl<T> std::ops::AddAssign<T> for Mod
+impl<T, M: Modulus> std::ops::AddAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod>,
+    T: std::convert::Into<Mod<M>>,
 {
     fn add_assign(&mut self, rhs: T) {
         *self = *self + rhs;
@@ -124,20 +161,20 @@ where
 }
 
 #[snippet("modulo")]
-impl<T> std::ops::Sub<T> for Mod
+impl<T, M: Modulus> std::ops::Sub<T> for Mod<M>
 where
-    T: std::convert::Into<Mod>,
+    T: std::convert::Into<Mod<M>>,
 {
     type Output = Self;
     fn sub(self, rhs: T) -> Self {
-        Mod::new(self.0 + modulus() - rhs.into().0)
+        Mod::new(self.0 + M::modulus() - rhs.into().0)
     }
 }
 
 #[snippet("modulo")]
-impl<T> std::ops::SubAssign<T> for Mod
+impl<T, M: Modulus> std::ops::SubAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod>,
+    T: std::convert::Into<Mod<M>>,
 {
     fn sub_assign(&mut self, rhs: T) {
         *self = *self - rhs;
@@ -145,9 +182,9 @@ where
 }
 
 #[snippet("modulo")]
-impl<T> std::ops::Mul<T> for Mod
+impl<T, M: Modulus> std::ops::Mul<T> for Mod<M>
 where
-    T: std::convert::Into<Mod>,
+    T: std::convert::Into<Mod<M>>,
 {
     type Output = Self;
     fn mul(self, rhs: T) -> Self {
@@ -156,9 +193,9 @@ where
 }
 
 #[snippet("modulo")]
-impl<T> std::ops::MulAssign<T> for Mod
+impl<T, M: Modulus> std::ops::MulAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod>,
+    T: std::convert::Into<Mod<M>>,
 {
     fn mul_assign(&mut self, rhs: T) {
         *self = *self * rhs;
@@ -166,9 +203,9 @@ where
 }
 
 #[snippet("modulo")]
-impl<T> std::ops::Div<T> for Mod
+impl<T, M: Modulus> std::ops::Div<T> for Mod<M>
 where
-    T: std::convert::Into<Mod>,
+    T: std::convert::Into<Mod<M>>,
 {
     type Output = Self;
     fn div(self, rhs: T) -> Self {
@@ -181,9 +218,9 @@ where
 }
 
 #[snippet("modulo")]
-impl<T> std::ops::DivAssign<T> for Mod
+impl<T, M: Modulus> std::ops::DivAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod>,
+    T: std::convert::Into<Mod<M>>,
 {
     fn div_assign(&mut self, rhs: T) {
         *self = *self / rhs;
@@ -191,7 +228,7 @@ where
 }
 
 #[snippet("modulo")]
-impl std::iter::Product for Mod {
+impl<M: Modulus> std::iter::Product for Mod<M> {
     fn product<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -201,7 +238,7 @@ impl std::iter::Product for Mod {
 }
 
 #[snippet("modulo")]
-impl std::iter::Sum for Mod {
+impl<M: Modulus> std::iter::Sum for Mod<M> {
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -211,7 +248,7 @@ impl std::iter::Sum for Mod {
 }
 
 #[snippet("modulo")]
-impl num::Zero for Mod {
+impl<M: Modulus> num::Zero for Mod<M> {
     fn zero() -> Self {
         Mod::new(0)
     }
@@ -222,7 +259,7 @@ impl num::Zero for Mod {
 }
 
 #[snippet("modulo")]
-impl num::One for Mod {
+impl<M: Modulus> num::One for Mod<M> {
     fn one() -> Self {
         Mod::new(1)
     }
@@ -234,7 +271,7 @@ impl num::One for Mod {
 
 #[snippet("modulo_fact")]
 #[allow(dead_code)]
-fn generate_fact(n: usize) -> (Vec<Mod>, Vec<Mod>, Vec<Mod>) {
+fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
     let fact: Vec<_> = std::iter::once(Mod::one())
         .chain((1..=n).scan(Mod::one(), |f, i| {
             *f = *f * i;
@@ -242,7 +279,7 @@ fn generate_fact(n: usize) -> (Vec<Mod>, Vec<Mod>, Vec<Mod>) {
         }))
         .collect();
     let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
-        inv.push(-Mod::new(modulus() / i) * inv[modulus() % i]);
+        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
         inv
     });
     let inv_fact: Vec<_> = inv
