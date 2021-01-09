@@ -78,17 +78,23 @@ fn inv_fft_complex(f: &mut Vec<Complex64>) {
 
 #[allow(dead_code)]
 fn convolution<T: Copy + num::ToPrimitive + num::FromPrimitive>(p: &Vec<T>, q: &Vec<T>) -> Vec<T> {
-    assert!(p.len() == q.len());
-    // assert!(posmax(p) + poxmax(q) < p.len())
+    let n0 = p.len();
+    let n1 = q.len();
+
+    let n = (n0 + n1 - 1).next_power_of_two();
 
     // T => f64 => Complex64
     let mut pf = p
         .iter()
         .map(|x| x.to_f64().unwrap().into())
+        .chain(std::iter::repeat(Complex64::new(0.0, 0.0)))
+        .take(n)
         .collect::<Vec<_>>();
     let mut qf = q
         .iter()
         .map(|x| x.to_f64().unwrap().into())
+        .chain(std::iter::repeat(Complex64::new(0.0, 0.0)))
+        .take(n)
         .collect::<Vec<_>>();
 
     fft_complex(&mut pf);
@@ -104,6 +110,7 @@ fn convolution<T: Copy + num::ToPrimitive + num::FromPrimitive>(p: &Vec<T>, q: &
 
     r.iter()
         .map(|x| T::from_f64(x.re.round()).unwrap())
+        .take(n0 + n1 - 1)
         .collect()
 }
 
@@ -144,8 +151,8 @@ fn test_fft_complex() {
 
 #[test]
 fn test_convolution() {
-    let a: Vec<usize> = vec![1, 3, 5, 2, 0, 0, 0, 0];
-    let b: Vec<usize> = vec![2, 9, 4, 10, 0, 0, 0, 0];
+    let a: Vec<usize> = vec![1, 3, 5, 2];
+    let b: Vec<usize> = vec![2, 9, 4, 10];
 
-    assert_eq!(convolution(&a, &b), vec![2, 15, 41, 71, 68, 58, 20, 0]);
+    assert_eq!(convolution(&a, &b), vec![2, 15, 41, 71, 68, 58, 20]);
 }
