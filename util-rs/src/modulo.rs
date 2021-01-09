@@ -234,7 +234,7 @@ impl num::One for Mod {
 
 #[snippet("modulo_fact")]
 #[allow(dead_code)]
-fn generate_fact(n: usize) {
+fn generate_fact(n: usize) -> (Vec<Mod>, Vec<Mod>, Vec<Mod>) {
     let fact: Vec<_> = std::iter::once(Mod::one())
         .chain((1..=n).scan(Mod::one(), |f, i| {
             *f = *f * i;
@@ -253,4 +253,5 @@ fn generate_fact(n: usize) {
             Some(*f)
         })
         .collect();
+    (fact, inv, inv_fact)
 }
