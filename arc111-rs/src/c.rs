@@ -149,24 +149,76 @@ where
 }
 
 fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
+    let n: usize = read();
+    let a = read_row::<i64>();
+    let b = read_row::<i64>();
+    let p = read_row::<usize>()
+        .into_iter()
+        .map(|pp| pp - 1)
+        .collect_vec();
+    let ok = (0..n).filter(|&i| i != p[i]).all(|i| a[i] > b[p[i]]);
+    if !ok {
+        println!("-1");
+        return;
+    }
 
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
-            .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
-                    .sum::<f64>()
-            })
-            .collect_vec()
-    });
-    for a in ans {
-        println!("{}", a);
+    let cycles = (0..n)
+        .fold((vec![], vec![false; n]), |(cycles, mut used), i| {
+            if used[i] {
+                (cycles, used)
+            } else {
+                let cycle = iterate(i, |&j| p[j])
+                    .skip(1)
+                    .take_while(|&j| j != i)
+                    .fold(vec![i], |cycle, j| pushed!(cycle, j));
+                for &j in &cycle {
+                    used[j] = true;
+                }
+
+                (pushed!(cycles, cycle), used)
+            }
+        })
+        .0;
+
+    let ans = cycles
+        .iter()
+        .filter(|cycle| cycle.len() > 1)
+        .map(|cycle| {
+            let m = cycle.len();
+            let mut idxs = (0..cycle.len()).collect::<BTreeSet<_>>();
+
+            let mut q = (0..m)
+                .map(|i| (a[cycle[i]] - a[cycle[(i + 1) % m]], i, (i + 1) % m))
+                .collect::<BinaryHeap<_>>();
+
+            let mut ops = vec![];
+
+            while let Some((a_delta, idx0, idx1)) = q.pop() {
+                if !idxs.contains(&idx0) || !idxs.contains(&idx1) {
+                    continue;
+                }
+
+                assert!(a_delta >= 0);
+
+                ops.push((cycle[idx0], cycle[idx1]));
+                idxs.remove(&idx1);
+
+                if idxs.len() >= 2 {
+                    if let Some(&next_idx) =
+                        idxs.range(idx0 + 1..).next().or_else(|| idxs.iter().next())
+                    {
+                        q.push((a[cycle[idx0]] - a[cycle[next_idx]], idx0, next_idx));
+                    }
+                }
+            }
+
+            ops
+        })
+        .flatten()
+        .collect_vec();
+
+    println!("{}", ans.len());
+    for (x, y) in ans {
+        println!("{} {}", x + 1, y + 1);
     }
 }

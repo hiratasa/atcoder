@@ -148,25 +148,55 @@ where
 {
 }
 
-fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
-
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
-            .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
-                    .sum::<f64>()
-            })
-            .collect_vec()
-    });
-    for a in ans {
-        println!("{}", a);
+struct UnionFind {
+    g: Vec<usize>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        UnionFind {
+            g: (0..n).collect(),
+        }
     }
+    fn root(&mut self, v: usize) -> usize {
+        if self.g[v] != v {
+            self.g[v] = self.root(self.g[v]);
+        }
+        self.g[v]
+    }
+    fn unite(&mut self, v: usize, u: usize) {
+        let rv = self.root(v);
+        let ru = self.root(u);
+        self.g[rv] = ru;
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+}
+
+fn main() {
+    let n: usize = read();
+
+    let ab = read_vec(n, || read_tuple!(usize, usize));
+
+    let mut uf = ab.citer().fold(UnionFind::new(400001), |mut uf, (a, b)| {
+        uf.unite(a, b);
+        uf
+    });
+
+    let num_v = (1..=400000).fold(FxHashMap::default(), |mut map, i| {
+        *map.entry(uf.root(i)).or_insert(0) += 1;
+        map
+    });
+
+    let num_e = ab.citer().fold(FxHashMap::default(), |mut map, (a, b)| {
+        *map.entry(uf.root(a)).or_insert(0) += 1;
+        map
+    });
+
+    let ans = num_e
+        .iter()
+        .map(|(a, m)| min(*num_v.get(a).unwrap(), *m))
+        .sum::<usize>();
+    println!("{}", ans);
 }

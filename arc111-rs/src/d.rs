@@ -148,25 +148,61 @@ where
 {
 }
 
-fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
+fn dfs(
+    edges: &Vec<Vec<(usize, usize)>>,
+    dirs: &mut Vec<bool>,
+    visited: &mut Vec<bool>,
+    v: usize,
+    c: &Vec<usize>,
+) {
+    if visited[v] {
+        return;
+    }
+    visited[v] = true;
 
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
-            .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
-                    .sum::<f64>()
-            })
-            .collect_vec()
-    });
-    for a in ans {
-        println!("{}", a);
+    let m = dirs.len();
+
+    for &(u, i_edge) in &edges[v] {
+        if c[v] != c[u] {
+            continue;
+        }
+
+        dirs[i_edge % m] = (i_edge / m) != 0;
+
+        dfs(edges, dirs, visited, u, c);
+    }
+}
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+
+    let ab = read_vec(m, || read_tuple!(usize, usize));
+
+    let c = read_row::<usize>();
+
+    let edges = ab
+        .citer()
+        .enumerate()
+        .fold(vec![vec![]; n], |mut edges, (i, (a, b))| {
+            edges[a - 1].push((b - 1, i));
+            edges[b - 1].push((a - 1, m + i));
+            edges
+        });
+    let mut dirs = vec![false; m];
+    let mut visited = vec![false; n];
+    for i in 0..n {
+        dfs(&edges, &mut dirs, &mut visited, i, &c);
+    }
+
+    for i in 0..m {
+        if c[ab[i].0 - 1] > c[ab[i].1 - 1] {
+            println!("->");
+        } else if c[ab[i].0 - 1] < c[ab[i].1 - 1] {
+            println!("<-");
+        } else if dirs[i] {
+            println!("<-");
+        } else {
+            println!("->");
+        }
     }
 }

@@ -149,24 +149,29 @@ where
 }
 
 fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
+    let (n, m) = read_tuple!(usize, usize);
 
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
-            .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
-                    .sum::<f64>()
-            })
-            .collect_vec()
+    let a = read_row::<i64>();
+
+    let xy = read_vec(m, || read_tuple!(usize, usize));
+
+    let parents = xy.citer().fold(vec![vec![]; n], |mut parents, (x, y)| {
+        parents[y - 1].push(x - 1);
+        parents
     });
-    for a in ans {
-        println!("{}", a);
-    }
+
+    let ans = (0..n)
+        .scan(vec![], |dp, i| {
+            if let Some(m) = parents[i].citer().map(|p| dp[p]).min() {
+                dp.push(min(m, a[i]));
+                Some(Some(a[i] - m))
+            } else {
+                dp.push(a[i]);
+                Some(None)
+            }
+        })
+        .flatten()
+        .max()
+        .unwrap();
+    println!("{}", ans);
 }

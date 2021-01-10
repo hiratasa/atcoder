@@ -148,25 +148,81 @@ where
 {
 }
 
-fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
-
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
-            .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
-                    .sum::<f64>()
-            })
-            .collect_vec()
-    });
-    for a in ans {
-        println!("{}", a);
+trait ToString {
+    fn to_string(self: Self) -> String;
+}
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
     }
+}
+
+fn main() {
+    let s = read_str();
+    let k: usize = read();
+
+    let aoffset = 'a' as usize;
+    let poss = s
+        .citer()
+        .enumerate()
+        .fold(vec![BTreeSet::new(); 26], |mut poss, (i, c)| {
+            poss[c as usize - aoffset].insert(i);
+            poss
+        });
+
+    let n = s.len();
+    let mut init = vec![0usize; n + 1];
+    init[n] = 1;
+    let dp = s.citer().enumerate().rev().fold(init, |mut dp, (i, c)| {
+        if let Some(pos) = poss[c as usize - aoffset].range(i + 1..).next() {
+            dp[i] = dp[i + 1] - dp[pos + 1];
+        } else {
+            dp[i] = dp[i + 1];
+        }
+        // cumsum
+        dp[i] = dp[i].saturating_add(dp[i + 1]);
+
+        dp
+    });
+    // eprintln!("{:?}", dp);
+    // dp[0] includes empty string
+    if dp[0] < k + 1 {
+        println!("Eel");
+        return;
+    }
+
+    let ans = successors(Some((0usize, k + 1, '#')), |&(pos, kk, _prevc)| {
+        if kk == 1 {
+            return None;
+        }
+        let kk = kk - 1;
+
+        let (c, pos1, num, acc) = (b'a'..=b'z')
+            .map(|c| c as char)
+            .map(|c| {
+                poss[c as usize - aoffset]
+                    .range(pos + 1..)
+                    .next()
+                    .map_or((c, n, 0), |&pos1| (c, pos1, dp[pos1 + 1]))
+            })
+            .scan(0usize, |acc, (c, pos1, num)| {
+                Some((c, pos1, num, replace(acc, acc.saturating_add(num))))
+            })
+            .take_while(|&t| t.3 < kk)
+            .last()
+            .unwrap();
+        assert!(kk <= acc.saturating_add(num));
+        Some((pos1, kk - acc, c))
+    })
+    .skip(1)
+    .map(|t| t.2)
+    .to_string();
+    println!("{}", ans);
 }

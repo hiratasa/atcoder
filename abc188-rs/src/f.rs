@@ -149,24 +149,44 @@ where
 }
 
 fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
+    let (x, y) = read_tuple!(i64, i64);
 
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
-            .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
-                    .sum::<f64>()
-            })
-            .collect_vec()
-    });
-    for a in ans {
-        println!("{}", a);
+    if x >= y {
+        println!("{}", x - y);
+        return;
     }
+
+    let mut costs = BTreeMap::new();
+    let mut ans = std::i64::MAX;
+
+    costs.insert(y, 0);
+    while let Some((&z, &c)) = costs.iter().next_back() {
+        // eprintln!("{} {}", z, c);
+        ans = min(ans, c + (z - x).abs());
+        costs.remove(&z);
+
+        if z % 2 == 0 {
+            costs.insert(
+                z / 2,
+                min(costs.get(&(z / 2)).copied().unwrap_or(std::i64::MAX), c + 1),
+            );
+        } else if z > 1 {
+            costs.insert(
+                (z + 1) / 2,
+                min(
+                    costs.get(&((z + 1) / 2)).copied().unwrap_or(std::i64::MAX),
+                    c + 2,
+                ),
+            );
+            costs.insert(
+                (z - 1) / 2,
+                min(
+                    costs.get(&((z - 1) / 2)).copied().unwrap_or(std::i64::MAX),
+                    c + 2,
+                ),
+            );
+        }
+    }
+
+    println!("{}", ans);
 }

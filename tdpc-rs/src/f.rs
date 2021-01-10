@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -148,4 +149,19 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+
+    const M: usize = 1_000_000_007;
+    let dp = (1..n).fold((vec![0, 1], vec![0, 1]), |(mut dp0, mut dp1), i| {
+        let r0 = dp1[i - 1];
+        dp0.push((r0 + dp0[i]) % M);
+        let r1 = (dp0[i + 1] + M - dp0[i.saturating_sub(k - 2)]) % M;
+        dp1.push((r1 + dp1[i]) % M);
+
+        (dp0, dp1)
+    });
+    // eprintln!("{:?}", dp);
+    let ans = ((dp.1)[n] + M - (dp.1)[n - 1]) % M;
+    println!("{}", ans);
+}

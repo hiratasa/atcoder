@@ -149,24 +149,24 @@ where
 }
 
 fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
+    let (n, c) = read_tuple!(usize, i64);
 
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
-            .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
-                    .sum::<f64>()
-            })
-            .collect_vec()
-    });
-    for a in ans {
-        println!("{}", a);
-    }
+    let abc = read_vec(n, || read_tuple!(i64, i64, i64));
+
+    let ans = abc
+        .citer()
+        .flat_map(|(a, b, cost)| it!((a, cost), (b + 1, -cost)))
+        .sorted()
+        .group_by(|&(day, _)| day)
+        .into_iter()
+        .map(|(day, it)| (day, it.map(|t| t.1).sum::<i64>()))
+        .scan((0i64, 0i64), |(acc, prev_day), (day, inc)| {
+            let cost = min(*acc, c) * (day - *prev_day);
+            *acc += inc;
+            *prev_day = day;
+
+            Some(cost)
+        })
+        .sum::<i64>();
+    println!("{}", ans);
 }

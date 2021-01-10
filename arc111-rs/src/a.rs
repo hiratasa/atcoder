@@ -148,25 +148,27 @@ where
 {
 }
 
-fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
+fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
+    let mut y = 1;
 
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
-            .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
-                    .sum::<f64>()
-            })
-            .collect_vec()
-    });
-    for a in ans {
-        println!("{}", a);
+    while p > 0 {
+        if p & 1 > 0 {
+            y = y * x % m;
+        }
+
+        x = x * x % m;
+        p >>= 1;
     }
+
+    y
+}
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let m2 = m * m;
+
+    let r2 = pow_mod(10, n, m2);
+
+    let ans = r2 / m;
+    println!("{}", ans);
 }

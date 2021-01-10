@@ -148,4 +148,39 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let d: usize = read();
+    let n = read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect_vec();
+
+    const M: usize = 1_000_000_007;
+
+    let (dp, r) = n.citer().fold((vec![0; d], 0usize), |(prev, r), c| {
+        let next0 =
+            iproduct!(prev.citer().enumerate(), 0..10).fold(vec![0; d], |mut a, ((q, m), cc)| {
+                a[(q + cc) % d] += m;
+                a[(q + cc) % d] %= M;
+                a
+            });
+
+        let next = (0..c).fold(next0, |mut a, cc| {
+            a[(r + cc) % d] += 1;
+            a[(r + cc) % d] %= M;
+            a
+        });
+
+        // eprintln!("{:?}, {}, {}", next, r, (r + c) % 3);
+
+        (next, (r + c) % d)
+    });
+
+    let ans = if r == 0 {
+        dp[0] + 1 - /* zero */ 1
+    } else {
+        dp[0] - 1 /* zero */
+    };
+    let ans = (ans + M) % M;
+    println!("{}", ans);
+}

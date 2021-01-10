@@ -149,24 +149,40 @@ where
 }
 
 fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
+    let n: usize = read();
+    let a = read_row::<i64>();
+    let b = read_row::<i64>();
+    let p = read_row::<usize>()
+        .into_iter()
+        .map(|pp| pp - 1)
+        .collect_vec();
+    let ok = (0..n).filter(|&i| i != p[i]).all(|i| a[i] > b[p[i]]);
+    if !ok {
+        println!("-1");
+        return;
+    }
 
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
-            .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
-                    .sum::<f64>()
-            })
-            .collect_vec()
+    let q = p.citer().enumerate().fold(vec![0; n], |mut q, (i, pp)| {
+        q[pp] = i;
+        q
     });
-    for a in ans {
-        println!("{}", a);
+
+    let ans = (0..n)
+        .sorted_by_key(|&i| a[i])
+        .scan((p, q), |(p, q), i| {
+            if q[i] == i {
+                Some(None)
+            } else {
+                let j = q[i];
+                q.swap(p[i], p[j]);
+                p.swap(i, j);
+                Some(Some((i, j)))
+            }
+        })
+        .flatten()
+        .collect_vec();
+    println!("{}", ans.len());
+    for (x, y) in ans {
+        println!("{} {}", x + 1, y + 1);
     }
 }
