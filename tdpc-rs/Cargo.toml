@@ -52,3 +52,39 @@ path = "src/g.rs"
 [[bin]]
 name = "tdpc-h"
 path = "src/h.rs"
+
+[[bin]]
+name = "tdpc-j"
+path = "src/j.rs"
+
+[[bin]]
+name = "tdpc-k"
+path = "src/k.rs"
+
+[[bin]]
+name = "tdpc-k2"
+path = "src/k2.rs"
+
+[[bin]]
+name = "tdpc-l"
+path = "src/l.rs"
+
+[[bin]]
+name = "tdpc-m"
+path = "src/m.rs"
+
+[[bin]]
+name = "tdpc-n"
+path = "src/n.rs"
+
+[[bin]]
+name = "tdpc-o"
+path = "src/o.rs"
+
+[[bin]]
+name = "tdpc-p"
+path = "src/p.rs"
+
+[[bin]]
+name = "tdpc-r"
+path = "src/r.rs"
