@@ -1,7 +1,6 @@
 mod binary_search;
 mod bit;
 mod convex_hull;
-mod dijkstra;
 mod extgcd;
 mod fact;
 mod fft;
@@ -10,7 +9,6 @@ mod iterext;
 mod modulo;
 mod multiset;
 mod point;
-mod scc;
 mod segment_tree;
 mod stringutil;
 mod suffix_array;
