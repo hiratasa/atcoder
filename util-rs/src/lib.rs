@@ -4,6 +4,7 @@ mod convex_hull;
 mod extgcd;
 mod fact;
 mod fft;
+mod floor_sum;
 mod graph;
 mod iterext;
 mod max_flow;
