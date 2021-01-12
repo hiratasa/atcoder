@@ -6,6 +6,7 @@ mod fact;
 mod fft;
 mod graph;
 mod iterext;
+mod max_flow;
 mod modulo;
 mod multiset;
 mod point;
