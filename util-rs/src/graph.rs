@@ -1,141 +1,172 @@
 use cargo_snippet::snippet;
 
-#[snippet("graph")]
-#[allow(dead_code)]
-#[derive(Clone, Copy, Debug)]
-struct Edge {
-    from: usize,
-    to: usize,
-    weight: usize,
-}
+#[allow(unused_imports)]
+pub use detail::{Edge, Graph, UnweightedEdge, UnweightedGraph, WeightedEdge, WeightedGraph};
 
 #[snippet("graph")]
-#[allow(dead_code)]
-impl Edge {
-    fn new(from: usize, to: usize, weight: usize) -> Self {
-        Edge { from, to, weight }
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
     }
 
-    fn rev(&self) -> Edge {
-        Edge {
-            from: self.to,
-            to: self.from,
-            ..*self
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
         }
-    }
-}
 
-#[snippet("graph")]
-// unweighted
-impl std::convert::From<(usize, usize)> for Edge {
-    fn from(t: (usize, usize)) -> Self {
-        Edge::new(t.0, t.1, 1)
-    }
-}
-#[snippet("graph")]
-impl std::convert::From<&(usize, usize)> for Edge {
-    fn from(t: &(usize, usize)) -> Self {
-        Edge::from(*t)
-    }
-}
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
 
-#[snippet("graph")]
-// weighted
-impl std::convert::From<(usize, usize, usize)> for Edge {
-    fn from(t: (usize, usize, usize)) -> Self {
-        Edge::new(t.0, t.1, t.2)
-    }
-}
-#[snippet("graph")]
-impl std::convert::From<&(usize, usize, usize)> for Edge {
-    fn from(t: &(usize, usize, usize)) -> Self {
-        Edge::from(*t)
-    }
-}
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
 
-#[snippet("graph")]
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-struct Graph {
-    out_edges: Vec<Vec<Edge>>,
-    in_edges: Vec<Vec<Edge>>,
-}
-
-#[snippet("graph")]
-#[allow(dead_code)]
-impl Graph {
-    fn new(n: usize) -> Graph {
-        Graph {
-            out_edges: vec![vec![]; n],
-            in_edges: vec![vec![]; n],
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
         }
     }
 
-    fn from_edges_directed<T, I>(n: usize, edges: I) -> Graph
-    where
-        I: IntoIterator<Item = T>,
-        T: std::convert::Into<Edge>,
-    {
-        let mut g = Graph::new(n);
-        for edge in edges {
-            let e = edge.into();
-            g.add_edge(e);
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
         }
-        g
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
     }
 
-    // with offset 1
-    fn from_edges1_directed<T, I>(n: usize, edges: I) -> Graph
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
     where
-        I: IntoIterator<Item = T>,
-        T: std::convert::Into<Edge>,
+        W: Copy,
     {
-        Graph::from_edges_directed(
-            n,
-            edges
-                .into_iter()
-                .map(|e| e.into())
-                .map(|e| Edge::new(e.from - 1, e.to - 1, e.weight)),
-        )
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
     }
 
-    fn from_edges_undirected<T, I>(n: usize, edges: I) -> Graph
-    where
-        I: IntoIterator<Item = T>,
-        T: std::convert::Into<Edge>,
-    {
-        Graph::from_edges_directed(
-            n,
-            edges
-                .into_iter()
-                .map(|e| e.into())
-                .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
-        )
-    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
 
-    // with offset 1
-    fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Graph
-    where
-        I: IntoIterator<Item = T>,
-        T: std::convert::Into<Edge>,
-    {
-        Graph::from_edges1_directed(
-            n,
-            edges
-                .into_iter()
-                .map(|e| e.into())
-                .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
-        )
-    }
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
 
-    fn size(&self) -> usize {
-        self.out_edges.len()
-    }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
 
-    fn add_edge<E: std::convert::Into<Edge>>(&mut self, e: E) {
-        let edge = e.into();
-        self.out_edges[edge.from].push(edge);
-        self.in_edges[edge.to].push(edge);
+        // with offset 1
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+
+        // with offset 1
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+
+        // pub fn add_edge<T: std::convert::Into<Edge<W>>>(&mut self, e: T) {
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            // let edge = e.into();
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
     }
 }
 
@@ -196,7 +227,7 @@ mod tree_dfs {
 
 #[allow(dead_code)]
 #[snippet("dijkstra")]
-fn dijkstra(g: &Graph, src: usize) -> Vec<usize> {
+fn dijkstra(g: &WeightedGraph, src: usize) -> Vec<usize> {
     let n = g.size();
 
     let mut q = std::collections::BinaryHeap::new();
@@ -211,7 +242,7 @@ fn dijkstra(g: &Graph, src: usize) -> Vec<usize> {
         }
 
         for &edge in &g.out_edges[v] {
-            let next_cost = cost + edge.weight;
+            let next_cost = cost + edge.label;
 
             if next_cost < costs[edge.to] {
                 q.push(std::cmp::Reverse((next_cost, edge.to)));
@@ -225,7 +256,7 @@ fn dijkstra(g: &Graph, src: usize) -> Vec<usize> {
 
 #[allow(dead_code)]
 #[snippet("dijkstra1")]
-fn dijkstra1(g: &Graph, src: usize, dst: usize) -> Option<usize> {
+fn dijkstra1(g: &WeightedGraph, src: usize, dst: usize) -> Option<usize> {
     let n = g.size();
 
     let mut q = std::collections::BinaryHeap::new();
@@ -244,7 +275,7 @@ fn dijkstra1(g: &Graph, src: usize, dst: usize) -> Option<usize> {
         }
 
         for &edge in &g.out_edges[v] {
-            let next_cost = cost + edge.weight;
+            let next_cost = cost + edge.label;
 
             if next_cost < costs[edge.to] {
                 q.push(std::cmp::Reverse((next_cost, edge.to)));
