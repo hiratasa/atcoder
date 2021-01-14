@@ -148,4 +148,47 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let q: usize = read();
+
+    let mut q0 = BinaryHeap::new();
+    let mut q1 = BinaryHeap::new();
+    let mut a0sum = 0;
+    let mut a1sum = 0;
+    let mut bsum = 0;
+    for _ in 0..q {
+        let query = read::<String>();
+        let query = query.split_whitespace().collect_vec();
+
+        if query[0] == "1" {
+            let a = query[1].parse::<i64>().unwrap();
+            let b = query[2].parse::<i64>().unwrap();
+
+            if a <= q0.peek().copied().unwrap_or(std::i64::MAX) {
+                q0.push(a);
+                a0sum += a;
+                while q0.len() > q1.len() + 1 {
+                    let aa = q0.pop().unwrap();
+                    q1.push(Reverse(aa));
+                    a0sum -= aa;
+                    a1sum += aa;
+                }
+            } else {
+                q1.push(Reverse(a));
+                a1sum += a;
+                while q0.len() < q1.len() {
+                    let Reverse(aa) = q1.pop().unwrap();
+                    q0.push(aa);
+                    a1sum -= aa;
+                    a0sum += aa;
+                }
+            }
+
+            bsum += b;
+        } else {
+            let x = q0.peek().unwrap();
+            let fx = x * q0.len() as i64 - a0sum + a1sum - x * q1.len() as i64 + bsum;
+            println!("{} {}", x, fx);
+        }
+    }
+}
