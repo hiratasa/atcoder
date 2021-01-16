@@ -106,61 +106,40 @@ where
         } else if a == self.cap {
             None
         } else {
-            self.right_partition_point_impl(a, &mut f, 0, 0, self.cap, &M::id())
-                .ok()
-        }
-    }
+            let mut b = a;
+            let mut idx = ((b + self.cap) >> (b + self.cap).trailing_zeros()) - 1;
+            let mut len = 1 << (b + self.cap).trailing_zeros();
+            let mut val = M::id();
+            let mut val_next = M::op(&val, &self.values[idx]);
 
-    fn right_partition_point_impl<F>(
-        &self,
-        a: usize,
-        f: &mut F,
-        idx: usize,
-        l: usize,
-        r: usize,
-        carry: &M::Item,
-    ) -> Result<usize, M::Item>
-    where
-        F: FnMut(&M::Item) -> bool,
-    {
-        // precondition
-        assert!(a < r);
-        assert!(f(carry));
-        // assert!(l < a || carry == query(a, l))
+            while f(&val_next) {
+                val = val_next;
+                b += len;
+                len <<= (idx + 2).trailing_zeros();
+                idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
 
-        // postcondition
-        // when return Ok, f(query(a, ok_value - 1)) && !f(query(a, ok_value))
-        // when return Err, err_value == query(a, r) && f(err_value)
-
-        let left_idx = 2 * (idx + 1) - 1;
-        let right_idx = 2 * (idx + 1);
-        let mid = (l + r) / 2;
-
-        if a <= l {
-            let v = M::op(carry, &self.values[idx]);
-            if f(&v) {
-                Err(v.clone())
-            } else {
-                if l + 1 == r {
-                    // leaf
-                    Ok(r)
-                } else {
-                    match self.right_partition_point_impl(a, f, left_idx, l, mid, carry) {
-                        Ok(found) => Ok(found),
-                        // In this branch, expected to be always return Ok
-                        Err(q) => self.right_partition_point_impl(a, f, right_idx, mid, r, &q),
-                    }
+                // 最後に計算したidxが右端だった場合
+                if idx == 0 {
+                    return None;
                 }
+                val_next = M::op(&val, &self.values[idx]);
             }
-        } else if a < mid {
-            match self.right_partition_point_impl(a, f, left_idx, l, mid, &M::id()) {
-                Ok(found) => Ok(found),
-                Err(q) => self.right_partition_point_impl(a, f, right_idx, mid, r, &q),
+
+            idx = 2 * idx + 1;
+            len >>= 1;
+            while idx < self.values.len() {
+                val_next = M::op(&val, &self.values[idx]);
+                if f(&val_next) {
+                    val = val_next;
+                    b += len;
+                    idx += 1;
+                }
+                len >>= 1;
+                idx = 2 * idx + 1;
             }
-        } else if a < r {
-            self.right_partition_point_impl(a, f, right_idx, mid, r, &M::id())
-        } else {
-            unreachable!()
+
+            // [a, b)区間でfがtrue => 求めるbはその次
+            Some(b + 1)
         }
     }
 }
