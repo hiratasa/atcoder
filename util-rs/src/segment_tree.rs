@@ -67,27 +67,29 @@ where
         }
     }
 
-    fn query(&self, a: usize, b: usize) -> M::Item {
-        self.query_impl(a, b, 0, 0, self.cap)
-    }
+    fn query(&self, mut a: usize, mut b: usize) -> M::Item {
+        let mut c = (a + self.cap).trailing_zeros();
+        let mut idx = ((a + self.cap) >> c) - 1;
+        let mut left = M::id();
 
-    fn query_impl(&self, a: usize, b: usize, idx: usize, l: usize, r: usize) -> M::Item {
-        if a >= r || b <= l {
-            // no overlap
-            return M::id();
+        while a + (1 << c) <= b {
+            left = M::op(&left, &self.values[idx]);
+            a += 1 << c;
+            c += (idx + 2).trailing_zeros();
+            idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
         }
 
-        if a <= l && r <= b {
-            return self.values[idx].clone();
+        let mut d = (b + self.cap).trailing_zeros();
+        let mut idx2 = ((b + self.cap) >> d) - 1;
+        let mut right = M::id();
+        while a + (1 << d) <= b {
+            right = M::op(&self.values[idx2 - 1], &right);
+            b -= 1 << d;
+            d += idx2.trailing_zeros();
+            idx2 = (idx2 >> idx2.trailing_zeros()) - 1;
         }
 
-        let left_idx = 2 * (idx + 1) - 1;
-        let right_idx = 2 * (idx + 1);
-
-        let left_v = self.query_impl(a, b, left_idx, l, (l + r) / 2);
-        let right_v = self.query_impl(a, b, right_idx, (l + r) / 2, r);
-
-        M::op(&left_v, &right_v)
+        M::op(&left, &right)
     }
 
     // f(query(a, b)) == false となるbが存在すればその最小のものを返す
@@ -342,7 +344,9 @@ mod test {
 
         st.set(1, 2);
         st.set(3, 4);
+        st.set(5, 8);
 
+        assert_eq!(st.query(0, 10), 2);
         assert_eq!(st.query(1, 4), 2);
         assert_eq!(st.query(2, 4), 4);
         assert_eq!(st.query(3, 3), Minimum::id());
