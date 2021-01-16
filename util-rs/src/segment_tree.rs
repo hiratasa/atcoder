@@ -68,25 +68,28 @@ where
     }
 
     fn query(&self, mut a: usize, mut b: usize) -> M::Item {
-        let mut c = (a + self.cap).trailing_zeros();
-        let mut idx = ((a + self.cap) >> c) - 1;
         let mut left = M::id();
-
-        while a + (1 << c) <= b {
-            left = M::op(&left, &self.values[idx]);
-            a += 1 << c;
-            c += (idx + 2).trailing_zeros();
-            idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
+        {
+            let mut idx = ((a + self.cap) >> (a + self.cap).trailing_zeros()) - 1;
+            let mut len = 1 << (a + self.cap).trailing_zeros();
+            while a + len <= b {
+                left = M::op(&left, &self.values[idx]);
+                a += len;
+                len <<= (idx + 2).trailing_zeros();
+                idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
+            }
         }
 
-        let mut d = (b + self.cap).trailing_zeros();
-        let mut idx2 = ((b + self.cap) >> d) - 1;
         let mut right = M::id();
-        while a + (1 << d) <= b {
-            right = M::op(&self.values[idx2 - 1], &right);
-            b -= 1 << d;
-            d += idx2.trailing_zeros();
-            idx2 = (idx2 >> idx2.trailing_zeros()) - 1;
+        {
+            let mut idx = ((b + self.cap) >> (b + self.cap).trailing_zeros()) - 1;
+            let mut len = 1 << (b + self.cap).trailing_zeros();
+            while a + len <= b {
+                right = M::op(&self.values[idx - 1], &right);
+                b -= len;
+                len <<= idx.trailing_zeros();
+                idx = (idx >> idx.trailing_zeros()) - 1;
+            }
         }
 
         M::op(&left, &right)
