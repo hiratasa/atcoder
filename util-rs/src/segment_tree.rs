@@ -68,29 +68,39 @@ where
         }
     }
 
-    fn query(&self, mut a: usize, mut b: usize) -> M::Item {
+    fn query(&self, a: usize, b: usize) -> M::Item {
         let mut left = M::id();
-        {
-            let mut idx = ((a + self.cap) >> (a + self.cap).trailing_zeros()) - 1;
-            let mut len = 1 << (a + self.cap).trailing_zeros();
-            while a + len <= b {
-                left = M::op(&left, &self.values[idx]);
-                a += len;
-                len <<= (idx + 2).trailing_zeros();
-                idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
-            }
-        }
-
         let mut right = M::id();
-        {
-            let mut idx = ((b + self.cap) >> (b + self.cap).trailing_zeros()) - 1;
-            let mut len = 1 << (b + self.cap).trailing_zeros();
-            while a + len <= b {
-                right = M::op(&self.values[idx - 1], &right);
-                b -= len;
-                len <<= idx.trailing_zeros();
-                idx = (idx >> idx.trailing_zeros()) - 1;
+
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        let c0 = std::cmp::min(
+            // trailing_ones
+            (!left_idx).trailing_zeros(),
+            (right_idx + 1).trailing_zeros(),
+        );
+        left_idx = left_idx >> c0;
+        right_idx = ((right_idx + 1) >> c0) - 1;
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                left = M::op(&left, &self.values[left_idx]);
+                left_idx += 1;
             }
+
+            if right_idx % 2 == 0 {
+                right = M::op(&self.values[right_idx - 1], &right);
+                right_idx -= 1;
+            }
+
+            let c = std::cmp::min(
+                // trailing_ones
+                (!left_idx).trailing_zeros(),
+                (right_idx + 1).trailing_zeros(),
+            );
+            left_idx = left_idx >> c;
+            right_idx = ((right_idx + 1) >> c) - 1;
         }
 
         M::op(&left, &right)
@@ -211,10 +221,12 @@ where
     fn fix_value(&mut self, idx: usize) {
         let left_idx = 2 * (idx + 1) - 1;
         let right_idx = 2 * (idx + 1);
-        self.values[idx] = M::op(
-            &self.get_node_value(left_idx),
-            &self.get_node_value(right_idx),
-        );
+        if left_idx < self.values.len() {
+            self.values[idx] = M::op(
+                &self.get_node_value(left_idx),
+                &self.get_node_value(right_idx),
+            );
+        }
     }
 
     // internal
@@ -262,95 +274,81 @@ where
     }
 
     fn update(&mut self, a: usize, b: usize, p: Op::Item) {
-        let mut a = a;
-        {
-            let c = (a + self.cap).trailing_zeros() as usize;
-            let mut idx = ((a + self.cap) >> c) - 1;
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
 
-            // Opが非可換の場合用に, これより前にupdateされたものを適用させておく
-            for i in (1..self.height - c).rev() {
-                self.resolve(((idx + 1) >> i) - 1);
-            }
-
-            let mut len = 1 << c;
-            for _ in c..self.height {
-                if idx % 2 == 0 && a + len <= b {
-                    self.lazy[idx] = Op::op(&p, &self.lazy[idx]);
-                    a += len;
-                }
-                // 偶数の場合は一つ右隣の親になる
-                idx = idx >> 1;
-                if idx == 0 {
-                    break;
-                }
-                self.fix_value(idx - 1);
-                len <<= 1;
-            }
+        // Opが非可換の場合用に, これより前にupdateされたものを適用させておく
+        for i in (1..self.height).rev() {
+            self.resolve(((left_idx + 1) >> i) - 1);
+            self.resolve(((right_idx + 1) >> i) - 1);
         }
 
-        let mut b = b;
-        {
-            let c = (b + self.cap).trailing_zeros() as usize;
-            let mut idx = ((b + self.cap) >> c) - 1;
-
-            for i in (1..self.height - c).rev() {
-                self.resolve(((idx + 1) >> i) - 1);
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                self.lazy[left_idx] = Op::op(&p, &self.lazy[left_idx]);
             }
 
-            let mut len = 1 << c;
-            // 最上段に足す必要がある場合はaのほうで計算済みなのでその手前までで良い
-            for _ in c..self.height - 1 {
-                if idx % 2 == 0 && a + len <= b {
-                    self.lazy[idx - 1] = Op::op(&p, &self.lazy[idx - 1]);
-                    b -= len;
-                }
-                idx = (idx - 1) >> 1;
-                self.fix_value(idx);
-                len <<= 1;
+            if right_idx % 2 == 0 {
+                self.lazy[right_idx - 1] = Op::op(&p, &self.lazy[right_idx - 1]);
             }
+
+            // 偶数の場合は一つ右隣の親になる
+            left_idx = left_idx >> 1;
+            right_idx = (right_idx - 1) >> 1;
+        }
+
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+        for _ in 0..self.height - 1 {
+            left_idx = (left_idx - 1) >> 1;
+            self.fix_value(left_idx);
+
+            right_idx = (right_idx - 1) >> 1;
+            // This is out of bounds if b == self.cap.
+            // (currently checked in fix_value())
+            self.fix_value(right_idx);
         }
     }
 
     fn query(&mut self, a: usize, b: usize) -> M::Item {
-        let mut a = a;
         let mut left = M::id();
-        {
-            let c = (a + self.cap).trailing_zeros() as usize;
-            let mut idx = ((a + self.cap) >> c) - 1;
-            for i in (1..self.height - c).rev() {
-                self.resolve(((idx + 1) >> i) - 1);
-            }
-
-            let mut len = 1 << c;
-            while a + len <= b {
-                left = M::op(&left, &self.get_node_value(idx));
-                a += len;
-                len <<= (idx + 2).trailing_zeros();
-                idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
-            }
-        }
-
-        if a == b {
-            return left;
-        }
-
-        let mut b = b;
         let mut right = M::id();
-        {
-            assert!(0 < b);
-            let c = (b + self.cap).trailing_zeros() as usize;
-            let mut idx = ((b + self.cap) >> c) - 1;
-            for i in (1..self.height - c).rev() {
-                self.resolve((idx >> i) - 1);
+
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        let c0 = std::cmp::min(
+            // trailing_ones
+            (!left_idx).trailing_zeros(),
+            (right_idx + 1).trailing_zeros(),
+        ) as usize;
+
+        for i in (c0 + 1..self.height).rev() {
+            self.resolve(((left_idx + 1) >> i) - 1);
+            self.resolve(((right_idx + 1) >> i) - 1);
+        }
+
+        left_idx = left_idx >> c0;
+        right_idx = ((right_idx + 1) >> c0) - 1;
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                left = M::op(&left, &self.get_node_value(left_idx));
+                left_idx += 1;
             }
 
-            let mut len = 1 << c;
-            while a + len <= b {
-                right = M::op(&self.get_node_value(idx - 1), &right);
-                b -= len;
-                len <<= idx.trailing_zeros();
-                idx = (idx >> idx.trailing_zeros()) - 1;
+            if right_idx % 2 == 0 {
+                right = M::op(&self.get_node_value(right_idx - 1), &right);
+                right_idx -= 1;
             }
+
+            let c = std::cmp::min(
+                // trailing_ones
+                (!left_idx).trailing_zeros(),
+                (right_idx + 1).trailing_zeros(),
+            );
+            left_idx = left_idx >> c;
+            right_idx = ((right_idx + 1) >> c) - 1;
         }
 
         M::op(&left, &right)
@@ -417,13 +415,14 @@ mod test {
 
         let mut rng = rand::rngs::SmallRng::from_entropy();
 
-        let n = 5;
-
         let dist = rand::distributions::Uniform::new(0, 1000);
-        let distidx = rand::distributions::Uniform::new(0, n);
         let dist01 = rand::distributions::Uniform::new(0, 2);
 
-        for _ in 0..5 {
+        for i in 0..5 {
+            // 2の冪乗のあたりを試す
+            let n = 510 + i;
+            let distidx = rand::distributions::Uniform::new(0, n);
+
             let a0 = std::iter::repeat_with(|| dist.sample(&mut rng))
                 .take(n)
                 .collect();
@@ -495,13 +494,14 @@ mod test {
 
         let mut rng = rand::rngs::SmallRng::from_entropy();
 
-        let n = 5;
-
-        let dist = rand::distributions::Uniform::new(0, 1000);
-        let distidx = rand::distributions::Uniform::new(0, n);
+        let dist = rand::distributions::Uniform::new(0, 100000);
         let dist01 = rand::distributions::Uniform::new(0, 2);
 
-        for _ in 0..5 {
+        for i in 0..5 {
+            // 2の冪乗のあたりを試す
+            let n = 510 + i;
+            let distidx = rand::distributions::Uniform::new(0, n + 1);
+
             let a0 = std::iter::repeat_with(|| dist.sample(&mut rng))
                 .take(n)
                 .collect();
@@ -517,8 +517,8 @@ mod test {
                 if t == 0 {
                     // update
                     let l = distidx.sample(&mut rng);
-                    let distidx2 = rand::distributions::Uniform::new(l, n + 1);
-                    let r = distidx2.sample(&mut rng);
+                    let r = distidx.sample(&mut rng);
+                    let (l, r) = if l <= r { (l, r) } else { (r, l) };
                     let x = dist.sample(&mut rng);
 
                     st.update(l, r, x);
@@ -530,8 +530,8 @@ mod test {
                 } else {
                     // query
                     let l = distidx.sample(&mut rng);
-                    let distidx2 = rand::distributions::Uniform::new(l, n + 1);
-                    let r = distidx2.sample(&mut rng);
+                    let r = distidx.sample(&mut rng);
+                    let (l, r) = if l <= r { (l, r) } else { (r, l) };
 
                     assert_eq!(
                         st.query(l, r),
