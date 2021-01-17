@@ -9,6 +9,7 @@ trait Monoid {
     fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
 }
 
+#[derive(Debug)]
 struct SegmentTree<M>
 where
     M: Monoid,
@@ -146,6 +147,7 @@ where
 
 // M: Monoid of value
 // Op: Monoid of lazy operation
+#[derive(Debug)]
 struct LazySegmentTree<M, Op>
 where
     M: Monoid,
@@ -170,17 +172,42 @@ where
     fn new(n: usize) -> Self {
         let cap = n.next_power_of_two();
         LazySegmentTree {
-            height: cap.trailing_zeros() as usize,
+            height: cap.trailing_zeros() as usize + 1,
             cap,
             values: vec![M::id(); 2 * cap - 1],
             lazy: vec![Op::id(); 2 * cap - 1],
         }
     }
 
+    fn with(vals: &Vec<M::Item>) -> Self {
+        let n = vals.len();
+        let cap = n.next_power_of_two();
+
+        let mut values = Vec::with_capacity(2 * cap - 1);
+        values.resize(cap - 1, M::id());
+        values.extend(vals.iter().cloned());
+        values.resize(2 * cap - 1, M::id());
+
+        let mut st = LazySegmentTree {
+            height: cap.trailing_zeros() as usize + 1,
+            cap,
+            values,
+            lazy: vec![Op::id(); 2 * cap - 1],
+        };
+
+        for idx in (0..cap - 1).rev() {
+            st.fix_value(idx);
+        }
+
+        st
+    }
+
+    // internal
     fn get_node_value(&mut self, idx: usize) -> M::Item {
         Op::apply(&self.lazy[idx], &self.values[idx])
     }
 
+    // internal
     fn fix_value(&mut self, idx: usize) {
         let left_idx = 2 * (idx + 1) - 1;
         let right_idx = 2 * (idx + 1);
@@ -190,34 +217,39 @@ where
         );
     }
 
-    fn resolve(&mut self, pos: usize) {
-        let idx = self.cap - 1 + pos;
-        for i in (1..=self.height).rev() {
-            let parent_idx = ((idx + 1) >> i) - 1;
+    // internal
+    fn resolve(&mut self, parent_idx: usize) {
+        let left_idx = 2 * (parent_idx + 1) - 1;
+        let right_idx = 2 * (parent_idx + 1);
 
-            let left_idx = 2 * (parent_idx + 1) - 1;
-            let right_idx = 2 * (parent_idx + 1);
-
+        if left_idx < self.values.len() {
             self.lazy[left_idx] = Op::op(&self.lazy[parent_idx], &self.lazy[left_idx]);
             self.lazy[right_idx] = Op::op(&self.lazy[parent_idx], &self.lazy[right_idx]);
             self.lazy[parent_idx] = Op::id();
-
             self.fix_value(parent_idx);
+        } else {
+            self.values[parent_idx] = Op::apply(&self.lazy[parent_idx], &self.values[parent_idx]);
+            self.lazy[parent_idx] = Op::id();
         }
+    }
 
-        self.values[idx] = Op::apply(&self.lazy[idx], &self.values[idx]);
-        self.lazy[idx] = Op::id();
+    // internal
+    fn resolve_all(&mut self, pos: usize) {
+        let idx = self.cap - 1 + pos;
+        for i in (0..self.height).rev() {
+            self.resolve(((idx + 1) >> i) - 1);
+        }
     }
 
     fn get(&mut self, pos: usize) -> M::Item {
-        self.resolve(pos);
+        self.resolve_all(pos);
 
         let idx = self.cap - 1 + pos;
         self.values[idx].clone()
     }
 
     fn set(&mut self, pos: usize, v: M::Item) {
-        self.resolve(pos);
+        self.resolve_all(pos);
 
         let mut idx = self.cap - 1 + pos;
         self.values[idx] = v;
@@ -230,61 +262,104 @@ where
     }
 
     fn update(&mut self, a: usize, b: usize, p: Op::Item) {
-        self.update_impl(a, b, p, 0, 0, self.cap);
-    }
+        let mut a = a;
+        {
+            let c = (a + self.cap).trailing_zeros() as usize;
+            let mut idx = ((a + self.cap) >> c) - 1;
 
-    fn update_impl(&mut self, a: usize, b: usize, p: Op::Item, idx: usize, l: usize, r: usize) {
-        if a >= r || b <= l {
-            // no overlap
-            return;
+            // Opが非可換の場合用に, これより前にupdateされたものを適用させておく
+            for i in (1..self.height - c).rev() {
+                self.resolve(((idx + 1) >> i) - 1);
+            }
+
+            let mut len = 1 << c;
+            for _ in c..self.height {
+                if idx % 2 == 0 && a + len <= b {
+                    self.lazy[idx] = Op::op(&p, &self.lazy[idx]);
+                    a += len;
+                }
+                // 偶数の場合は一つ右隣の親になる
+                idx = idx >> 1;
+                if idx == 0 {
+                    break;
+                }
+                self.fix_value(idx - 1);
+                len <<= 1;
+            }
         }
 
-        if a <= l && r <= b {
-            self.lazy[idx] = Op::op(&p, &self.lazy[idx]);
-            return;
+        let mut b = b;
+        {
+            let c = (b + self.cap).trailing_zeros() as usize;
+            let mut idx = ((b + self.cap) >> c) - 1;
+
+            for i in (1..self.height - c).rev() {
+                self.resolve(((idx + 1) >> i) - 1);
+            }
+
+            let mut len = 1 << c;
+            // 最上段に足す必要がある場合はaのほうで計算済みなのでその手前までで良い
+            for _ in c..self.height - 1 {
+                if idx % 2 == 0 && a + len <= b {
+                    self.lazy[idx - 1] = Op::op(&p, &self.lazy[idx - 1]);
+                    b -= len;
+                }
+                idx = (idx - 1) >> 1;
+                self.fix_value(idx);
+                len <<= 1;
+            }
         }
-
-        let left_idx = 2 * (idx + 1) - 1;
-        let right_idx = 2 * (idx + 1);
-
-        // モノイドOpが可換でない場合、pの適用前にlazy[idx]の適用が必要
-        self.lazy[left_idx] = Op::op(&self.lazy[idx], &self.lazy[left_idx]);
-        self.lazy[right_idx] = Op::op(&self.lazy[idx], &self.lazy[right_idx]);
-        self.lazy[idx] = Op::id();
-
-        self.update_impl(a, b, p.clone(), left_idx, l, (l + r) / 2);
-        self.update_impl(a, b, p.clone(), right_idx, (l + r) / 2, r);
-
-        self.fix_value(idx);
     }
 
     fn query(&mut self, a: usize, b: usize) -> M::Item {
-        self.query_impl(a, b, 0, 0, self.cap)
-    }
+        let mut a = a;
+        let mut left = M::id();
+        {
+            let c = (a + self.cap).trailing_zeros() as usize;
+            let mut idx = ((a + self.cap) >> c) - 1;
+            for i in (1..self.height - c).rev() {
+                self.resolve(((idx + 1) >> i) - 1);
+            }
 
-    fn query_impl(&mut self, a: usize, b: usize, idx: usize, l: usize, r: usize) -> M::Item {
-        if a >= r || b <= l {
-            // no overlap
-            return M::id();
+            let mut len = 1 << c;
+            while a + len <= b {
+                left = M::op(&left, &self.get_node_value(idx));
+                a += len;
+                len <<= (idx + 2).trailing_zeros();
+                idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
+            }
         }
 
-        if a <= l && r <= b {
-            return self.get_node_value(idx);
+        if a == b {
+            return left;
         }
 
-        let left_idx = 2 * (idx + 1) - 1;
-        let right_idx = 2 * (idx + 1);
+        let mut b = b;
+        let mut right = M::id();
+        {
+            assert!(0 < b);
+            let c = (b + self.cap).trailing_zeros() as usize;
+            let mut idx = ((b + self.cap) >> c) - 1;
+            for i in (1..self.height - c).rev() {
+                self.resolve((idx >> i) - 1);
+            }
 
-        let left_v = self.query_impl(a, b, left_idx, l, (l + r) / 2);
-        let right_v = self.query_impl(a, b, right_idx, (l + r) / 2, r);
+            let mut len = 1 << c;
+            while a + len <= b {
+                right = M::op(&self.get_node_value(idx - 1), &right);
+                b -= len;
+                len <<= idx.trailing_zeros();
+                idx = (idx >> idx.trailing_zeros()) - 1;
+            }
+        }
 
-        Op::apply(&self.lazy[idx], &M::op(&left_v, &right_v))
+        M::op(&left, &right)
     }
 }
 
 macro_rules! define_monoid {
     ($name: ident, $t: ty, $id: expr, $op: expr) => {
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         struct $name;
 
         impl Monoid for $name {
@@ -336,11 +411,69 @@ mod test {
     }
 
     #[test]
+    fn test_segtree_random() {
+        use rand::distributions::Distribution;
+        use rand::SeedableRng;
+
+        let mut rng = rand::rngs::SmallRng::from_entropy();
+
+        let n = 5;
+
+        let dist = rand::distributions::Uniform::new(0, 1000);
+        let distidx = rand::distributions::Uniform::new(0, n);
+        let dist01 = rand::distributions::Uniform::new(0, 2);
+
+        for _ in 0..5 {
+            let a0 = std::iter::repeat_with(|| dist.sample(&mut rng))
+                .take(n)
+                .collect();
+
+            let mut st = RMTTree::with(&a0);
+            let mut logs = vec![];
+
+            let q = 1000;
+            let mut a = a0.clone();
+            for _ in 0..q {
+                let t = dist01.sample(&mut rng);
+
+                if t == 0 {
+                    // update
+                    let pos = distidx.sample(&mut rng);
+                    let x = dist.sample(&mut rng);
+
+                    st.set(pos, x);
+                    a[pos] = x;
+
+                    logs.push(format!("a[{}] = {};", pos, x));
+                } else {
+                    // query
+                    let l = distidx.sample(&mut rng);
+                    let distidx2 = rand::distributions::Uniform::new(l, n + 1);
+                    let r = distidx2.sample(&mut rng);
+
+                    assert_eq!(
+                        st.query(l, r),
+                        a[l..r].iter().copied().min().unwrap_or(Minimum::id()),
+                        "a0: {:?}, a: {:?}, l: {}, r: {}, ops: {}",
+                        a0,
+                        a,
+                        l,
+                        r,
+                        logs.join(" ")
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn test_lazy_segtree() {
         let mut st = RMTTreeWithAddition::new(10);
 
         st.set(1, 2);
         st.set(3, 4);
+
+        // [inf, 2, inf, 4, ...]
 
         assert_eq!(st.query(1, 4), 2);
         assert_eq!(st.query(2, 4), 4);
@@ -349,13 +482,70 @@ mod test {
 
         st.update(1, 5, 2);
 
+        // [inf, 4, inf, 6, ...]
+
         assert_eq!(st.query(1, 4), 4);
         assert_eq!(st.query(2, 4), 6);
+    }
 
-        st.update(0, 16, 3);
+    #[test]
+    fn test_lazy_segtree_random() {
+        use rand::distributions::Distribution;
+        use rand::SeedableRng;
 
-        assert_eq!(st.get(1), 7);
-        assert_eq!(st.get(3), 9);
+        let mut rng = rand::rngs::SmallRng::from_entropy();
+
+        let n = 5;
+
+        let dist = rand::distributions::Uniform::new(0, 1000);
+        let distidx = rand::distributions::Uniform::new(0, n);
+        let dist01 = rand::distributions::Uniform::new(0, 2);
+
+        for _ in 0..5 {
+            let a0 = std::iter::repeat_with(|| dist.sample(&mut rng))
+                .take(n)
+                .collect();
+
+            let mut st = RMTTreeWithAddition::with(&a0);
+            let mut logs = vec![];
+
+            let q = 1000;
+            let mut a = a0.clone();
+            for _ in 0..q {
+                let t = dist01.sample(&mut rng);
+
+                if t == 0 {
+                    // update
+                    let l = distidx.sample(&mut rng);
+                    let distidx2 = rand::distributions::Uniform::new(l, n + 1);
+                    let r = distidx2.sample(&mut rng);
+                    let x = dist.sample(&mut rng);
+
+                    st.update(l, r, x);
+                    for i in l..r {
+                        a[i] += x;
+                    }
+
+                    logs.push(format!("Add {} for [{}, {});", x, l, r));
+                } else {
+                    // query
+                    let l = distidx.sample(&mut rng);
+                    let distidx2 = rand::distributions::Uniform::new(l, n + 1);
+                    let r = distidx2.sample(&mut rng);
+
+                    assert_eq!(
+                        st.query(l, r),
+                        a[l..r].iter().copied().min().unwrap_or(Minimum::id()),
+                        "a0: {:?}, a: {:?}, l: {}, r: {}, ops: {}",
+                        a0,
+                        a,
+                        l,
+                        r,
+                        logs.join(" ")
+                    );
+                }
+            }
+        }
     }
 
     #[test]
