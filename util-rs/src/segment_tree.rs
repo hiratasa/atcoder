@@ -192,7 +192,7 @@ where
 
     fn resolve(&mut self, pos: usize) {
         let idx = self.cap - 1 + pos;
-        for i in (1..self.height).rev() {
+        for i in (1..=self.height).rev() {
             let parent_idx = ((idx + 1) >> i) - 1;
 
             let left_idx = 2 * (parent_idx + 1) - 1;
@@ -351,6 +351,11 @@ mod test {
 
         assert_eq!(st.query(1, 4), 4);
         assert_eq!(st.query(2, 4), 6);
+
+        st.update(0, 16, 3);
+
+        assert_eq!(st.get(1), 7);
+        assert_eq!(st.get(3), 9);
     }
 
     #[test]
