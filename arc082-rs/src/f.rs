@@ -148,4 +148,103 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let x: i64 = read();
+    let k: usize = read();
+    let r = read_row::<i64>();
+
+    let r = once(0)
+        .chain(r.citer())
+        .chain(once(std::i64::MAX))
+        .collect_vec();
+
+    let q: usize = read();
+    let query = read_vec(q, || read_tuple!(i64, i64));
+
+    let c = once(0)
+        .chain(r.citer().scan(0, |p, rr| {
+            let t = rr - *p;
+            *p = t;
+            Some(*p)
+        }))
+        .collect_vec();
+
+    let limit = (0..=k)
+        .map(|i| {
+            if i % 2 == 0 {
+                c[i + 2] - c[i + 1]
+            } else {
+                x - c[i + 2] + c[i + 1]
+            }
+        })
+        .enumerate()
+        .fold(vec![0, x], |limit, (i, aa)| {
+            let t = if i % 2 == 0 {
+                max(aa, limit[limit.len() - 2])
+            } else {
+                min(aa, limit[limit.len() - 2])
+            };
+
+            pushed!(limit, t)
+        });
+
+    let b0 = (0..=k)
+        .scan(0, |p, i| {
+            let p0 = *p;
+            if i % 2 == 0 {
+                *p = max(*p - (r[i + 1] - r[i]), 0);
+            } else {
+                *p = min(*p + (r[i + 1] - r[i]), x);
+            }
+
+            Some(p0)
+        })
+        .collect_vec();
+
+    let bx = (0..=k)
+        .scan(x, |p, i| {
+            let p0 = *p;
+            if i % 2 == 0 {
+                *p = max(*p - (r[i + 1] - r[i]), 0);
+            } else {
+                *p = min(*p + (r[i + 1] - r[i]), x);
+            }
+
+            Some(p0)
+        })
+        .collect_vec();
+    for (t, a) in query {
+        let idx = r
+            .binary_search_by(|&rr| rr.cmp(&t).then(Ordering::Less))
+            .unwrap_err()
+            - 1;
+
+        let ans = if idx % 2 == 0 {
+            let st = if limit[idx] >= a {
+                // 下に張り付いてる
+                b0[idx]
+            } else if limit[idx + 1] <= a {
+                // 上に張り付いてる
+                bx[idx]
+            } else {
+                a + c[idx + 1] - c[idx]
+            };
+
+            max(0, st - (t - r[idx]))
+        } else {
+            let st = if limit[idx + 1] >= a {
+                // 下に張り付いてる
+                b0[idx]
+            } else if limit[idx] <= a {
+                // 上に張り付いてる
+                bx[idx]
+            } else {
+                a + c[idx] - c[idx + 1]
+            };
+
+            min(x, st + (t - r[idx]))
+        };
+
+        println!("{}", ans);
+    }
+}

@@ -356,112 +356,16 @@ fn main() {
 
     let r = n - m;
 
-    let d0 = chain(
-        once(Mod::one()),
-        (1..=r).scan(vec![Mod::one()], |dp, _| {
-            *dp = izip!(
-                once(Mod::zero()).chain(dp.citer()),
-                dp.citer().skip(1).chain(repeat(Mod::zero())),
-            )
-            .map(|(m0, m1)| m0 * 2usize + m1)
-            .collect_vec();
-            Some(dp[0])
-        }),
-    )
-    .collect_vec();
-
-    // eprintln!("{:?}", d0);
-    let d = iterate(d0, |prev| {
-        (0..=r)
-            .map(|i| {
-                (0..=i)
-                    .map(|j| {
-                        let k = i - j;
-                        prev[j] * prev[k]
-                    })
-                    .sum::<Mod>()
-            })
-            .collect_vec()
-    })
-    .take((m + 1).next_power_of_two().trailing_zeros() as usize)
-    .collect_vec();
-
-    // eprintln!("{:?}", d);
-
-    let d_m = iterate(m, |kk| kk / 2)
-        .take_while(|&kk| kk > 0)
-        .positions(|kk| kk % 2 > 0)
-        .map(|idx| &d[idx])
-        .fold(vvec![Mod::one(); Mod::zero(); n], |prev, current| {
-            (0..=r)
-                .map(|i| {
-                    (0..=i)
-                        .map(|j| {
-                            let k = i - j;
-                            prev[j] * current[k]
-                        })
-                        .sum::<Mod>()
-                })
-                .collect_vec()
-        });
-
-    let e = chain(
-        once(Mod::one()),
-        (1..=r).scan(vec![Mod::one()], |dp, _| {
-            *dp = izip!(
-                once(Mod::zero()).chain(dp.citer()),
-                dp.citer().skip(1).chain(repeat(Mod::zero())),
-                once(dp[0]).chain(repeat(Mod::zero())),
-            )
-            .map(|(m0, m1, m2)| m0 * 2usize + m1 + m2)
-            .collect_vec();
-            Some(dp[0])
-        }),
-    )
-    .collect_vec();
-
-    let ans = (0..=r)
-        .map(|i| {
-            let j = r - i;
-            e[i] * d_m[j]
-        })
-        .sum::<Mod>();
+    let d = (1..=n).fold(vec![Mod::one()], |dp, _| {
+        izip!(
+            once(Mod::zero()).chain(dp.citer()),
+            dp.citer().skip(1).chain(repeat(Mod::zero())),
+            once(dp[0]).chain(repeat(Mod::zero())),
+        )
+        .map(|(m0, m1, m2)| m0 * 2usize + m1 + m2)
+        .collect_vec()
+    })[m];
+    let ans = d / Mod::new(2).pow(m);
 
     println!("{}", ans);
-
-    // println!("{}", calc(n, &s, &mut vec![], &mut vec![]));
-}
-
-// brute force
-fn calc(n: usize, s: &[char], t: &mut Vec<char>, y: &mut Vec<char>) -> Mod1000000007 {
-    if n == 0 {
-        if s == t.as_slice() {
-            // eprintln!("{:?}", y);
-            Mod::one()
-        } else {
-            Mod::zero()
-        }
-    } else {
-        t.push('0');
-        y.push('0');
-        let r0 = calc(n - 1, s, t, y);
-        t.pop();
-        y.pop();
-
-        t.push('1');
-        y.push('1');
-        let r1 = calc(n - 1, s, t, y);
-        t.pop();
-        y.pop();
-
-        let x = t.pop();
-        y.push('B');
-        let r2 = calc(n - 1, s, t, y);
-        if let Some(x) = x {
-            t.push(x);
-        }
-        y.pop();
-
-        r0 + r1 + r2
-    }
 }

@@ -149,54 +149,50 @@ where
 }
 
 fn main() {
-    let (k, m) = read_tuple!(usize, usize);
-    let m_digits = iterate(m, |&mm| mm / 10)
-        .take_while(|&mm| mm > 0)
-        .map(|mm| mm % 10)
-        .collect_vec()
+    let n: usize = read();
+
+    let xy = read_vec(n, || read_tuple!(i64, i64));
+    let xy = xy
         .into_iter()
-        .rev()
+        .map(|(x, y)| (min(x, y), max(x, y)))
         .collect_vec();
 
-    if k <= 100000 {
-        let mut dp = vec![vec![0usize; k]; 2];
-        dp[0][0] = 1;
-        for i in 0..m_digits.len() {
-            let e = 10usize.pow((m_digits.len() - i - 1) as u32);
+    let ma_idx = xy.citer().map(|(x, y)| (y, x)).position_max().unwrap();
+    let mi_idx = xy.citer().position_min().unwrap();
 
-            let mut next = vec![vec![0; k]; 2];
-
-            for lower_m in 0..2 {
-                for r in 0..k {
-                    for d in 0..10 {
-                        if lower_m == 0 && d > m_digits[i] {
-                            break;
-                        }
-
-                        next[lower_m | (d < m_digits[i]) as usize][(r + d * e + k - d) % k] +=
-                            dp[lower_m][r];
-                    }
-                }
-            }
-
-            dp = next;
-        }
-
-        let ans = dp[0][0] + dp[1][0] - /* zero */ 1;
-        println!("{}", ans);
+    // ma, miを両方同じ色で塗った場合
+    let ans0 = if ma_idx == mi_idx {
+        std::i64::MAX
     } else {
-        let ans = (0..)
-            .flat_map(|i| i * k..i * k + 100)
-            .take_while(|&i| i <= m)
-            .filter(|&i| {
-                let s = iterate(i, |ii| ii / 10)
-                    .take_while(|ii| *ii > 0)
-                    .map(|ii| ii % 10)
-                    .sum::<usize>();
-                i % k == s % k
+        let t = xy
+            .citer()
+            .enumerate()
+            .filter(|(i, _)| *i != ma_idx && *i != mi_idx)
+            .map(|(_, t)| t)
+            .sorted_by_key(|&(x, y)| x)
+            .collect_vec();
+
+        let x0 = xy[ma_idx].0;
+        let y0 = xy[mi_idx].1;
+        let r = t
+            .citer()
+            .chain(once((std::i64::MAX, std::i64::MIN)))
+            .scan((min(x0, y0), max(x0, y0)), |r, (x, y)| {
+                let ret = max(r.1, t.last().copied().map_or(0, |t| t.0)) - min(r.0, x);
+                r.1 = max(r.1, y);
+                r.0 = min(r.0, y);
+                Some(ret)
             })
-            .filter(|&i| i > 0)
-            .count();
-        println!("{}", ans);
-    }
+            .min()
+            .unwrap();
+
+        (xy[ma_idx].1 - xy[mi_idx].0) * r
+    };
+
+    // ma, miを異なる色で塗った場合
+    let ans1 = (xy[ma_idx].1 - xy.citer().map(|t| t.1).min().unwrap())
+        * (xy.citer().map(|t| t.0).max().unwrap() - xy[mi_idx].0);
+
+    let ans = min(ans0, ans1);
+    println!("{}", ans);
 }

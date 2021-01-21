@@ -148,55 +148,90 @@ where
 {
 }
 
+#[allow(dead_code)]
+pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
+    let mut y = 1;
+    while p > 0 {
+        if p & 1 > 0 {
+            y = y * x % m;
+        }
+        x = x * x % m;
+        p >>= 1;
+    }
+    y
+}
+
 fn main() {
-    let (k, m) = read_tuple!(usize, usize);
-    let m_digits = iterate(m, |&mm| mm / 10)
-        .take_while(|&mm| mm > 0)
-        .map(|mm| mm % 10)
-        .collect_vec()
-        .into_iter()
-        .rev()
+    let n: usize = read();
+    let a = read_row::<usize>();
+
+    let x = a
+        .citer()
+        .scan(0usize, |x, aa| {
+            *x ^= aa;
+            Some(*x)
+        })
         .collect_vec();
 
-    if k <= 100000 {
-        let mut dp = vec![vec![0usize; k]; 2];
-        dp[0][0] = 1;
-        for i in 0..m_digits.len() {
-            let e = 10usize.pow((m_digits.len() - i - 1) as u32);
+    let z = once(0)
+        .chain(x.citer().map(|xx| (xx == 0) as usize))
+        .cumsum::<usize>()
+        .collect_vec();
 
-            let mut next = vec![vec![0; k]; 2];
+    const M: usize = 1_000_000_007;
 
-            for lower_m in 0..2 {
-                for r in 0..k {
-                    for d in 0..10 {
-                        if lower_m == 0 && d > m_digits[i] {
-                            break;
-                        }
+    eprintln!("{:?}", x);
 
-                        next[lower_m | (d < m_digits[i]) as usize][(r + d * e + k - d) % k] +=
-                            dp[lower_m][r];
+    let ans = if x[n - 1] == 0 {
+        pow_mod(2, z[n] - 1, M)
+            + x.citer()
+                .enumerate()
+                .filter(|t| t.1 > 0)
+                .fold(FxHashMap::default(), |mut map, (i, xx)| {
+                    if let Some((j, k0, kx)) = map.get_mut(&xx) {
+                        *k0 += (z[i] - z[*j]) * *kx % M;
+                        *k0 %= M;
+                        *kx += *k0;
+                        *kx %= M;
+                        *j = i;
+                    } else {
+                        map.insert(xx, (i, 1, 1));
                     }
-                }
-            }
 
-            dp = next;
-        }
-
-        let ans = dp[0][0] + dp[1][0] - /* zero */ 1;
-        println!("{}", ans);
+                    map
+                })
+                .into_iter()
+                .map(|t| (t.1).2)
+                .fold(0usize, |acc, x| (acc + x) % M)
     } else {
-        let ans = (0..)
-            .flat_map(|i| i * k..i * k + 100)
-            .take_while(|&i| i <= m)
-            .filter(|&i| {
-                let s = iterate(i, |ii| ii / 10)
-                    .take_while(|ii| *ii > 0)
-                    .map(|ii| ii % 10)
-                    .sum::<usize>();
-                i % k == s % k
+        x.citer()
+            .fold((1usize, 0usize), |(k0, kx), xx| {
+                // eprintln!("{} {} {}", xx, k0, kx);
+                if xx == 0 {
+                    ((k0 + kx) % M, kx)
+                } else if xx == x[n - 1] {
+                    (k0, (k0 + kx) % M)
+                } else {
+                    (k0, kx)
+                }
             })
-            .filter(|&i| i > 0)
-            .count();
-        println!("{}", ans);
-    }
+            .0
+    };
+    println!("{}", ans % M);
+    // eprintln!("{}", calc(&a));
+}
+
+fn calc(a: &[usize]) -> usize {
+    (0..a.len() - 1)
+        .map(|_| 0..2)
+        .multi_cartesian_product()
+        .filter(|s| {
+            once(0)
+                .chain(s.citer().positions(|b| b > 0).map(|idx| idx + 1))
+                .chain(once(a.len()))
+                .tuple_windows()
+                .map(|(b, e)| a[b..e].citer().fold(0usize, |x, aa| x ^ aa))
+                .all_equal()
+        })
+        .count()
 }

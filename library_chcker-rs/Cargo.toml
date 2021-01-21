@@ -1,5 +1,5 @@
 [package]
-name = "arc087-rs"
+name = "library_chcker-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,29 +18,37 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "arc087-a"
+name = "library_chcker-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "arc087-b"
+name = "library_chcker-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "arc087-c"
+name = "library_chcker-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "arc087-d"
+name = "library_chcker-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "arc087-e"
+name = "library_chcker-e"
 path = "src/e.rs"
 
 [[bin]]
-name = "arc087-f"
+name = "library_chcker-f"
 path = "src/f.rs"
 
 [[bin]]
-name = "arc087-c2"
-path = "src/c2.rs"
+name = "library_chcker-point_add_range_sum"
+path = "src/point_add_range_sum.rs"
+
+[[bin]]
+name = "library_chcker-point_set_range_composite"
+path = "src/point_set_range_composite.rs"
+
+[[bin]]
+name = "library_chcker-range_affine_range_sum"
+path = "src/range_affine_range_sum.rs"

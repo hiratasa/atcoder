@@ -148,55 +148,77 @@ where
 {
 }
 
-fn main() {
-    let (k, m) = read_tuple!(usize, usize);
-    let m_digits = iterate(m, |&mm| mm / 10)
-        .take_while(|&mm| mm > 0)
-        .map(|mm| mm % 10)
-        .collect_vec()
-        .into_iter()
-        .rev()
-        .collect_vec();
+struct Node {
+    zero: Option<Box<Node>>,
+    one: Option<Box<Node>>,
+}
 
-    if k <= 100000 {
-        let mut dp = vec![vec![0usize; k]; 2];
-        dp[0][0] = 1;
-        for i in 0..m_digits.len() {
-            let e = 10usize.pow((m_digits.len() - i - 1) as u32);
-
-            let mut next = vec![vec![0; k]; 2];
-
-            for lower_m in 0..2 {
-                for r in 0..k {
-                    for d in 0..10 {
-                        if lower_m == 0 && d > m_digits[i] {
-                            break;
-                        }
-
-                        next[lower_m | (d < m_digits[i]) as usize][(r + d * e + k - d) % k] +=
-                            dp[lower_m][r];
-                    }
-                }
-            }
-
-            dp = next;
+impl Node {
+    fn new() -> Self {
+        Node {
+            zero: None,
+            one: None,
         }
+    }
 
-        let ans = dp[0][0] + dp[1][0] - /* zero */ 1;
-        println!("{}", ans);
+    fn is_leaf(&self) -> bool {
+        self.zero.is_none() && self.one.is_none()
+    }
+}
+
+fn insert(node: &mut Node, str: &[char], idx: usize) {
+    if str.len() == idx {
+        return;
+    }
+
+    if str[idx] == '0' {
+        let mut child = node.zero.take().unwrap_or(Box::new(Node::new()));
+        insert(&mut child, str, idx + 1);
+        node.zero = Some(child);
     } else {
-        let ans = (0..)
-            .flat_map(|i| i * k..i * k + 100)
-            .take_while(|&i| i <= m)
-            .filter(|&i| {
-                let s = iterate(i, |ii| ii / 10)
-                    .take_while(|ii| *ii > 0)
-                    .map(|ii| ii % 10)
-                    .sum::<usize>();
-                i % k == s % k
-            })
-            .filter(|&i| i > 0)
-            .count();
-        println!("{}", ans);
+        let mut child = node.one.take().unwrap_or(Box::new(Node::new()));
+        insert(&mut child, str, idx + 1);
+        node.one = Some(child);
+    }
+}
+
+fn grundy(node: &Node, depth: usize, l: usize) -> usize {
+    let mut g = 0;
+
+    if node.is_leaf() {
+        return 0;
+    }
+
+    if let Some(child) = &node.zero {
+        g ^= grundy(child, depth + 1, l);
+    } else {
+        g ^= 1 << (l - depth).trailing_zeros();
+    }
+
+    if let Some(child) = &node.one {
+        g ^= grundy(child, depth + 1, l);
+    } else {
+        g ^= 1 << (l - depth).trailing_zeros();
+    }
+
+    g
+}
+
+fn main() {
+    let (n, l) = read_tuple!(usize, usize);
+
+    let s = read_vec(n, || read_str());
+
+    let mut trie = Node::new();
+    for str in s {
+        insert(&mut trie, &str, 0);
+    }
+
+    let g = grundy(&trie, 0, l);
+
+    if g == 0 {
+        println!("Bob");
+    } else {
+        println!("Alice");
     }
 }

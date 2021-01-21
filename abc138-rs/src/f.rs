@@ -149,54 +149,48 @@ where
 }
 
 fn main() {
-    let (k, m) = read_tuple!(usize, usize);
-    let m_digits = iterate(m, |&mm| mm / 10)
-        .take_while(|&mm| mm > 0)
-        .map(|mm| mm % 10)
-        .collect_vec()
-        .into_iter()
-        .rev()
-        .collect_vec();
+    let (l, r) = read_tuple!(usize, usize);
 
-    if k <= 100000 {
-        let mut dp = vec![vec![0usize; k]; 2];
-        dp[0][0] = 1;
-        for i in 0..m_digits.len() {
-            let e = 10usize.pow((m_digits.len() - i - 1) as u32);
+    const M: usize = 1_000_000_007;
 
-            let mut next = vec![vec![0; k]; 2];
+    let dp = (0..60).fold(vec![vec![0; 2]; 2], |prev, i| {
+        let mut dp = vec![vec![0; 2]; 2];
 
-            for lower_m in 0..2 {
-                for r in 0..k {
-                    for d in 0..10 {
-                        if lower_m == 0 && d > m_digits[i] {
-                            break;
+        // eprintln!("{} {:?}", i, prev);
+
+        let ri = ((r >> (59 - i)) & 1) as i32;
+        let li = ((l >> (59 - i)) & 1) as i32;
+
+        if r.leading_zeros() <= 64 - (60 - i) && 64 - (60 - i) <= l.leading_zeros() {
+            dp[(r.leading_zeros() < 64 - (60 - i)) as usize][(1 > li) as usize] = 1;
+        }
+
+        for lower_r in 0..2 {
+            for upper_l in 0..2 {
+                for y in 0i32..2 {
+                    if lower_r == 0 && y > ri {
+                        continue;
+                    }
+                    for x in 0i32..2 {
+                        if upper_l == 0 && x < li {
+                            continue;
                         }
-
-                        next[lower_m | (d < m_digits[i]) as usize][(r + d * e + k - d) % k] +=
-                            dp[lower_m][r];
+                        if y == 0 && x == 1 {
+                            continue;
+                        }
+                        dp[lower_r | (y < ri) as usize][upper_l | (x > li) as usize] +=
+                            prev[lower_r][upper_l];
+                        dp[lower_r | (y < ri) as usize][upper_l | (x > li) as usize] %= M;
                     }
                 }
             }
-
-            dp = next;
         }
 
-        let ans = dp[0][0] + dp[1][0] - /* zero */ 1;
-        println!("{}", ans);
-    } else {
-        let ans = (0..)
-            .flat_map(|i| i * k..i * k + 100)
-            .take_while(|&i| i <= m)
-            .filter(|&i| {
-                let s = iterate(i, |ii| ii / 10)
-                    .take_while(|ii| *ii > 0)
-                    .map(|ii| ii % 10)
-                    .sum::<usize>();
-                i % k == s % k
-            })
-            .filter(|&i| i > 0)
-            .count();
-        println!("{}", ans);
-    }
+        dp
+    });
+    // eprintln!("{:?}", dp);
+    let ans = iproduct!(0..2, 0..2)
+        .map(|(i, j)| dp[i][j])
+        .fold(0usize, |acc, x| (acc + x) % M);
+    println!("{}", ans);
 }

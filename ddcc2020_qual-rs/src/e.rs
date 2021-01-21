@@ -148,55 +148,78 @@ where
 {
 }
 
+fn query<I: IntoIterator<Item = usize>>(a: I) -> bool {
+    println!("? {}", a.into_iter().join(" "));
+    let c = read::<String>();
+
+    if c == "-1" {
+        std::process::exit(1);
+    }
+
+    c == "Red"
+}
+
 fn main() {
-    let (k, m) = read_tuple!(usize, usize);
-    let m_digits = iterate(m, |&mm| mm / 10)
-        .take_while(|&mm| mm > 0)
-        .map(|mm| mm % 10)
-        .collect_vec()
-        .into_iter()
-        .rev()
-        .collect_vec();
+    let n: usize = read();
 
-    if k <= 100000 {
-        let mut dp = vec![vec![0usize; k]; 2];
-        dp[0][0] = 1;
-        for i in 0..m_digits.len() {
-            let e = 10usize.pow((m_digits.len() - i - 1) as u32);
+    let c = query(1..=n);
 
-            let mut next = vec![vec![0; k]; 2];
+    let mut begin = 1;
+    let mut end = n + 1;
+    while begin + 1 < end {
+        // [1, begin) に+nしても色が変わらない
+        // [1, end) に+nすると色が変わる
+        let mid = (begin + end) / 2;
 
-            for lower_m in 0..2 {
-                for r in 0..k {
-                    for d in 0..10 {
-                        if lower_m == 0 && d > m_digits[i] {
-                            break;
-                        }
+        let d = query((1..mid).map(|i| i + n).chain(mid..=n));
+        if d == c {
+            begin = mid;
+        } else {
+            end = mid;
+        }
+    }
+    assert!(begin + 1 == end);
 
-                        next[lower_m | (d < m_digits[i]) as usize][(r + d * e + k - d) % k] +=
-                            dp[lower_m][r];
-                    }
+    let c_idx = begin;
+
+    // c_idxの色がc
+    // c_idx+nの色が!c
+    // [1+n, c_idx+n) + [c_idx, n] で c <-> !c するとmajorityが変わる
+
+    let a0 = (1 + n..c_idx + n).chain(c_idx..=n).collect_vec();
+    let a1 = (1..c_idx).chain(c_idx + n..=2 * n).collect_vec();
+
+    let ans = a0
+        .citer()
+        .map(|i| {
+            if i == c_idx {
+                (i, c)
+            } else {
+                let d = query(a0.citer().map(|j| if j == i { c_idx + n } else { j }));
+                if d == c {
+                    (i, !c)
+                } else {
+                    (i, c)
                 }
             }
-
-            dp = next;
-        }
-
-        let ans = dp[0][0] + dp[1][0] - /* zero */ 1;
-        println!("{}", ans);
-    } else {
-        let ans = (0..)
-            .flat_map(|i| i * k..i * k + 100)
-            .take_while(|&i| i <= m)
-            .filter(|&i| {
-                let s = iterate(i, |ii| ii / 10)
-                    .take_while(|ii| *ii > 0)
-                    .map(|ii| ii % 10)
-                    .sum::<usize>();
-                i % k == s % k
-            })
-            .filter(|&i| i > 0)
-            .count();
-        println!("{}", ans);
-    }
+        })
+        .chain(a1.citer().map(|i| {
+            if i == c_idx + n {
+                (i, !c)
+            } else {
+                let d = query(a0.citer().map(|j| if j == c_idx { i } else { j }));
+                if d == c {
+                    (i, c)
+                } else {
+                    (i, !c)
+                }
+            }
+        }))
+        .sorted()
+        .map(|t| t.1)
+        .collect_vec();
+    println!(
+        "! {}",
+        ans.citer().map(|a| if a { "R" } else { "B" }).join("")
+    );
 }
