@@ -3,6 +3,9 @@ use cargo_snippet::snippet;
 #[snippet("lowerbound")]
 #[snippet("lowerboundint")]
 #[allow(dead_code)]
+// 以下を満たすxを(一つ)見つける
+//  - f(x - epsilon) == Ordering::Less
+//  - f(x) != Ordering::Less
 fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
 where
     T: std::marker::Copy
@@ -32,6 +35,9 @@ where
 
 #[snippet("lowerboundint")]
 #[allow(dead_code)]
+// 以下を満たすxを(一つ)見つける
+//  - f(x - 1) == Ordering::Less
+//  - f(x) != Ordering::Less
 fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
 where
     T: std::marker::Copy
