@@ -68,7 +68,7 @@ impl Modulus for DynamicModulus {
 }
 
 #[snippet("modulo")]
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
 
 #[snippet("modulo")]
@@ -115,6 +115,13 @@ impl<M: Modulus> Mod<M> {
 
 #[snippet("modulo")]
 impl<M> std::fmt::Display for Mod<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[snippet("modulo")]
+impl<M> std::fmt::Debug for Mod<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
