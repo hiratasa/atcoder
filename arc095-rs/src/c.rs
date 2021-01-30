@@ -148,4 +148,94 @@ where
 {
 }
 
-fn main() {}
+fn check(s: &Vec<Vec<char>>, seq: &[usize]) -> bool {
+    // let h = s.len();
+    let w = s[0].len();
+
+    let mut used = vec![false; w];
+    let mut single = false;
+    for i in 0..w {
+        if used[i] {
+            continue;
+        }
+
+        if let Some(j) = (i + 1..w).filter(|&j| !used[j]).find(|&j| {
+            seq.citer()
+                .map(|u| s[u][i])
+                .eq(seq.citer().map(|u| s[u][j]).rev())
+        }) {
+            used[i] = true;
+            used[j] = true;
+        } else if !single
+            && seq
+                .citer()
+                .map(|u| s[u][i])
+                .eq(seq.citer().map(|u| s[u][i]).rev())
+        {
+            used[i] = true;
+            single = true;
+        } else {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn solve(
+    s: &Vec<Vec<char>>,
+    seq: &mut [usize],
+    next: usize,
+    single: bool,
+    used: &mut [bool],
+) -> bool {
+    let h = s.len();
+
+    if 2 * next + single as usize == h {
+        return check(s, seq);
+    }
+
+    let i = (0..h).find(|&i| !used[i]).unwrap();
+
+    used[i] = true;
+    for j in i + 1..h {
+        if used[j] {
+            continue;
+        }
+
+        used[j] = true;
+
+        seq[next] = i;
+        seq[h - 1 - next] = j;
+
+        if solve(s, seq, next + 1, single, used) {
+            return true;
+        }
+
+        used[j] = false;
+    }
+
+    if h % 2 > 0 && !single {
+        seq[h / 2] = i;
+        if solve(s, seq, next, true, used) {
+            return true;
+        }
+    }
+
+    used[i] = false;
+
+    return false;
+}
+
+fn main() {
+    let (h, w) = read_tuple!(usize, usize);
+
+    let s = read_vec(h, || read_str());
+    assert!(s[0].len() == w);
+
+    if solve(&s, &mut vec![0; h], 0, false, &mut vec![false; h]) {
+        println!("YES");
+    } else {
+        println!("NO");
+    }
+}

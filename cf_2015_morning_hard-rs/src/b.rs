@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,92 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+
+    let a = read_row::<usize>();
+
+    let mut b = once(0).chain(a.citer()).chain(once(0)).enumerate().fold(
+        BTreeMap::new(),
+        |mut map, (i, aa)| {
+            if !matches!(map.values().next_back(), Some(&last) if last == aa) {
+                map.insert(i, aa);
+            }
+            map
+        },
+    );
+    let mut q = b
+        .iter()
+        .tuple_windows()
+        .filter(|(prev, current, next)| prev.1 < current.1 && current.1 > next.1)
+        .map(|(_prev, current, next)| (Reverse(next.0 - current.0), *current.0))
+        .collect::<BinaryHeap<_>>();
+
+    let c = b
+        .iter()
+        .tuple_windows()
+        .map(|(prev, current, next)| {
+            let len = next.0 - current.0;
+
+            let left = if prev.1 < current.1 {
+                current.1 - prev.1
+            } else {
+                0
+            };
+            let right = if next.1 < current.1 {
+                current.1 - next.1
+            } else {
+                0
+            };
+
+            left + right + len + 2 * len * current.1
+        })
+        .sum::<usize>();
+    let mut ans = c;
+    let mut k = k;
+    while let Some((Reverse(len), idx)) = q.pop() {
+        let (&prev_idx, &prev) = b.range(..idx).next_back().unwrap();
+        let current = b[&idx];
+        let (&next_idx, &next) = b.range(idx + 1..).next().unwrap();
+
+        assert!(len == next_idx - idx);
+        let h = max(prev, next);
+        let r = (current - h) * len;
+
+        if r < k {
+            k -= r;
+            ans -= (current - h) * (2 * len + 2);
+
+            b.remove(&idx);
+
+            if prev < next {
+                b.remove(&next_idx);
+                b.insert(idx, h);
+                let (&next_idx2, &next2) = b.range(idx + 1..).next().unwrap();
+                if h > next2 {
+                    q.push((Reverse(next_idx2 - idx), idx));
+                }
+            } else if prev == next {
+                b.remove(&next_idx);
+                let (&_prev_idx2, &prev2) = b.range(..prev_idx).next_back().unwrap();
+                let (&next_idx2, &next2) = b.range(prev_idx + 1..).next().unwrap();
+                if prev2 < h && h > next2 {
+                    q.push((Reverse(next_idx2 - prev_idx), prev_idx));
+                }
+            } else {
+                let (&_prev_idx2, &prev2) = b.range(..prev_idx).next_back().unwrap();
+                if prev2 < h {
+                    q.push((Reverse(next_idx - prev_idx), prev_idx));
+                }
+            }
+        } else {
+            let y = k / len;
+            ans -= y * (2 * len + 2);
+
+            ans -= (k % len) * 2;
+            break;
+        }
+    }
+
+    println!("{}", ans);
+}

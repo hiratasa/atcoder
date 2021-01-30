@@ -148,4 +148,20 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (h, w, d) = read_tuple!(i64, i64, i64);
+
+    let colors = ['R', 'Y', 'G', 'B'];
+    (0..h)
+        .map(|i| {
+            (0..w)
+                .map(move |j| {
+                    let x = i + j;
+                    let y = i - j + w;
+
+                    colors[(2 * ((x / d) % 2) + (y / d) % 2) as usize]
+                })
+                .collect::<String>()
+        })
+        .for_each(|line| println!("{}", line));
+}

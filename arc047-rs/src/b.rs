@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,37 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let xy = read_vec(n, || read_tuple!(i64, i64));
+
+    let (z0, z1) = xy
+        .citer()
+        .map(|(x, y)| x + y)
+        .minmax()
+        .into_option()
+        .unwrap();
+    let (w0, w1) = xy
+        .citer()
+        .map(|(x, y)| x - y)
+        .minmax()
+        .into_option()
+        .unwrap();
+
+    let d = max((z1 - z0) / 2, (w1 - w0) / 2);
+
+    let ans = it!(
+        (z0 + d, w0 + d),
+        (z0 + d, w1 - d),
+        (z1 - d, w1 - d),
+        (z1 - d, w1 - d)
+    )
+    .map(|(z, w)| ((z + w) / 2, (z - w) / 2))
+    .find(|&(x, y)| {
+        xy.citer()
+            .map(|(x2, y2)| (x - x2).abs() + (y - y2).abs())
+            .all_equal()
+    })
+    .unwrap();
+    println!("{} {}", ans.0, ans.1);
+}

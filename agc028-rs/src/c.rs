@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,32 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let ab = read_vec(n, || read_tuple!(i64, i64));
+
+    let c = ab
+        .citer()
+        .enumerate()
+        .flat_map(|(i, (a, b))| it!((a, 0, i), (b, 1, i)))
+        .sorted()
+        .collect_vec();
+
+    let ans = if c.citer().take(n).map(|t| t.1).all_equal()
+        || c.citer()
+            .take(n)
+            .map(|t| t.2)
+            .sorted()
+            .group_by(|&t| t)
+            .into_iter()
+            .any(|(_, it)| it.count() == 2)
+    {
+        c.citer().take(n).map(|t| t.0).sum::<i64>()
+    } else if c[n - 1].2 != c[n].2 {
+        c.citer().take(n + 1).map(|t| t.0).sum::<i64>() - c[n - 1].0
+    } else {
+        let s = c.citer().take(n).map(|t| t.0).sum::<i64>();
+        min(s + c[n].0 - c[n - 2].0, s + c[n + 1].0 - c[n - 1].0)
+    };
+    println!("{}", ans);
+}
