@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,258 @@ where
 {
 }
 
-fn main() {}
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: u16,
+        pub to: u16,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: u16, to: u16) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
+        }
+        pub fn new_with_label(from: u16, to: u16, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
+        }
+    }
+    pub type UnweightedEdge = Edge<()>;
+    impl std::convert::From<(u16, u16)> for UnweightedEdge {
+        fn from(t: (u16, u16)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(u16, u16)> for UnweightedEdge {
+        fn from(t: &(u16, u16)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from as usize].push(edge);
+            self.in_edges[edge.to as usize].push(edge);
+        }
+    }
+}
+
+use detail::Graph;
+
+#[allow(dead_code)]
+fn dfs(g: &Graph, v: u16, visited: &mut Vec<bool>, vs: &mut Vec<u16>) {
+    visited[v as usize] = true;
+
+    for edge in &g.out_edges[v as usize] {
+        if !visited[edge.to as usize] {
+            dfs(g, edge.to, visited, vs);
+        }
+    }
+
+    vs.push(v);
+}
+
+#[allow(dead_code)]
+fn rev_dfs(
+    g: &Graph,
+    v: u16,
+    idx: usize,
+    idxs: &mut Vec<Option<usize>>,
+    vs: &mut Vec<u16>,
+    parents: &mut Vec<usize>,
+) {
+    idxs[v as usize] = Some(idx);
+    vs.push(v);
+
+    for edge in &g.in_edges[v as usize] {
+        if let Some(t) = idxs[edge.from as usize] {
+            if t < idx {
+                parents.push(t);
+            }
+        } else {
+            rev_dfs(g, edge.from, idx, idxs, vs, parents);
+        }
+    }
+}
+
+#[allow(dead_code)]
+fn scc_in_degrees(g: &Graph) -> Vec<usize> {
+    let mut vs = vec![];
+    {
+        let mut visited = vec![false; g.size()];
+        for v in 0..g.size() {
+            if !visited[v] {
+                dfs(g, v as u16, &mut visited, &mut vs);
+            }
+        }
+    }
+
+    let mut in_degrees = vec![];
+    {
+        let mut idxs = vec![None; g.size()];
+        for &v in vs.iter().rev() {
+            if idxs[v as usize].is_none() {
+                let idx = in_degrees.len();
+                let mut component = vec![];
+                let mut parents = vec![];
+                rev_dfs(g, v, idx, &mut idxs, &mut component, &mut parents);
+                in_degrees.push(parents.citer().unique().count());
+            }
+        }
+    }
+
+    in_degrees
+}
+
+fn main() {
+    let n: usize = read();
+    let f = read_vec(n, || read_tuple!(i64, i64));
+
+    let m: usize = read();
+    let s = read_vec(m, || read_tuple!(i64, i64));
+
+    if m == 0 {
+        println!("1");
+        return;
+    }
+
+    const B: i64 = 100_000_000;
+
+    let map = s
+        .citer()
+        .map(|(x, y)| ((x / B, y / B), (x, y)))
+        // .inspect(|t| eprintln!("{:?}", t))
+        .into_group_map();
+
+    let edges = f
+        .citer()
+        .enumerate()
+        .flat_map(|(i, (x, y))| {
+            let d2 = (1..)
+                .find_map(|j| {
+                    let xx = x / B;
+                    let yy = y / B;
+
+                    iproduct!(xx - j..=xx + j, yy - j..=yy + j)
+                        // .inspect(|t| eprintln!("{:?}", t))
+                        .filter_map(|(xx2, yy2)| map.get(&(xx2, yy2)))
+                        .flatten()
+                        .copied()
+                        .map(|(x2, y2)| (x - x2) * (x - x2) + (y - y2) * (y - y2))
+                        .min()
+                        .filter(|&d2| d2 <= j * j * B * B)
+                })
+                .unwrap();
+
+            f.citer()
+                .enumerate()
+                .filter(move |&(j, _)| j != i)
+                .filter(move |&(_, (x2, y2))| (x - x2) * (x - x2) + (y - y2) * (y - y2) < d2)
+                .map(move |(j, _)| (i as u16, j as u16))
+        })
+        .collect_vec();
+
+    let g = Graph::from_edges_directed(n, &edges);
+
+    let in_degrees = scc_in_degrees(&g);
+
+    let ans = in_degrees.citer().filter(|deg| *deg == 0).count();
+    println!("{}", ans);
+}
