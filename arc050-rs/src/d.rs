@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,85 @@ where
 {
 }
 
-fn main() {}
+fn suffix_ranks<T: Ord>(s: &[T]) -> Vec<Vec<usize>> {
+    let n = s.len();
+    let sa0 = (0..n).sorted_by_key(|&i| &s[i]).collect_vec();
+    let r0 = sa0
+        .iter()
+        .group_by(|&&i| &s[i])
+        .into_iter()
+        .enumerate()
+        .fold(vec![0; n], |mut r, (rank, (_, it))| {
+            for &idx in it {
+                r[idx] = rank;
+            }
+            r
+        });
+
+    successors(Some((r0, 1)), |(prev_r, prev_len)| {
+        if *prev_len >= n {
+            return None;
+        }
+
+        let len = 2 * *prev_len;
+        let to_key = |i: usize| (prev_r.get(i), prev_r.get(i + len / 2));
+        let sa = (0..n).sorted_by_key(|&i| to_key(i)).collect_vec();
+        let r = sa
+            .iter()
+            .group_by(|&&i| to_key(i))
+            .into_iter()
+            .enumerate()
+            .fold(vec![0; n], |mut r, (rank, (_, it))| {
+                for &idx in it {
+                    r[idx] = rank;
+                }
+                r
+            });
+        Some((r, len))
+    })
+    .map(|t| t.0)
+    .collect_vec()
+}
+
+fn is_prefix_of(sr: &Vec<Vec<usize>>, idx0: usize, idx1: usize) -> bool {
+    let n = sr[0].len();
+
+    if idx0 < idx1 {
+        return false;
+    }
+
+    (0..sr.len())
+        .rev()
+        .try_fold((idx0, idx1), |(idx0, idx1), i| {
+            let len = 1 << i;
+
+            if len > n - idx0 {
+                Some((idx0, idx1))
+            } else if sr[i][idx0] == sr[i][idx1] {
+                Some((idx0 + len, idx1 + len))
+            } else {
+                None
+            }
+        })
+        .is_some()
+}
+
+fn main() {
+    let n: usize = read();
+    let s = read_str();
+
+    let sr = suffix_ranks(&s);
+    let sa = &sr[sr.len() - 1];
+
+    (0..n)
+        .sorted_by(|&i, &j| {
+            if i > j && is_prefix_of(&sr, i, j) {
+                sa[j].cmp(&sa[j + (n - i)])
+            } else if i < j && is_prefix_of(&sr, j, i) {
+                sa[i + (n - j)].cmp(&sa[i])
+            } else {
+                sa[i].cmp(&sa[j])
+            }
+        })
+        .for_each(|i| println!("{}", i + 1));
+}
