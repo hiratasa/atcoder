@@ -149,93 +149,30 @@ where
 }
 
 fn main() {
-    let b = read::<String>()
-        .chars()
-        .map(|c| c.to_digit(10).unwrap() as usize)
-        .collect_vec();
-    let price = read::<usize>();
+    let (h, w) = read_tuple!(usize, usize);
 
-    const A: usize = 200;
-    const B: usize = 100;
-    const C: usize = B * 9 + 1;
+    let s = read_vec(h, || read_str());
 
-    let c = b.citer().fold(
-        vvec![(0, vec![]); (usize::MAX, vec![]); C],
-        |c: Vec<(usize, Vec<usize>)>, bb| {
-            (0..C - bb).fold(c, move |mut c, i| {
-                if c[i].0.saturating_add(1) < c[i + bb].0 {
-                    c[i + bb] = (c[i].0 + 1, c[i].1.citer().chain(once(bb)).collect_vec());
-                }
-                c
-            })
-        },
-    );
+    let ans = iproduct!(1..h - 1, 1..w - 1)
+        .map(|(i, j)| {
+            let b0 = s[i - 1][j] == s[i][j];
+            let b1 = s[i][j + 1] == s[i][j];
+            let b2 = s[i + 1][j] == s[i][j];
+            let b3 = s[i][j - 1] == s[i][j];
+            let t = b0 as usize + b1 as usize + b2 as usize + b3 as usize;
 
-    let digits = iterate(price, |p| p / 10)
-        .take_while(|x| *x > 0)
-        .map(|x| x % 10)
-        .collect_vec()
-        .into_iter()
-        .rev()
-        .collect_vec();
-
-    let mut init = vec![vec![(usize::MAX, None); B]; B];
-    init[0][0] = (0, None);
-    let dp = digits.into_iter().fold(vec![init], |dp, d| {
-        let prev = dp.last().unwrap();
-        let next =
-            iproduct!(0..B, 0..B).fold(vec![vec![(usize::MAX, None); B]; B], |next, (i, j)| {
-                c.iter()
-                    .enumerate()
-                    .take_while(|(k, (l, _))| *k <= i * 10 + d)
-                    .skip_while(|(k, (l, _))| i * 10 + d >= k + B)
-                    .filter(|(k, (l, _))| *l < B)
-                    .fold(next, |mut next, (k, (l, _))| {
-                        let i1 = i * 10 + d - k;
-                        let (l1, x) = if j < *l {
-                            (*l, prev[i][j].0.saturating_add(j + (l - j) * 2))
-                        } else {
-                            (j, prev[i][j].0.saturating_add(j))
-                        };
-                        if x < next[i1][l1].0 {
-                            next[i1][l1] = (x, Some((i, j, k)));
-                        }
-
-                        next
-                    })
-            });
-        pushed!(dp, next)
-    });
-
-    let min_idx = dp[dp.len() - 1][0].citer().position_min().unwrap();
-
-    let nums = dp
-        .iter()
-        .skip(1)
-        .rev()
-        .scan((0, min_idx), |(idx0, idx1), dp_row| {
-            let (next_idx0, next_idx1, k) = dp_row[*idx0][*idx1].1.unwrap();
-            // eprintln!("{:?} {:?}", dp_row[*idx0][*idx1], c[k]);
-            *idx0 = next_idx0;
-            *idx1 = next_idx1;
-            Some(&c[k].1)
+            if t == 0 {
+                4
+            } else if t == 1 {
+                2
+            } else if t == 2 && ((b0 && b2) || (b1 && b3)) {
+                0
+            } else if t == 2 {
+                1
+            } else {
+                0
+            }
         })
-        .fold((1, vec![]), |(d, nums), cc| {
-            let len = max(nums.len(), cc.len());
-            let nums = izip!(
-                nums.into_iter().chain(repeat(0)),
-                cc.citer().chain(repeat(0)),
-            )
-            .take(len)
-            .map(|(x, y)| x + d * y)
-            .collect_vec();
-            (10 * d, nums)
-        })
-        .1;
-    let ans = if nums.len() == 1 {
-        nums[0].to_string()
-    } else {
-        nums.citer().join("+") + "="
-    };
+        .sum::<usize>();
     println!("{}", ans);
 }

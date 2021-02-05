@@ -148,94 +148,89 @@ where
 {
 }
 
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
+        }
+    }
+    begin
+}
+#[allow(dead_code)]
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
+}
+
+fn floor_sqrt(x: i64) -> i64 {
+    let r = lower_bound_int(1, x, |s| (s.saturating_pow(2)).cmp(&x));
+    if r * r > x {
+        r - 1
+    } else {
+        r
+    }
+}
+
 fn main() {
-    let b = read::<String>()
-        .chars()
-        .map(|c| c.to_digit(10).unwrap() as usize)
-        .collect_vec();
-    let price = read::<usize>();
-
-    const A: usize = 200;
-    const B: usize = 100;
-    const C: usize = B * 9 + 1;
-
-    let c = b.citer().fold(
-        vvec![(0, vec![]); (usize::MAX, vec![]); C],
-        |c: Vec<(usize, Vec<usize>)>, bb| {
-            (0..C - bb).fold(c, move |mut c, i| {
-                if c[i].0.saturating_add(1) < c[i + bb].0 {
-                    c[i + bb] = (c[i].0 + 1, c[i].1.citer().chain(once(bb)).collect_vec());
-                }
-                c
-            })
-        },
+    let (x, y, r) = read_tuple!(f64, f64, f64);
+    let (x, y, r) = (
+        (x * 10000.0).round() as i64,
+        (y * 10000.0).round() as i64,
+        (r * 10000.0).round() as i64,
     );
 
-    let digits = iterate(price, |p| p / 10)
-        .take_while(|x| *x > 0)
-        .map(|x| x % 10)
-        .collect_vec()
-        .into_iter()
-        .rev()
-        .collect_vec();
+    let x = x + 2000000000;
+    let y = y + 2000000000;
 
-    let mut init = vec![vec![(usize::MAX, None); B]; B];
-    init[0][0] = (0, None);
-    let dp = digits.into_iter().fold(vec![init], |dp, d| {
-        let prev = dp.last().unwrap();
-        let next =
-            iproduct!(0..B, 0..B).fold(vec![vec![(usize::MAX, None); B]; B], |next, (i, j)| {
-                c.iter()
-                    .enumerate()
-                    .take_while(|(k, (l, _))| *k <= i * 10 + d)
-                    .skip_while(|(k, (l, _))| i * 10 + d >= k + B)
-                    .filter(|(k, (l, _))| *l < B)
-                    .fold(next, |mut next, (k, (l, _))| {
-                        let i1 = i * 10 + d - k;
-                        let (l1, x) = if j < *l {
-                            (*l, prev[i][j].0.saturating_add(j + (l - j) * 2))
-                        } else {
-                            (j, prev[i][j].0.saturating_add(j))
-                        };
-                        if x < next[i1][l1].0 {
-                            next[i1][l1] = (x, Some((i, j, k)));
-                        }
+    assert!(x - r >= 0);
+    assert!(y - r >= 0);
 
-                        next
-                    })
-            });
-        pushed!(dp, next)
-    });
+    const B: i64 = 10000;
 
-    let min_idx = dp[dp.len() - 1][0].citer().position_min().unwrap();
+    let top = (y + r) / B * B;
+    let bottom = (y - r + B - 1) / B * B;
 
-    let nums = dp
-        .iter()
-        .skip(1)
-        .rev()
-        .scan((0, min_idx), |(idx0, idx1), dp_row| {
-            let (next_idx0, next_idx1, k) = dp_row[*idx0][*idx1].1.unwrap();
-            // eprintln!("{:?} {:?}", dp_row[*idx0][*idx1], c[k]);
-            *idx0 = next_idx0;
-            *idx1 = next_idx1;
-            Some(&c[k].1)
+    let ans = (bottom / B..=top / B)
+        .map(|yy| yy * B)
+        .map(|yy| {
+            // (xx-x)^2 <= r^2 - (yy-y)^2
+            let t = r * r - (yy - y) * (yy - y);
+            assert!(t >= 0);
+
+            // x - sqrt(t) <= xx <= x + sqrt(t)
+            let sqrtt = floor_sqrt(t);
+            assert!(sqrtt <= r);
+            let right = (x + sqrtt) / B * B;
+            let left = (x - sqrtt + B - 1) / B * B;
+
+            // assert!(right - left >= -B);
+            (right - left) / B + 1
         })
-        .fold((1, vec![]), |(d, nums), cc| {
-            let len = max(nums.len(), cc.len());
-            let nums = izip!(
-                nums.into_iter().chain(repeat(0)),
-                cc.citer().chain(repeat(0)),
-            )
-            .take(len)
-            .map(|(x, y)| x + d * y)
-            .collect_vec();
-            (10 * d, nums)
-        })
-        .1;
-    let ans = if nums.len() == 1 {
-        nums[0].to_string()
-    } else {
-        nums.citer().join("+") + "="
-    };
+        .sum::<i64>();
     println!("{}", ans);
 }
