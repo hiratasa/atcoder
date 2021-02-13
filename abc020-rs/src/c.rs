@@ -187,52 +187,54 @@ where
     lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
 }
 
+fn chmin(a: &mut usize, b: usize) -> bool {
+    if *a <= b {
+        false
+    } else {
+        *a = b;
+        true
+    }
+}
+
 fn main() {
     let (h, w, t) = read_tuple!(usize, usize, usize);
 
     let s = read_vec(h, || read_str());
 
-    let is_black = s
+    let start = s
         .iter()
-        .map(|row| row.citer().map(|c| c == '#').collect_vec())
-        .collect_vec();
-    let start = iproduct!(0..h, 0..w)
-        .find(|&(i, j)| s[i][j] == 'S')
+        .enumerate()
+        .find_map(|(i, row)| row.citer().position(|c| c == 'S').map(|j| (i, j)))
         .unwrap();
-    let goal = iproduct!(0..h, 0..w)
-        .find(|&(i, j)| s[i][j] == 'G')
+    let goal = s
+        .iter()
+        .enumerate()
+        .find_map(|(i, row)| row.citer().position(|c| c == 'G').map(|j| (i, j)))
         .unwrap();
 
-    let ans = lower_bound_int(1, t, |x| {
+    let ans = lower_bound_int(0, t, |x| {
         let mut q = BinaryHeap::new();
         let mut costs = vec![vec![usize::MAX; w]; h];
 
-        q.push(Reverse((0, start)));
+        q.push((Reverse(0), start));
         costs[start.0][start.1] = 0;
-
-        while let Some(Reverse((cost, (i, j)))) = q.pop() {
-            if costs[i][j] < cost {
-                continue;
-            }
-
+        while let Some((Reverse(cost), (i, j))) = q.pop() {
             if (i, j) == goal {
                 break;
             }
 
-            it!((usize::MAX, 0), (0, usize::MAX), (0, 1), (1, 0))
+            let deltas = [(usize::MAX, 0), (0, usize::MAX), (1, 0), (0, 1)];
+            deltas
+                .citer()
                 .map(|(di, dj)| (i.wrapping_add(di), j.wrapping_add(dj)))
                 .filter(|&(ni, nj)| ni < h && nj < w)
-                .for_each(|(ni, nj)| {
-                    let next_cost = if is_black[ni][nj] { cost + x } else { cost + 1 };
-
-                    if next_cost < costs[ni][nj] {
-                        q.push(Reverse((next_cost, (ni, nj))));
-                        costs[ni][nj] = next_cost;
-                    }
-                });
+                .map(|(ni, nj)| (ni, nj, cost + if s[ni][nj] == '#' { x } else { 1 }))
+                .filter(|&(ni, nj, ncost)| chmin(&mut costs[ni][nj], ncost))
+                .for_each(|(ni, nj, ncost)| q.push((Reverse(ncost), (ni, nj))));
         }
 
         costs[goal.0][goal.1].cmp(&t).then(Ordering::Less)
     }) - 1;
+
     println!("{}", ans);
 }

@@ -100,12 +100,13 @@ trait IteratorDpExt: Iterator + Sized {
 impl<I> IteratorDpExt for I where I: Iterator + Sized {}
 
 fn main() {
-    let ans = read::<String>()
+    let n = read::<String>();
+    let ans = n
         .chars()
         .map(|c| match c {
             '1' => '9',
             '9' => '1',
-            _ => c,
+            _ => unreachable!(),
         })
         .collect::<String>();
     println!("{}", ans);

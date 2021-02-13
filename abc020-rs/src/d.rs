@@ -148,4 +148,63 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+
+    let prime_factors = (2..)
+        .scan(k, |kk, x| {
+            if *kk == 1 {
+                None
+            } else if x * x > *kk {
+                Some(Some(replace(kk, 1)))
+            } else {
+                let (kkk, d) = iterate((*kk, 0), |(kkk, i)| (kkk / x, i + 1))
+                    .find(|&(kkk, _)| kkk % x > 0)
+                    .unwrap();
+                *kk = kkk;
+                if d == 0 {
+                    Some(None)
+                } else {
+                    Some(Some(x))
+                }
+            }
+        })
+        .flatten()
+        .collect_vec();
+
+    let factors = (1..)
+        .take_while(|&x| x * x <= k)
+        .flat_map(|x| {
+            if k % x == 0 {
+                if x * x == k {
+                    vec![x]
+                } else {
+                    vec![x, k / x]
+                }
+            } else {
+                vec![]
+            }
+        })
+        .collect_vec();
+
+    const M: usize = 1_000_000_007;
+    let init = factors
+        .citer()
+        .map(|m| (m, n / m))
+        .map(|(m, t)| (m, t * (t + 1) / 2 % M * m % M))
+        .collect::<FxHashMap<_, _>>();
+    // eprintln!("{:?}", prime_factors);
+    // eprintln!("{:?}", factors);
+    // eprintln!("{:?}", init);
+
+    let ans = prime_factors
+        .citer()
+        .fold(init, |map, p| {
+            map.iter()
+                .map(|(&m, &v)| (m, (v + M - map.get(&(p * m)).copied().unwrap_or(0)) % M))
+                .collect::<FxHashMap<_, _>>()
+        })
+        .into_iter()
+        .fold(0, |acc, (m, v)| (acc + v * (k / m)) % M);
+    println!("{}", ans);
+}

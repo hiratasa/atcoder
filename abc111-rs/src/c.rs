@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,39 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let v = read_row::<usize>();
+
+    let e = v
+        .citer()
+        .enumerate()
+        .filter(|(i, _)| i % 2 == 0)
+        .map(|t| t.1)
+        .sorted()
+        .group_by(|&x| x)
+        .into_iter()
+        .map(|(k, it)| ((n + 1) / 2 - it.count(), k))
+        .sorted()
+        .take(2)
+        .collect_vec();
+    let o = v
+        .citer()
+        .enumerate()
+        .filter(|(i, _)| i % 2 != 0)
+        .map(|t| t.1)
+        .sorted()
+        .group_by(|&x| x)
+        .into_iter()
+        .map(|(k, it)| (n / 2 - it.count(), k))
+        .sorted()
+        .take(2)
+        .collect_vec();
+
+    let ans = iproduct!(e, o)
+        .filter(|(t0, t1)| t0.1 != t1.1)
+        .map(|(t0, t1)| t0.0 + t1.0)
+        .min()
+        .unwrap_or(n / 2);
+    println!("{}", ans);
+}

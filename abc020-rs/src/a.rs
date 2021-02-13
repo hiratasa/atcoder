@@ -148,4 +148,12 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    if n == 1 {
+        println!("ABC");
+    } else {
+        println!("chokudai");
+    }
+}

@@ -148,4 +148,11 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (a, b) = read_tuple!(String, String);
+
+    let c = (a + &b).parse::<usize>().unwrap();
+    let ans = 2 * c;
+
+    println!("{}", ans);
+}
