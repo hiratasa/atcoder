@@ -42,6 +42,11 @@ macro_rules! define_static_mod {
     };
 }
 
+//2^26
+#[snippet("modulo")]
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
+
+// 2^22
 #[snippet("modulo")]
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
 
