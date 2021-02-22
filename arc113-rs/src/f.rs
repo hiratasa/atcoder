@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -146,6 +146,22 @@ where
     I: IntoIterator<Item = &'a T>,
     T: 'a + Copy,
 {
+}
+
+trait ToString {
+    fn to_string(self: Self) -> String;
+}
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
+    }
 }
 
 fn main() {}

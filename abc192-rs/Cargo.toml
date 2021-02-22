@@ -1,5 +1,5 @@
 [package]
-name = "agc019-rs"
+name = "abc192-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,25 +18,25 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "agc019-a"
+name = "abc192-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "agc019-b"
+name = "abc192-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "agc019-c"
+name = "abc192-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "agc019-d"
+name = "abc192-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "agc019-e"
+name = "abc192-e"
 path = "src/e.rs"
 
 [[bin]]
-name = "agc019-f"
+name = "abc192-f"
 path = "src/f.rs"
