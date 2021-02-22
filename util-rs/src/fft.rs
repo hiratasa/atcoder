@@ -1,9 +1,11 @@
 use super::modulo::{pow_mod, Mod, Modulus};
 use num::complex::Complex64;
 
-// Calculate fft: g[i] = sum[j=0 to n] f[j] * c^(i * j)
+// Calculate fft: g[i] = sum[j=0 to n] f[j] * es[i * j]
 // - length must be power of two
-// - c^n == 1
+// - es[i] = es[0]^i
+// - es[0]^n == 1
+// esを順次掛け算で計算していくと誤差が大きくなるので（型に応じた方法で）適切に計算して外から渡す
 // 計算量 O(n logn)
 fn fft<
     T: Copy
@@ -13,7 +15,7 @@ fn fft<
         + num::One,
 >(
     f: &mut Vec<T>,
-    c: T,
+    es: &[T],
 ) {
     let n = f.len();
 
@@ -33,23 +35,17 @@ fn fft<
         }
     }
 
-    let cs = std::iter::successors(Some(c), |cc| Some(*cc * *cc))
-        .take(d)
-        .collect::<Vec<_>>();
     for i in 0..d {
         let b = 1 << i;
         let c = n >> (i + 1); // b * c == n/2
-        let z = cs[d - 1 - i];
 
         for j in 0..c {
-            let mut p = T::one();
-
             for k in 0..b {
+                let p = es[k * c];
                 let t1 = f[j * 2 * b + k];
                 let t2 = f[j * 2 * b + k + b];
                 f[j * 2 * b + k] = t1 + p * t2;
                 f[j * 2 * b + k + b] = t1 - p * t2;
-                p = p * z;
             }
         }
     }
@@ -60,7 +56,11 @@ fn fft_complex(f: &mut Vec<Complex64>) {
     let n = f.len();
     fft(
         f,
-        Complex64::from_polar(&1.0, &(2.0 * std::f64::consts::PI / (n as f64))),
+        &(0..n)
+            .map(|i| {
+                Complex64::from_polar(&1.0, &(2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
+            })
+            .collect::<Vec<_>>(),
     );
 }
 
@@ -70,7 +70,11 @@ fn inv_fft_complex(f: &mut Vec<Complex64>) {
 
     fft(
         f,
-        Complex64::from_polar(&1.0, &(-2.0 * std::f64::consts::PI / (n as f64))),
+        &(0..n)
+            .map(|i| {
+                Complex64::from_polar(&1.0, &(-2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
+            })
+            .collect::<Vec<_>>(),
     );
     for x in f {
         *x /= n as f64;
@@ -158,7 +162,7 @@ fn fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
     assert!((M::modulus() - 1) % n == 0);
     let g = primitive_root(M::modulus());
     let c = pow_mod(g, (M::modulus() - 1) / n, M::modulus());
-    fft(f, Mod::new(c));
+    fft(f, &(0..n).map(|i| Mod::new(c).pow(i)).collect::<Vec<_>>());
 }
 
 #[allow(dead_code)]
@@ -169,7 +173,7 @@ fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
     let g = primitive_root(M::modulus());
     // let c = pow_mod(g, (modulus() - 1) / n, modulus()).inv();
     let c = pow_mod(g, (M::modulus() - 1) / n * (n - 1), M::modulus());
-    fft(f, Mod::new(c));
+    fft(f, &(0..n).map(|i| Mod::new(c).pow(i)).collect::<Vec<_>>());
     for x in f {
         *x /= n;
     }
@@ -207,6 +211,36 @@ fn convolution_mod<M: Modulus>(p: &Vec<Mod<M>>, q: &Vec<Mod<M>>) -> Vec<Mod<M>> 
     pf.resize(n0 + n1 - 1, Mod::new(0));
     pf
 }
+
+// fn convolution_crt(p: &Vec<usize>, q: &Vec<usize>) -> Vec<usize> {
+//     define_static_mod!(469762049, Modulus469762049, Mod469762049);
+//     define_static_mod!(998244353, Modulus998244353, Mod998244353);
+
+//     type Mod1 = Mod469762049;
+//     type Mod2 = Mod998244353;
+
+//     let M1 = Mod1::modulus() as i64;
+//     let M2 = Mod2::modulus() as i64;
+
+//     let p1 = p.iter().copied().map(|x| Mod1::new(x)).collect();
+//     let q1 = q.iter().copied().map(|x| Mod1::new(x)).collect();
+//     let conv1 = convolution_mod(&p1, &q1);
+
+//     let p2 = p.iter().copied().map(|x| Mod2::new(x)).collect();
+//     let q2 = q.iter().copied().map(|x| Mod2::new(x)).collect();
+//     let conv2 = convolution_mod(&p2, &q2);
+
+//     // u * M1 + v * M2 = 1
+//     let (u, v, _1) = extgcd(M1, M2);
+
+//     conv1
+//         .into_iter()
+//         .zip(conv2)
+//         .map(|(r1, r2)| {
+//             (r1.0 as i64 * v % M1 * M2 + r2.0 as i64 * u % M2 * M1).rem_euclid(M1 * M2) as usize
+//         })
+//         .collect()
+// }
 
 #[test]
 fn test_fft_complex() {
