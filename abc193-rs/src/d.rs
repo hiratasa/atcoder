@@ -148,4 +148,59 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let k: usize = read();
+    let s = read_str()
+        .into_iter()
+        .take(4)
+        .map(|d| d.to_digit(10).unwrap() as usize)
+        .collect::<Vec<_>>();
+    let t = read_str()
+        .into_iter()
+        .take(4)
+        .map(|d| d.to_digit(10).unwrap() as usize)
+        .collect::<Vec<_>>();
+
+    let ss = s.citer().fold(vec![0; 10], |mut a, x| {
+        a[x] += 1;
+        a
+    });
+    let tt = t.citer().fold(vec![0; 10], |mut a, x| {
+        a[x] += 1;
+        a
+    });
+
+    let nums = (0..10).map(|i| k - ss[i] - tt[i]).collect::<Vec<_>>();
+
+    let calc_score = |hands: &[usize], add: usize| {
+        (1..=9)
+            .map(|i| {
+                if i == add {
+                    i * 10usize.pow(hands[i] as u32 + 1)
+                } else {
+                    i * 10usize.pow(hands[i] as u32)
+                }
+            })
+            .sum::<usize>()
+    };
+
+    let m = iproduct!(1..=9, 1..=9)
+        .filter(|&(a, b)| {
+            if a == b {
+                nums[a] >= 2 && calc_score(&ss, a) > calc_score(&tt, a)
+            } else {
+                nums[a] >= 1 && nums[b] >= 1 && calc_score(&ss, a) > calc_score(&tt, b)
+            }
+        })
+        .map(|(a, b)| {
+            if a == b {
+                nums[a] * (nums[a] - 1)
+            } else {
+                nums[a] * nums[b]
+            }
+        })
+        .sum::<usize>();
+
+    let ans = m as f64 / ((9 * k - 8) * (9 * k - 9)) as f64;
+    println!("{}", ans);
+}

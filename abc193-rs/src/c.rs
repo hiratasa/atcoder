@@ -148,4 +148,17 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let ans = n
+        - (2..)
+            .take_while(|&i| i * i <= n)
+            .fold(BTreeSet::new(), |mut set, i| {
+                set.extend(iterate(i, |&x| x * i).take_while(|&x| x <= n).skip(1));
+
+                set
+            })
+            .len();
+    println!("{}", ans);
+}

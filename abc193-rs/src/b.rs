@@ -148,4 +148,15 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let apx = read_vec(n, || read_tuple!(usize, usize, usize));
+
+    let ans = apx.citer().filter(|(a, _p, x)| x > a).map(|t| t.1).min();
+
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}

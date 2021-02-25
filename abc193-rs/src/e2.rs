@@ -148,4 +148,52 @@ where
 {
 }
 
-fn main() {}
+fn extgcd(a: i64, b: i64) -> (i64, i64, i64) {
+    let (_zero, g, _u, v) = std::iter::successors(Some((a, b, 1, 0)), |&(a, b, u, v)| {
+        if a == 0 {
+            None
+        } else {
+            Some((b % a, a, -u * (b / a) + v, u))
+        }
+    })
+    .last()
+    .unwrap();
+
+    (v, (g - a * v) / b, g)
+}
+
+fn main() {
+    let t: usize = read();
+
+    for _ in 0..t {
+        let (x, y, p, q) = read_tuple!(i64, i64, i64, i64);
+
+        let t = 2 * (x + y);
+        let s = p + q;
+
+        // n * t + m * s = g
+        let (n, m, g) = extgcd(t, s);
+
+        let ans = iproduct!(x..x + y, p..p + q)
+            .filter_map(|(i, j)| {
+                // u = i mod t
+                // u = j mod s
+                if (j - i) % g != 0 {
+                    None
+                } else {
+                    let u = i + ((j - i) / g).rem_euclid(s / g) * n.rem_euclid(s / g) % (s / g) * t;
+                    let u = if u < 0 { u + s * t / g } else { u };
+                    assert!(u % t == i);
+                    assert!(u % s == j);
+                    Some(u)
+                }
+            })
+            .min();
+
+        if let Some(ans) = ans {
+            println!("{}", ans);
+        } else {
+            println!("infinity");
+        }
+    }
+}

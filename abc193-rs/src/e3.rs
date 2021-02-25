@@ -148,4 +148,56 @@ where
 {
 }
 
-fn main() {}
+fn extgcd(a: i64, b: i64) -> (i64, i64, i64) {
+    let (_zero, g, _u, v) = std::iter::successors(Some((a, b, 1, 0)), |&(a, b, u, v)| {
+        if a == 0 {
+            None
+        } else {
+            Some((b % a, a, -u * (b / a) + v, u))
+        }
+    })
+    .last()
+    .unwrap();
+
+    (v, (g - a * v) / b, g)
+}
+
+fn main() {
+    let t: usize = read();
+
+    for _ in 0..t {
+        let (x, y, p, q) = read_tuple!(i64, i64, i64, i64);
+
+        let (nn, mm, g) = extgcd(2 * (x + y), p + q);
+
+        // 起床時に電車の状態が i (x - q < i < x + y) であればよい
+        let ans = (x - q + 1..x + y)
+            // .inspect(|t| eprintln!("?{}", t))
+            .filter_map(|i| {
+                let i = i.rem_euclid(2 * (x + y));
+
+                // n * 2 * (x + y) + i == m * (p + q) + p
+                // => n * 2 * (x + y) + m' * (p + q) == p - i
+                if (p - i) % g != 0 {
+                    None
+                } else {
+                    let n = (nn * ((p - i) / g)).rem_euclid((p + q) / g);
+                    let awake = n * 2 * (x + y) + i;
+
+                    if x <= i && i < x + y {
+                        Some(awake)
+                    } else {
+                        Some((awake - x + 2 * (x + y) - 1) / (2 * (x + y)) * 2 * (x + y) + x)
+                    }
+                }
+            })
+            // .inspect(|t| eprintln!("!{}", t))
+            .min();
+
+        if let Some(ans) = ans {
+            println!("{}", ans);
+        } else {
+            println!("infinity");
+        }
+    }
+}

@@ -148,4 +148,9 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (a, b) = read_tuple!(f64, f64);
+
+    let ans = 1. - b / a;
+    println!("{}", ans * 100.);
+}
