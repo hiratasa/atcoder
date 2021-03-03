@@ -149,54 +149,86 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-    let s = read_str();
+    let (n, m, k) = read_tuple!(usize, usize, usize);
 
-    let ans = s
-        .citer()
-        .map(|c| (c == '1') as i32)
-        .chain(it!(0, 0))
-        .group_by(|&c| c)
-        .into_iter()
-        .map(|(k, it)| (k, it.count()))
-        .fold((0, None, None, Some(0)), |(ans, a, b, c), (k, m)| {
-            // eprintln!("{} {} {} {:?} {:?} {:?}", k, m, ans, a, b, c);
-            if k == 0 {
-                if m < 2 {
-                    (ans, a, b, c)
-                } else {
-                    (ans + c.unwrap(), None, None, Some(0))
+    let a = read_vec(n, || read_row::<usize>());
+
+    let q: usize = read();
+    let queries = read_vec(q, || read_tuple!(usize, usize, usize, usize, usize));
+
+    let s = a
+        .iter()
+        .map(|row| {
+            row.citer().fold(vec![vec![0]; k + 1], |mut b, t| {
+                for bb in &mut b {
+                    bb.push(*bb.last().unwrap());
                 }
-            } else if m > 1 {
-                // 左の隙間から左に、右の隙間から左に
-                let aa = a.map(|a| a + m - 1);
-                // 左の隙間から左に、右の隙間から右に
-                let ab = a.map(|a| a + 2);
-                // 左の隙間から左に
-                let ac = a.map(|a| a + 1);
-                let ba = b.map(|b| b + m - 2);
-                let bb = b.map(|b| b + m - 1);
-                let bc = b.map(|b| b + m - 1);
-                let ca = c.map(|c| c + m - 1);
-                let cb = c.map(|c| c + 1);
-                let cc = c;
 
-                (
-                    ans,
-                    max(aa, max(ba, ca)),
-                    max(ab, max(bb, cb)),
-                    max(ac, max(bc, cc)),
-                )
+                *b[t].last_mut().unwrap() += 1;
+
+                b
+            })
+        })
+        .fold(vec![vec![vec![0; m + 1]]; k + 1], |mut b, row| {
+            for i in 0..=k {
+                let bb = b[i].last().unwrap().clone();
+                b[i].push(bb);
+                for j in 0..=m {
+                    b[i].last_mut().unwrap()[j] += row[i][j];
+                }
+            }
+
+            b
+        });
+
+    queries
+        .citer()
+        .scan((a, s), |(a, s), (t, x1, y1, x2, y2)| {
+            if t == 1 {
+                let x1 = x1 - 1;
+                let x2 = x2 - 1;
+                let y1 = y1 - 1;
+                let y2 = y2 - 1;
+                let a1 = a[x1][y1];
+                let a2 = a[x2][y2];
+                if x1 == x2 {
+                    let x = x1;
+                    let (amin, amax, ymin) = if y1 < y2 { (a1, a2, y1) } else { (a2, a1, y2) };
+
+                    for xx in x..n {
+                        s[amin][xx + 1][ymin + 1] -= 1;
+                        s[amax][xx + 1][ymin + 1] += 1;
+                    }
+                } else {
+                    let y = y1;
+                    let (amin, amax, xmin) = if x1 < x2 { (a1, a2, x1) } else { (a2, a1, x2) };
+
+                    for yy in y..m {
+                        s[amin][xmin + 1][yy + 1] -= 1;
+                        s[amax][xmin + 1][yy + 1] += 1;
+                    }
+                }
+
+                a[x1][y1] = a2;
+                a[x2][y2] = a1;
+
+                Some(None)
             } else {
-                let ac = a.map(|a| a + 1);
-                let bc = b;
-                let ca = c;
-                let cb = c.map(|c| c + 1);
-                let cc = c;
-
-                (ans, ca, cb, max(ac, max(bc, cc)))
+                // eprintln!("{:?}", s);
+                let ans = (1..=k)
+                    .map(|i| {
+                        (
+                            i,
+                            s[i][x2][y2] + s[i][x1 - 1][y1 - 1]
+                                - s[i][x2][y1 - 1]
+                                - s[i][x1 - 1][y2],
+                        )
+                    })
+                    .max_by_key(|&(t, m)| (m, t))
+                    .unwrap();
+                Some(Some(ans))
             }
         })
-        .0;
-    println!("{}", ans);
+        .flatten()
+        .for_each(|(x, y)| println!("{} {}", x, y));
 }

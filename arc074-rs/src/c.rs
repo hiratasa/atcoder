@@ -352,61 +352,58 @@ impl<M: Modulus> num::One for Mod<M> {
 }
 
 fn main() {
-    type Mod = Mod998244353;
+    type Mod = Mod1000000007;
 
-    let s = read_str();
+    let (n, m) = read_tuple!(usize, usize);
 
-    const B: usize = 22;
+    let lrx = read_vec(m, || read_tuple!(usize, usize, usize));
 
-    let (_dp, ans, _) = s.citer().rev().enumerate().fold(
-        (
-            vvec![vec![Mod::one()]; vec![Mod::zero()]; B + 1],
-            Mod::zero(),
-            None,
-        ),
-        |(mut dp, mut ans, last_b), (i, c)| {
-            // eprintln!("{:?} {}", dp, ans);
-            match c {
-                'B' => {
-                    dp[0].push(Mod::one());
-                    for j in 0..B {
-                        // i, i-1, i-2, i-4,
-                        let k = i
-                            .checked_sub(j.checked_sub(1).map_or(0, |x| 1 << x))
-                            .unwrap_or(0);
-                        let k = max(k, last_b.unwrap_or(0));
-                        ans += dp[j][i] - dp[j][k];
-                        let x = dp[j + 1][i]
-                            + (dp[j][k] - last_b.map_or(Mod::zero(), |idx| dp[j][idx]));
-                        dp[j + 1].push(x);
+    let dp = lrx
+        .citer()
+        .fold(vec![vec![]; n], |mut a, (l, r, x)| {
+            a[r - 1].push((l - 1, x));
+            a
+        })
+        .into_iter()
+        .enumerate()
+        .fold(
+            vvec![vvec![Mod::one(); Mod::zero(); n]; vec![Mod::zero(); n]; n],
+            |dp, (r, conds)| {
+                // update
+                let mut next = vec![vec![Mod::zero(); n]; n];
+                for i in 0..=r {
+                    if i == 0 {
+                        // i = j = 0
+                        next[0][0] += dp[0][0];
+                        next[0][r] += dp[0][0] * 2usize;
                     }
-                    (dp, ans, Some(i))
-                }
-                'S' => {
-                    for row in &mut dp {
-                        row.push(*row.last().unwrap());
+
+                    for j in i + 1..=r {
+                        next[i][j] += dp[i][j];
+                        next[i][r] += dp[i][j];
+                        next[j][r] += dp[i][j];
                     }
-                    (dp, ans, last_b)
                 }
-                _ => {
-                    ans *= 2usize;
-                    dp[0].push(Mod::one());
-                    for j in 0..B {
-                        // i, i-1, i-2, i-4,
-                        let k = i
-                            .checked_sub(j.checked_sub(1).map_or(0, |x| 1 << x))
-                            .unwrap_or(0);
-                        let k = max(k, last_b.unwrap_or(0));
-                        ans += dp[j][i] - dp[j][k];
-                        let x = dp[j + 1][i]
-                            + (dp[j][k] - last_b.map_or(Mod::zero(), |idx| dp[j][idx]));
-                        dp[j + 1].push(x);
+
+                // eprintln!("{:?}", next);
+
+                // check and update
+                for i in 0..=r {
+                    for j in i..=r {
+                        if !conds.citer().all(|(l, x)| match x {
+                            1 => j <= l,
+                            2 => i <= l && l < j,
+                            3 => l < i,
+                            _ => unreachable!(),
+                        }) {
+                            next[i][j] = Mod::zero();
+                        }
                     }
-                    (dp, ans, last_b)
                 }
-            }
-        },
-    );
-    // eprintln!("{:?}", _dp);
+
+                next
+            },
+        );
+    let ans = dp.iter().map(|row| row.citer().sum::<Mod>()).sum::<Mod>();
     println!("{}", ans);
 }

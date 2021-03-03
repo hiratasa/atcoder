@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -148,4 +148,80 @@ where
 {
 }
 
-fn main() {}
+fn suffix_array_r<T: Ord>(s: &[T]) -> Vec<usize> {
+    let n = s.len();
+    let sa0 = (0..n).sorted_by_key(|&i| &s[i]).collect_vec();
+    let r0 = sa0
+        .iter()
+        .group_by(|&&i| &s[i])
+        .into_iter()
+        .enumerate()
+        .fold(vec![0; n], |mut r, (rank, (_, it))| {
+            for &idx in it {
+                r[idx] = rank;
+            }
+            r
+        });
+
+    iterate(2, |len| len * 2)
+        .take_while(|&len| len / 2 < n)
+        .fold((sa0, r0), |(_prev_sa, prev_r), len| {
+            let to_key = |i: usize| (prev_r.get(i), prev_r.get(i + len / 2));
+            let sa = (0..n).sorted_by_key(|&i| to_key(i)).collect_vec();
+            let r = sa
+                .iter()
+                .group_by(|&&i| to_key(i))
+                .into_iter()
+                .enumerate()
+                .fold(vec![0; n], |mut r, (rank, (_, it))| {
+                    for &idx in it {
+                        r[idx] = rank;
+                    }
+                    r
+                });
+            (sa, r)
+        })
+        .1
+}
+
+trait ToString {
+    fn to_string(self: Self) -> String;
+}
+impl<I, T> ToString for I
+where
+    I: IntoIterator<Item = T>,
+    T: std::convert::TryInto<u32>,
+{
+    fn to_string(self: Self) -> String {
+        self.into_iter()
+            .map(|t| t.try_into().ok().unwrap())
+            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
+            .collect()
+    }
+}
+
+fn main() {
+    let s = read_str();
+    let k: usize = read();
+
+    let non_a_all = s.citer().filter(|c| *c != 'a').count();
+
+    let ans = if k >= non_a_all {
+        repeat_n('a', s.len() - k).to_string()
+    } else {
+        let r = suffix_array_r(&s);
+
+        let (numa, i) = (0..s.len())
+            .scan(0, |non_a, i| {
+                Some((replace(non_a, *non_a + (s[i] != 'a') as usize), i))
+            })
+            .take_while(|&(non_a, _)| non_a <= k)
+            .map(|(non_a, i)| (k - non_a + i, i))
+            .min_by_key(|&(numa, i)| (Reverse(numa), r[i]))
+            .unwrap();
+
+        chain(repeat_n('a', numa), s[i..].citer()).to_string()
+    };
+
+    println!("{}", ans);
+}
