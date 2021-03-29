@@ -8,3 +8,5 @@
 !/.cargo/**/*
 !/.devcontainer/**/*
 /past*
+/ahc*
+!/ahc001-rs
