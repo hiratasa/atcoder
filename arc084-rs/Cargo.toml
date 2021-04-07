@@ -1,5 +1,5 @@
 [package]
-name = "tenka1_2018-rs"
+name = "arc084-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,25 +18,25 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "tenka1_2018-a"
+name = "arc084-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "tenka1_2018-b"
+name = "arc084-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "tenka1_2018-c"
+name = "arc084-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "tenka1_2018-d"
+name = "arc084-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "tenka1_2018-e"
+name = "arc084-e"
 path = "src/e.rs"
 
 [[bin]]
-name = "tenka1_2018-f"
+name = "arc084-f"
 path = "src/f.rs"

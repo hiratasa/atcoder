@@ -149,97 +149,32 @@ where
 }
 
 fn main() {
-    let (h, w) = read_tuple!(usize, usize);
+    let k: usize = read();
 
-    let s = read_vec(h, || read_str());
+    let mut q = VecDeque::new();
+    let mut costs = vec![usize::MAX; k];
 
-    let t = iproduct!(0..h, 0..w).filter(|&(i, j)| s[i][j] == '#').fold(
-        vec![vec![0; h + w]; h + w],
-        |mut t, (i, j)| {
-            t[i + j][i + (w - j)] = 1;
-            t
-        },
-    );
+    q.push_back(1);
+    costs[1] = 1;
 
-    let tate = once(vec![0; h + w])
-        .chain((0..h + w).scan(vec![0; h + w], |prev, i| {
-            izip!(prev.iter_mut(), t[i].citer()).for_each(|(x, y)| *x += y);
-            Some(prev.clone())
-        }))
-        .collect::<Vec<_>>();
+    while let Some(i) = q.pop_front() {
+        let cost = costs[i];
 
-    let yoko = (0..h + w)
-        .map(|i| {
-            once(0)
-                .chain(t[i].citer())
-                .cumsum::<i64>()
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
+        if i == 0 {
+            println!("{}", cost);
+            return;
+        }
 
-    let ans0 = (0..h + w)
-        .map(|x| {
-            iproduct!(
-                (0..)
-                    .map(|y| y * 2 + (x + w) % 2)
-                    .take_while(|&y| y < h + w),
-                (0..)
-                    .map(|y| y * 2 + (x + w) % 2)
-                    .take_while(|&y| y < h + w)
-            )
-            .filter(|(y0, y1)| y0 < y1)
-            .filter(|&(y0, y1)| t[y0][x] > 0 && t[y1][x] > 0)
-            .map(|(y0, y1)| {
-                let a = if x >= y1 - y0 {
-                    let x0 = x - (y1 - y0);
-                    tate[y1 + 1][x0] - tate[y0][x0]
-                } else {
-                    0
-                };
-                let b = if x + (y1 - y0) < h + w {
-                    let x0 = x + (y1 - y0);
-                    tate[y1 + 1][x0] - tate[y0][x0]
-                } else {
-                    0
-                };
+        // +1
+        if cost + 1 < costs[(i + 1) % k] {
+            costs[(i + 1) % k] = cost + 1;
+            q.push_back((i + 1) % k);
+        }
 
-                a + b
-            })
-            .sum::<i64>()
-        })
-        .sum::<i64>();
-
-    let ans1 = (0..h + w)
-        .map(|y| {
-            iproduct!(
-                (0..)
-                    .map(|x| x * 2 + (y + w) % 2)
-                    .take_while(|&x| x < h + w),
-                (0..)
-                    .map(|x| x * 2 + (y + w) % 2)
-                    .take_while(|&x| x < h + w)
-            )
-            .filter(|(x0, x1)| x0 < x1)
-            .filter(|&(x0, x1)| t[y][x0] > 0 && t[y][x1] > 0)
-            .map(|(x0, x1)| {
-                let a = if y >= x1 - x0 {
-                    let y0 = y - (x1 - x0);
-                    yoko[y0][x1] - yoko[y0][x0 + 1]
-                } else {
-                    0
-                };
-                let b = if y + (x1 - x0) < h + w {
-                    let y0 = y + (x1 - x0);
-                    yoko[y0][x1] - yoko[y0][x0 + 1]
-                } else {
-                    0
-                };
-
-                a + b
-            })
-            .sum::<i64>()
-        })
-        .sum::<i64>();
-    let ans = ans0 + ans1;
-    println!("{}", ans);
+        // *10
+        if cost < costs[(i * 10) % k] {
+            costs[(i * 10) % k] = cost;
+            q.push_front((i * 10) % k);
+        }
+    }
 }
