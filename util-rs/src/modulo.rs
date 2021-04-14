@@ -135,10 +135,11 @@ impl<M> std::fmt::Debug for Mod<M> {
 #[snippet("modulo")]
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::From<T>,
+    usize: std::convert::TryFrom<T>,
 {
     fn from(v: T) -> Self {
-        Mod::new(usize::from(v))
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
 
