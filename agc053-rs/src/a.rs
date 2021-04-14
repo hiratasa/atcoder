@@ -148,4 +148,34 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let s = read_str();
+
+    let a = read_row::<i64>();
+
+    let k = a
+        .citer()
+        .tuple_windows()
+        .map(|(a0, a1)| (a0 - a1).abs())
+        .min()
+        .unwrap() as usize;
+
+    let ans = a.citer().fold(vec![vec![]; k], |mut ans, aa| {
+        let aa = aa as usize;
+        for i in 0..k {
+            if i < aa % k {
+                ans[i].push(aa / k + 1);
+            } else {
+                ans[i].push(aa / k);
+            }
+        }
+
+        ans
+    });
+
+    println!("{}", k);
+    for row in ans {
+        println!("{}", row.citer().join(" "));
+    }
+}

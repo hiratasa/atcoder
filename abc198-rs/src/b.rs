@@ -148,4 +148,19 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read_str();
+
+    let m0 = n
+        .citer()
+        .rev()
+        .skip_while(|&c| c == '0')
+        .collect::<Vec<_>>();
+    let m1 = m0.citer().rev().collect::<Vec<_>>();
+
+    if m0 == m1 {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
+}

@@ -148,4 +148,39 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = [read_str(), read_str(), read_str()];
+
+    let chars = s.iter().flat_map(|ss| ss.citer()).collect::<FxHashSet<_>>();
+
+    if chars.len() > 10 {
+        println!("UNSOLVABLE");
+        return;
+    }
+
+    let ans = (0usize..10)
+        .permutations(chars.len())
+        .flat_map(|perm| {
+            let map = izip!(chars.citer(), perm).collect::<FxHashMap<_, _>>();
+
+            if s.iter().any(|ss| map[&ss[0]] == 0) {
+                return None;
+            }
+
+            let t = s
+                .iter()
+                .map(|ss| ss.citer().map(|c| map[&c]).fold(0, |a, b| a * 10 + b))
+                .collect::<Vec<_>>();
+
+            Some((t[0], t[1], t[2]))
+        })
+        .find(|&(t0, t1, t2)| t0 + t1 == t2);
+
+    if let Some((t0, t1, t2)) = ans {
+        println!("{}", t0);
+        println!("{}", t1);
+        println!("{}", t2);
+    } else {
+        println!("UNSOLVABLE");
+    }
+}

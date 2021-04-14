@@ -148,4 +148,22 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let v = read_row::<usize>();
+
+    let ans = (0..n)
+        .fold(BinaryHeap::new(), |mut q, i| {
+            q.push(Reverse(v[n - 1 - i]));
+            q.push(Reverse(v[n + i]));
+
+            q.pop();
+
+            q
+        })
+        .into_iter()
+        .map(|Reverse(a)| a)
+        .sum::<usize>();
+
+    println!("{}", ans);
+}

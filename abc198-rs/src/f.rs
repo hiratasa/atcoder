@@ -228,10 +228,11 @@ impl<M> std::fmt::Debug for Mod<M> {
 }
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::From<T>,
+    usize: std::convert::TryFrom<T>,
 {
     fn from(v: T) -> Self {
-        Mod::new(usize::from(v))
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
 impl<M: Modulus> std::str::FromStr for Mod<M> {
@@ -351,51 +352,42 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-#[allow(dead_code)]
-fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
-    let fact: Vec<_> = std::iter::once(Mod::one())
-        .chain((1..=n).scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        }))
-        .collect();
-    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
-        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
-        inv
-    });
-    let inv_fact: Vec<_> = inv
-        .iter()
-        .copied()
-        .scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        })
-        .collect();
-    (fact, inv, inv_fact)
-}
-
 fn main() {
-    type Mod = Mod1000000007;
+    type Mod = Mod998244353;
 
-    let (n, a, b, c, d) = read_tuple!(usize, usize, usize, usize, usize);
+    let s: usize = read();
+    let ss = Mod::new(s);
+    let s2 = Mod::new(s / 2);
+    let s24 = Mod::new((s - 2) / 4);
+    let s42 = Mod::new((s - 4) / 2);
 
-    let (fact, _, inv_fact) = generate_fact(n + 1);
+    // 1 * 6
+    let a = (ss - 1) * (ss - 2) * (ss - 3) * (ss - 4) * (ss - 5) / 5 / 4 / 3 / 2;
 
-    let dp = (a..=b).fold(vvec![Mod::one(); Mod::zero(); n + 1], |prev, i| {
-        // eprintln!("{:?} {:?}", i - 1, prev);
-        (0..=n)
-            .map(|m| {
-                /* j=0 */
-                prev[m]
-                    + (c..=d)
-                        .take_while(|&j| i * j <= m)
-                        .map(|j| prev[m - i * j] * inv_fact[i].pow(j) * inv_fact[j])
-                        .sum::<Mod>()
-            })
-            .collect()
-    });
-    // eprintln!("{:?}", dp);
-    let ans = dp[n] * fact[n];
+    // 4, 1 * 2
+    // sum (s - 4i - 1)
+    let b = (ss - 1) * s24 - s24 * (s24 + 1) / 2 * 4;
+
+    // 2 * 2, 1 * 2
+    // sum[i,j] (s - 2i - 2j - 1)
+    let c = s42 * (s42 + 1) * (s42 * 2 + 1) / 6 + s2 * ss * s42 + s42
+        - s42 * (s42 + 1) / 2 * (ss - 2)
+        - ss * s42
+        - s2 * s2 * s42;
+
+    // 3 * 2
+    let d = if s % 3 == 0 { ss / 3 - 1 } else { Mod::zero() };
+
+    // 2 * 3
+    let e = if s % 2 == 0 {
+        (s2 - 1) * (s2 - 2) / 2
+    } else {
+        Mod::zero()
+    };
+
+    eprintln!("{} {} {} {} {}", a, b, c, d, e);
+
+    let ans = (a + b * 6 + c * 3 + d * 8 + e * 6) / 24;
 
     println!("{}", ans);
 }
