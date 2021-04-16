@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,4 +149,30 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let a = read_row::<usize>().into_iter().sorted().collect::<Vec<_>>();
+
+    let b = vec![0, 2, 5, 5, 4, 5, 6, 3, 7, 6];
+
+    let c = (1..=n).fold(vec![Some(0)], |dp, i| {
+        pushed!(
+            dp,
+            a.citer()
+                .flat_map(|aa| { i.checked_sub(b[aa]).and_then(|j| dp[j]).map(|x| x + 1) })
+                .max()
+        )
+    });
+
+    let ans =
+        successors(Some((n, 0)), |&(m, _)| {
+            a.citer().rev().find(|&aa| {
+            matches!(m.checked_sub(b[aa]), Some(mm) if c[mm] == Some(c[m].unwrap() - 1))
+        }).map(|aa| (m - b[aa], aa))
+        })
+        .skip(1)
+        .map(|t| t.1)
+        .map(|d| std::char::from_digit(d as u32, 10).unwrap())
+        .collect::<String>();
+    println!("{}", ans);
+}
