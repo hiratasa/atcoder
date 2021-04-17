@@ -148,4 +148,45 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    let (b, c, s) = a.citer().tuple_windows().fold(
+        (vec![0i64; m], vec![0i64; m], 0),
+        |(mut b, mut c, s), (a0, a1)| {
+            let a0 = a0 - 1;
+            let a1 = a1 - 1;
+
+            if a0 + 1 < m {
+                b[a0 + 1] += 1;
+            }
+
+            b[a1] -= 1;
+
+            if a1 + 1 < m {
+                c[a1 + 1] -= ((a1 + m - a0 - 1) % m) as i64;
+            }
+
+            if a0 > a1 {
+                b[0] += 1;
+                c[0] += (m - a0 - 1) as i64;
+            }
+
+            (b, c, s + (a1 + m - a0) % m)
+        },
+    );
+
+    let ans = s
+        - (0..m)
+            .scan((0, 0), |(acc, k), i| {
+                *acc += *k + c[i];
+                *k += b[i];
+                Some(*acc)
+            })
+            // .inspect(|x| eprintln!("{}", x))
+            .max()
+            .unwrap() as usize;
+
+    println!("{}", ans);
+}

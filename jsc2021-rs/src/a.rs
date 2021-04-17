@@ -148,4 +148,9 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (x, y, z) = read_tuple!(usize, usize, usize);
+
+    let ans = (0..).take_while(|&i| i * x < y * z).last().unwrap();
+    println!("{}", ans);
+}

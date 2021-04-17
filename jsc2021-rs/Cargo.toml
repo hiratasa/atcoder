@@ -1,5 +1,5 @@
 [package]
-name = "agc008-rs"
+name = "jsc2021-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,25 +18,29 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "agc008-a"
+name = "jsc2021-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "agc008-b"
+name = "jsc2021-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "agc008-c"
+name = "jsc2021-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "agc008-d"
+name = "jsc2021-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "agc008-e"
+name = "jsc2021-e"
 path = "src/e.rs"
 
 [[bin]]
-name = "agc008-f"
+name = "jsc2021-f"
 path = "src/f.rs"
+
+[[bin]]
+name = "jsc2021-g"
+path = "src/g.rs"

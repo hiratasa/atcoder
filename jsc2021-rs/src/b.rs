@@ -148,4 +148,14 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
+
+    let aa = a.citer().collect::<BTreeSet<_>>();
+    let bb = b.citer().collect::<BTreeSet<_>>();
+
+    let ans = aa.symmetric_difference(&bb).join(" ");
+    println!("{}", ans);
+}

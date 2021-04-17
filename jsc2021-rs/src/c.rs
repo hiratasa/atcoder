@@ -148,4 +148,10 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (a, b) = read_tuple!(usize, usize);
+
+    let ans = (1..=b).rev().find(|&x| (a + x - 1) / x < b / x).unwrap();
+
+    println!("{}", ans);
+}
