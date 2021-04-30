@@ -299,22 +299,22 @@ use rand::{Rng, SeedableRng};
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum VisitStatus {
     NonVisited,
-    Visited(usize),
+    Visited(u32),
     Visiting,
 }
 
 fn dfs0<F: FnMut() -> bool>(
     tiles: &[Vec<usize>],
-    points: &[Vec<i64>],
+    points: &[Vec<i32>],
     partners: &[Vec<Option<(usize, usize)>>],
     si: usize,
     sj: usize,
-    visited: &mut [Vec<bool>],
+    visited: &mut [bool],
     path: &mut Vec<(usize, usize)>,
     best_path: &mut Vec<(usize, usize)>,
     should_terminate: &mut F,
 ) {
-    if visited[si][sj] {
+    if visited[si * N + sj] {
         if path.len() > best_path.len() {
             *best_path = path.clone();
         }
@@ -322,7 +322,7 @@ fn dfs0<F: FnMut() -> bool>(
     }
 
     if let Some((pi, pj)) = partners[si][sj] {
-        if visited[pi][pj] {
+        if visited[pi * N + pj] {
             if path.len() > best_path.len() {
                 *best_path = path.clone();
             }
@@ -337,7 +337,7 @@ fn dfs0<F: FnMut() -> bool>(
         return;
     }
 
-    visited[si][sj] = true;
+    visited[si * N + sj] = true;
     path.push((si, sj));
 
     let dirs = [Dir::Left, Dir::Up, Dir::Right, Dir::Down];
@@ -358,7 +358,7 @@ fn dfs0<F: FnMut() -> bool>(
             )
         });
 
-    visited[si][sj] = false;
+    visited[si * N + sj] = false;
     path.pop();
 
     ret
@@ -367,19 +367,19 @@ fn dfs0<F: FnMut() -> bool>(
 fn random_walk<
     R: Rng,
     F: FnMut() -> bool,
-    F2: FnMut(&[(usize, usize)], i64, &[Vec<VisitStatus>]) -> bool,
+    F2: FnMut(&[(usize, usize)], i32, &[VisitStatus]) -> bool,
 >(
     tiles: &[Vec<usize>],
-    points: &[Vec<i64>],
+    points: &[Vec<i32>],
     partners: &[Vec<Option<(usize, usize)>>],
     si: usize,
     sj: usize,
     idx0: usize,
     idx1: Option<usize>,
     rng: &mut R,
-    visited: &mut [Vec<VisitStatus>],
+    visited: &mut [VisitStatus],
     path: &mut Vec<(usize, usize)>,
-    cscore: i64,
+    cscore: i32,
     should_terminate: &mut F,
     process: &mut F2,
 ) -> bool {
@@ -391,34 +391,10 @@ fn random_walk<
     let mut idx1 = idx1;
     let new_cscore = cscore + points[si][sj];
 
-    if let Some((pi, pj)) = partners[si][sj] {
-        match visited[pi][pj] {
-            VisitStatus::NonVisited => {}
-            VisitStatus::Visited(idx2) => {
-                if idx2 == 0 {
-                    return false;
-                }
-
-                let idx1_ = idx1.unwrap_or(idx2);
-                // should same side for idx0
-                if (idx0 < idx1_) != (idx0 < idx2) {
-                    return false;
-                }
-                if idx0 < idx1_ {
-                    idx1 = Some(max(idx1_, idx2));
-                } else {
-                    idx1 = Some(min(idx1_, idx2));
-                }
-            }
-            VisitStatus::Visiting => {
-                return false;
-            }
-        }
-    }
-
-    match visited[si][sj] {
+    match visited[si * N + sj] {
         VisitStatus::NonVisited => {}
         VisitStatus::Visited(idx2) => {
+            let idx2 = idx2 as usize;
             let idx1_ = idx1.unwrap_or(idx2);
             // should same side for idx0
             if (idx0 < idx1_) != (idx0 < idx2) {
@@ -450,9 +426,35 @@ fn random_walk<
         }
     }
 
-    let old_visited = replace(&mut visited[si][sj], VisitStatus::Visiting);
-    let old_visited_partner =
-        partners[si][sj].map(|(pi, pj)| replace(&mut visited[pi][pj], VisitStatus::NonVisited));
+    if let Some((pi, pj)) = partners[si][sj] {
+        match visited[pi * N + pj] {
+            VisitStatus::NonVisited => {}
+            VisitStatus::Visited(idx2) => {
+                if idx2 == 0 {
+                    return false;
+                }
+
+                let idx2 = idx2 as usize;
+                let idx1_ = idx1.unwrap_or(idx2);
+                // should same side for idx0
+                if (idx0 < idx1_) != (idx0 < idx2) {
+                    return false;
+                }
+                if idx0 < idx1_ {
+                    idx1 = Some(max(idx1_, idx2));
+                } else {
+                    idx1 = Some(min(idx1_, idx2));
+                }
+            }
+            VisitStatus::Visiting => {
+                return false;
+            }
+        }
+    }
+
+    let old_visited = replace(&mut visited[si * N + sj], VisitStatus::Visiting);
+    let old_visited_partner = partners[si][sj]
+        .map(|(pi, pj)| replace(&mut visited[pi * N + pj], VisitStatus::NonVisited));
     path.push((si, sj));
 
     let mut dirs = [Dir::Left, Dir::Up, Dir::Right, Dir::Down];
@@ -478,9 +480,9 @@ fn random_walk<
             )
         });
 
-    visited[si][sj] = old_visited;
+    visited[si * N + sj] = old_visited;
     if let Some((pi, pj)) = partners[si][sj] {
-        visited[pi][pj] = old_visited_partner.unwrap();
+        visited[pi * N + pj] = old_visited_partner.unwrap();
     }
     if !ret {
         if idx1.is_none() {
@@ -503,10 +505,10 @@ fn is_valid_path(path: &[(usize, usize)]) -> bool {
 
 fn solve(
     tiles: &[Vec<usize>],
-    points: &[Vec<i64>],
+    points: &[Vec<i32>],
     si: usize,
     sj: usize,
-) -> (Vec<(usize, usize)>, i64) {
+) -> (Vec<(usize, usize)>, i32) {
     let partners = calc_partners(tiles);
 
     let start0 = Instant::now();
@@ -518,7 +520,7 @@ fn solve(
         &partners,
         si,
         sj,
-        &mut vec![vec![false; N]; N],
+        &mut vec![false; N * N],
         &mut vec![],
         &mut init_path,
         &mut || start0.elapsed().as_millis() > 100,
@@ -530,20 +532,20 @@ fn solve(
 
     let dist_prob = rand::distributions::Uniform::new(0.0, 1.0);
 
-    let mut visited = vec![vec![VisitStatus::NonVisited; N]; N];
+    let mut visited = vec![VisitStatus::NonVisited; N * N];
 
     init_path.citer().enumerate().for_each(|(idx, (i, j))| {
-        visited[i][j] = VisitStatus::Visited(idx);
+        visited[i * N + j] = VisitStatus::Visited(idx as u32);
     });
 
     let controller = TimeAnnealingController::new(1800);
-    // let controller = TimeAnnealingController::new(18000);
+    // let controller = TimeAnnealingController::new(60000);
 
     // tmp
     // let mut sum_nanos = 0;
-    let init_cscores = once(0i64)
+    let init_cscores = once(0i32)
         .chain(init_path.citer().map(|(ii, jj)| points[ii][jj]))
-        .cumsum::<i64>()
+        .cumsum::<i32>()
         .collect::<Vec<_>>();
     let init_score = init_cscores[init_path.len()];
     eprintln!("init score: {}", init_score);
@@ -560,7 +562,7 @@ fn solve(
             *i_trial += 1;
 
             if *i_trial % 20000 == 0 {
-                // eprintln!("i_trial: {}", *i_trial);
+                eprintln!("i_trial: {}", *i_trial);
             }
 
             if controller.should_terminate(*i_trial) {
@@ -572,19 +574,19 @@ fn solve(
 
             let (ii, jj) = path[idx];
             assert!(
-                visited[ii][jj] == VisitStatus::Visited(idx),
+                visited[ii * N + jj] == VisitStatus::Visited(idx as u32),
                 "{} {} {} {:?}",
                 ii,
                 jj,
                 idx,
-                visited[ii][jj]
+                visited[ii * N + jj]
             );
-            visited[ii][jj] = VisitStatus::NonVisited;
+            visited[ii * N + jj] = VisitStatus::NonVisited;
 
             let start1 = Instant::now();
             let mut sub_path = vec![];
             // let mut best_score_diff = 0;
-            let mut best_score_diff = std::i64::MIN;
+            let mut best_score_diff = std::i32::MIN;
             let mut i_check_timer = 0;
 
             let _ok = random_walk(
@@ -603,17 +605,15 @@ fn solve(
                     i_check_timer += 1;
                     if i_check_timer % 16 == 0 {
                         // start1.elapsed().as_micros() > 10
-                        start1.elapsed().as_micros() > 10
+                        start1.elapsed().as_micros() > 5
                     } else {
                         false
                     }
                 },
-                &mut |sub_path2: &[(usize, usize)],
-                      sub_score: i64,
-                      visited_: &[Vec<VisitStatus>]| {
+                &mut |sub_path2: &[(usize, usize)], sub_score: i32, visited_: &[VisitStatus]| {
                     let (ii2, jj2) = *sub_path2.last().unwrap();
-                    let idx2 = match visited_[ii2][jj2] {
-                        VisitStatus::Visited(idx2) => idx2,
+                    let idx2 = match visited_[ii2 * N + jj2] {
+                        VisitStatus::Visited(idx2) => idx2 as usize,
                         _ => path.len() - 1,
                     };
 
@@ -626,8 +626,10 @@ fn solve(
                         // true
                         false
                     } else {
+                        // true
                         false
                     }
+                    // idx2 != path.len() - 1
                 },
             );
             // sum_nanos += start1.elapsed().as_nanos();
@@ -635,7 +637,7 @@ fn solve(
             //     eprintln!("{} {}ns", *i_trial, sum_nanos / *i_trial as u128);
             // }
 
-            visited[ii][jj] = VisitStatus::Visited(idx);
+            visited[ii * N + jj] = VisitStatus::Visited(idx as u32);
 
             // if !ok {
             //     return Some(None);
@@ -647,9 +649,9 @@ fn solve(
             assert!(sub_path[0] == (ii, jj));
 
             let (ii2, jj2) = *sub_path.last().unwrap();
-            let idx2 = match visited[ii2][jj2] {
+            let idx2 = match visited[ii2 * N + jj2] {
                 VisitStatus::NonVisited => path.len() - 1,
-                VisitStatus::Visited(idx2) => idx2,
+                VisitStatus::Visited(idx2) => idx2 as usize,
                 _ => unreachable!(),
             };
 
@@ -668,7 +670,7 @@ fn solve(
                 path[min(idx, idx2)..=max(idx, idx2)]
                     .citer()
                     .for_each(|(i, j)| {
-                        visited[i][j] = VisitStatus::NonVisited;
+                        visited[i * N + j] = VisitStatus::NonVisited;
                     });
                 if idx <= idx2 {
                     path.splice(idx..=idx2, sub_path.citer());
@@ -687,7 +689,7 @@ fn solve(
                 let midx = min(idx, idx2);
                 cscores.resize(path.len() + 1, 0);
                 for (i_in_path, (i, j)) in path[midx..].citer().enumerate() {
-                    visited[i][j] = VisitStatus::Visited(i_in_path + midx);
+                    visited[i * N + j] = VisitStatus::Visited((i_in_path + midx) as u32);
                     cscores[i_in_path + midx + 1] = cscores[i_in_path + midx] + points[i][j];
                 }
 
@@ -736,7 +738,7 @@ fn solve(
     .last()
     .unwrap_or(init_path.clone());
 
-    let score = path.citer().map(|(ii, jj)| points[ii][jj]).sum::<i64>();
+    let score = path.citer().map(|(ii, jj)| points[ii][jj]).sum::<i32>();
     (path, score)
 }
 
@@ -744,7 +746,7 @@ fn main() {
     let (si, sj) = read_tuple!(usize, usize);
 
     let t = read_vec(N, || read_row::<usize>());
-    let points = read_vec(N, || read_row::<i64>());
+    let points = read_vec(N, || read_row::<i32>());
 
     let (path, score) = solve(&t, &points, si, sj);
 
