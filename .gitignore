@@ -10,4 +10,5 @@
 /past*
 /ahc*
 !/ahc001-rs
+!/ahc002-rs
 /typical90-rs
