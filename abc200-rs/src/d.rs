@@ -154,11 +154,8 @@ fn main() {
 
     let m = min(n, 8);
 
-    let ans = (1..1usize << m)
-        .flat_map(|s| {
-            successors(Some(s), move |t| t.checked_sub(1).map(|t| (t & s))).map(move |t| (s ^ t, t))
-        })
-        .filter(|&(s, t)| s > 0 && t > 0)
+    let ans = iproduct!(1..1usize << m, 1..1usize << m)
+        .filter(|&(s, t)| s != t)
         .map(|(s, t)| (bitset!(m, s), bitset!(m, t)))
         .find(|(bs, bs2)| {
             let x = a
