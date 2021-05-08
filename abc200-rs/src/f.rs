@@ -353,39 +353,191 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-#[allow(dead_code)]
-fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
-    let fact: Vec<_> = std::iter::once(Mod::one())
-        .chain((1..=n).scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        }))
-        .collect();
-    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
-        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
-        inv
-    });
-    let inv_fact: Vec<_> = inv
-        .iter()
-        .copied()
-        .scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
+fn mul_mat<M: Modulus>(x: &Vec<Vec<Mod<M>>>, y: &Vec<Vec<Mod<M>>>) -> Vec<Vec<Mod<M>>> {
+    let n = x.len();
+
+    let mut r = vec![vec![Mod::zero(); n]; n];
+    for i in 0..n {
+        for k in 0..n {
+            for j in 0..n {
+                r[i][j] += x[i][k] * y[k][j];
+            }
+        }
+    }
+
+    r
+}
+
+fn pow_mat<M: Modulus>(mut x: Vec<Vec<Mod<M>>>, mut p: usize) -> Vec<Vec<Mod<M>>> {
+    let n = x.len();
+
+    let mut y = vec![vec![Mod::zero(); n]; n];
+    for i in 0..n {
+        y[i][i] = Mod::one();
+    }
+
+    while p > 0 {
+        if p & 1 > 0 {
+            y = mul_mat(&x, &y);
+        }
+
+        x = mul_mat(&x, &x);
+        p >>= 1;
+    }
+
+    y
+}
+
+fn solve0(s: &[char], k: usize) -> Mod1000000007 {
+    type Mod = Mod1000000007;
+
+    let n = s.len();
+
+    let mut dp0 = vec![vec![Mod::zero(); 1]; 2];
+    match s[0] {
+        '0' => {
+            dp0[0][0] = Mod::one();
+        }
+        '1' => {
+            dp0[1][0] = Mod::one();
+        }
+        '?' => {
+            dp0[0][0] = Mod::one();
+            dp0[1][0] = Mod::one();
+        }
+        _ => unreachable!(),
+    }
+
+    let m = n * k;
+    let dp = s
+        .citer()
+        .cycle()
+        .take(m)
+        .skip(1)
+        .fold(dp0, |dp, c| match c {
+            '0' => vec![
+                izip!(
+                    dp[0].citer().chain(once(Mod::zero())),
+                    once(Mod::zero()).chain(dp[1].citer()),
+                )
+                .map(|(x, y)| x + y)
+                .take(m)
+                .collect::<Vec<_>>(),
+                vec![Mod::zero(); m],
+            ],
+            '1' => vec![
+                vec![Mod::zero(); m],
+                izip!(
+                    once(Mod::zero()).chain(dp[0].citer()),
+                    dp[1].citer().chain(once(Mod::zero())),
+                )
+                .map(|(x, y)| x + y)
+                .take(m)
+                .collect::<Vec<_>>(),
+            ],
+            '?' => vec![
+                izip!(
+                    dp[0].citer().chain(once(Mod::zero())),
+                    once(Mod::zero()).chain(dp[1].citer()),
+                )
+                .map(|(x, y)| x + y)
+                .take(m)
+                .collect::<Vec<_>>(),
+                izip!(
+                    once(Mod::zero()).chain(dp[0].citer()),
+                    dp[1].citer().chain(once(Mod::zero())),
+                )
+                .map(|(x, y)| x + y)
+                .take(m)
+                .collect::<Vec<_>>(),
+            ],
+            _ => unreachable!(),
+        });
+
+    dp.iter()
+        .map(|row| {
+            row.citer()
+                .enumerate()
+                .map(|(i, x)| x * ((i + 1) / 2))
+                .sum::<Mod>()
         })
-        .collect();
-    (fact, inv, inv_fact)
+        .sum()
 }
 
 fn main() {
     type Mod = Mod1000000007;
 
-    let (n, m, k) = read_tuple!(usize, usize, usize);
+    let s = read_str();
+    let k: usize = read();
 
-    let (fact, _, inv_fact) = generate_fact(n * m);
+    // 前半: パターン数、後半: パターン数×操作回数
+    // 0: 最後が0, 境目が偶数個
+    // 1: 最後が0, 境目が奇数個
+    // 2: 最後が1, 境目が偶数個
+    // 3: 最後が1, 境目が奇数個
+    let mut m0 = vec![vec![Mod::zero(); 8]; 8];
+    for i in 0..8 {
+        m0[i][i] = Mod::one();
+    }
 
-    let combi = |n: usize, r: usize| fact[n] * inv_fact[n - r] * inv_fact[r];
-    let calc = |n: usize, m: usize| Mod::new(m * (n - 1) * (n + 1)) / Mod::new(3 * (n * m - 1));
+    let m = s.citer().fold(m0, |m, c| match c {
+        '0' => (0..8)
+            .map(|i| {
+                vec![
+                    m[i][0] + m[i][3],
+                    m[i][1] + m[i][2],
+                    Mod::zero(),
+                    Mod::zero(),
+                    m[i][4] + m[i][7] + m[i][3],
+                    m[i][5] + m[i][6],
+                    Mod::zero(),
+                    Mod::zero(),
+                ]
+            })
+            .collect::<Vec<_>>(),
+        '1' => (0..8)
+            .map(|i| {
+                vec![
+                    Mod::zero(),
+                    Mod::zero(),
+                    m[i][1] + m[i][2],
+                    m[i][0] + m[i][3],
+                    Mod::zero(),
+                    Mod::zero(),
+                    m[i][5] + m[i][1] + m[i][6],
+                    m[i][4] + m[i][7],
+                ]
+            })
+            .collect::<Vec<_>>(),
+        '?' => (0..8)
+            .map(|i| {
+                vec![
+                    m[i][0] + m[i][3],
+                    m[i][1] + m[i][2],
+                    m[i][1] + m[i][2],
+                    m[i][0] + m[i][3],
+                    m[i][4] + m[i][7] + m[i][3],
+                    m[i][5] + m[i][6],
+                    m[i][5] + m[i][1] + m[i][6],
+                    m[i][4] + m[i][7],
+                ]
+            })
+            .collect::<Vec<_>>(),
+        _ => unreachable!(),
+    });
 
-    let ans = combi(n * m, k) * Mod::new(k * (k - 1) / 2) * (calc(n, m) + calc(m, n));
+    eprintln!("{:?}", m);
+    let mm = pow_mat(m, k);
+    eprintln!("{:?}", mm);
+
+    let ans = match s[0] {
+        '0' => mm[0][4] + (mm[0][1] + mm[0][5]) + mm[0][6] + (mm[0][3] + mm[0][7]),
+        '1' => mm[2][4] + (mm[2][1] + mm[2][5]) + mm[2][6] + (mm[2][3] + mm[2][7]),
+        '?' => mm[0][4] + mm[0][6] + mm[2][4] + mm[2][6],
+        _ => unreachable!(),
+    };
     println!("{}", ans);
+
+    // let ans0 = solve0(&s, k);
+    // eprintln!("{}", ans0);
 }

@@ -149,55 +149,14 @@ where
 }
 
 fn main() {
-    let (n, q) = read_tuple!(usize, usize);
+    let (n, k) = read_tuple!(usize, usize);
 
-    let stx = read_vec(n, || read_tuple!(usize, usize, usize));
-    let d = read_vec(q, || read::<usize>());
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-    enum Item {
-        ClosedStart(usize),
-        Query(usize),
-    }
-
-    chain(
-        stx.citer()
-            .enumerate()
-            .map(|(i, (s, _t, x))| (s.checked_sub(x).unwrap_or(0), Item::ClosedStart(i))),
-        d.citer().enumerate().map(|(i, dd)| (dd, Item::Query(i))),
-    )
-    .sorted()
-    .fold(
-        (vec![None; q], BinaryHeap::new()),
-        |(mut ans, mut q), (time, item)| {
-            match item {
-                Item::ClosedStart(i) => {
-                    let (_s, t, x) = stx[i];
-                    q.push((Reverse(x), t.checked_sub(x).unwrap_or(0)));
-                }
-                Item::Query(i) => {
-                    while matches!(q.peek(), Some(&(Reverse(_x), t)) if t <= time) {
-                        q.pop();
-                    }
-
-                    if let Some(&(Reverse(x), _)) = q.peek() {
-                        ans[i] = Some(x);
-                    } else {
-                        ans[i] = None;
-                    }
-                }
-            }
-
-            (ans, q)
-        },
-    )
-    .0
-    .into_iter()
-    .for_each(|x| {
-        if let Some(x) = x {
-            println!("{}", x);
+    let ans = (0..k).fold(n, |n, _| {
+        if n % 200 == 0 {
+            n / 200
         } else {
-            println!("-1");
+            n * 1000 + 200
         }
     });
+    println!("{}", ans);
 }

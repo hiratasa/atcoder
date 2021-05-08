@@ -149,55 +149,46 @@ where
 }
 
 fn main() {
-    let (n, q) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let a = read_row::<usize>();
 
-    let stx = read_vec(n, || read_tuple!(usize, usize, usize));
-    let d = read_vec(q, || read::<usize>());
+    let m = min(n, 8);
 
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-    enum Item {
-        ClosedStart(usize),
-        Query(usize),
+    let ans = (1..1usize << m)
+        .flat_map(|s| {
+            successors(Some(s), move |t| t.checked_sub(1).map(|t| (t & s))).map(move |t| (s ^ t, t))
+        })
+        .filter(|&(s, t)| s > 0 && t > 0)
+        .map(|(s, t)| (bitset!(m, s), bitset!(m, t)))
+        .find(|(bs, bs2)| {
+            let x = a
+                .citer()
+                .take(m)
+                .enumerate()
+                .filter(|(i, _)| bs[*i])
+                .map(|x| x.1)
+                .sum::<usize>();
+            let y = a
+                .citer()
+                .take(m)
+                .enumerate()
+                .filter(|(i, _)| bs2[*i])
+                .map(|x| x.1)
+                .sum::<usize>();
+
+            x % 200 == y % 200
+        })
+        .map(|(bs, bs2)| {
+            (
+                (0..m).filter(|&i| bs[i]).collect::<Vec<_>>(),
+                (0..m).filter(|&i| bs2[i]).collect::<Vec<_>>(),
+            )
+        });
+    if let Some((b, c)) = ans {
+        println!("Yes");
+        println!("{} {}", b.len(), b.citer().map(|i| i + 1).join(" "));
+        println!("{} {}", c.len(), c.citer().map(|i| i + 1).join(" "));
+    } else {
+        println!("No");
     }
-
-    chain(
-        stx.citer()
-            .enumerate()
-            .map(|(i, (s, _t, x))| (s.checked_sub(x).unwrap_or(0), Item::ClosedStart(i))),
-        d.citer().enumerate().map(|(i, dd)| (dd, Item::Query(i))),
-    )
-    .sorted()
-    .fold(
-        (vec![None; q], BinaryHeap::new()),
-        |(mut ans, mut q), (time, item)| {
-            match item {
-                Item::ClosedStart(i) => {
-                    let (_s, t, x) = stx[i];
-                    q.push((Reverse(x), t.checked_sub(x).unwrap_or(0)));
-                }
-                Item::Query(i) => {
-                    while matches!(q.peek(), Some(&(Reverse(_x), t)) if t <= time) {
-                        q.pop();
-                    }
-
-                    if let Some(&(Reverse(x), _)) = q.peek() {
-                        ans[i] = Some(x);
-                    } else {
-                        ans[i] = None;
-                    }
-                }
-            }
-
-            (ans, q)
-        },
-    )
-    .0
-    .into_iter()
-    .for_each(|x| {
-        if let Some(x) = x {
-            println!("{}", x);
-        } else {
-            println!("-1");
-        }
-    });
 }

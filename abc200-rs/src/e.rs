@@ -148,56 +148,84 @@ where
 {
 }
 
-fn main() {
-    let (n, q) = read_tuple!(usize, usize);
-
-    let stx = read_vec(n, || read_tuple!(usize, usize, usize));
-    let d = read_vec(q, || read::<usize>());
-
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-    enum Item {
-        ClosedStart(usize),
-        Query(usize),
-    }
-
-    chain(
-        stx.citer()
-            .enumerate()
-            .map(|(i, (s, _t, x))| (s.checked_sub(x).unwrap_or(0), Item::ClosedStart(i))),
-        d.citer().enumerate().map(|(i, dd)| (dd, Item::Query(i))),
-    )
-    .sorted()
-    .fold(
-        (vec![None; q], BinaryHeap::new()),
-        |(mut ans, mut q), (time, item)| {
-            match item {
-                Item::ClosedStart(i) => {
-                    let (_s, t, x) = stx[i];
-                    q.push((Reverse(x), t.checked_sub(x).unwrap_or(0)));
-                }
-                Item::Query(i) => {
-                    while matches!(q.peek(), Some(&(Reverse(_x), t)) if t <= time) {
-                        q.pop();
-                    }
-
-                    if let Some(&(Reverse(x), _)) = q.peek() {
-                        ans[i] = Some(x);
-                    } else {
-                        ans[i] = None;
-                    }
-                }
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
             }
-
-            (ans, q)
-        },
-    )
-    .0
-    .into_iter()
-    .for_each(|x| {
-        if let Some(x) = x {
-            println!("{}", x);
-        } else {
-            println!("-1");
+            _ => {
+                end = mid;
+            }
         }
-    });
+    }
+    begin
+}
+#[allow(dead_code)]
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
+}
+
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+
+    let ct = once(0)
+        .chain((1..=2 * n).map(|t| min(n, t - 1) - t.checked_sub(n + 1).unwrap_or(0)))
+        .cumsum::<usize>()
+        .collect::<Vec<_>>();
+
+    let (s, x, y) = (3..=3 * n)
+        .map(|s| {
+            (
+                s,
+                ct[min(2 * n, s - 1)] - ct[s.checked_sub(n + 2).unwrap_or(0) + 1],
+            )
+        })
+        .scan(0, |c, (s, x)| {
+            *c += x;
+            Some((s, x, *c))
+        })
+        .find(|&(_s, _x, y)| y >= k)
+        .unwrap();
+
+    let k1 = k - (y - x);
+    let (a, b, c) = (s.checked_sub(2 * n + 1).unwrap_or(0) + 1..=min(n, s - 2))
+        .scan(0, |bc, a| {
+            let t = s - a;
+            let xx = min(n, t - 1) - t.checked_sub(n + 1).unwrap_or(0);
+            *bc += xx;
+            Some((a, xx, *bc))
+        })
+        .find(|&(_a, _xx, bc)| bc >= k1)
+        .map(|(a, xx, bc)| {
+            let t = s - a;
+            let k2 = k1 - (bc - xx);
+            let b = t.checked_sub(n + 1).unwrap_or(0) + k2;
+            let c = s - a - b;
+            (a, b, c)
+        })
+        .unwrap();
+
+    println!("{} {} {}", a, b, c);
 }
