@@ -1,17 +1,19 @@
-/// calc sum[x=0 to n-1] floor((a+x*b)/c)
+// calc sum[x=0 to n-1] floor((a+x*b)/c)
 #[allow(dead_code)]
 fn floor_sum(n: usize, mut a: usize, mut b: usize, c: usize) -> usize {
     let mut ret = 0;
 
-    if a / c > 0 {
-        ret += a / c * n;
-        a %= c;
-    }
+    // if c < 0 {
+    //     return floor_sum(n, -a, -b, -c);
+    // }
 
-    if b / c > 0 {
-        ret += (b / c) * n * (n - 1) / 2;
-        b %= c;
-    }
+    ret += a.div_euclid(c) * n;
+    a = a.rem_euclid(c);
+    // assert!(a >= 0);
+
+    ret += b.div_euclid(c) * n * (n - 1) / 2;
+    b = b.rem_euclid(c);
+    // assert!(b >= 0);
 
     if b == 0 {
         return ret;
