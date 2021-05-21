@@ -4,7 +4,7 @@
 // for i < n, z[i] is max z[i] < n such that s[0:z[i]] = s[i:i+z[i]]
 // パターンの検索にも使える
 #[allow(dead_code)]
-fn z_algorithm<T: std::cmp::Eq>(s: &Vec<T>) -> Vec<usize> {
+fn z_algorithm<T: std::cmp::Eq>(s: &[T]) -> Vec<usize> {
     let n = s.len();
 
     // z[i] = max_{j<n} s[0:j] = s[i:i+j]
