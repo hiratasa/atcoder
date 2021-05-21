@@ -137,4 +137,16 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let s = read_str();
+
+    let freq = s.citer().fold(vec![0; 26], |mut freq, c| {
+        freq[c as usize - 'a' as usize] += 1;
+        freq
+    });
+
+    const M: usize = 1000000007;
+    let ans = ((0..26).map(|i| freq[i] + 1).fold(1, |p, x| p * x % M) + M - 1) % M;
+    println!("{}", ans);
+}

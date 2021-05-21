@@ -137,4 +137,34 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    let s = a.citer().sum::<usize>();
+
+    let m = (1..=s)
+        .take_while(|&x| x * x <= s)
+        .filter(|&x| s % x == 0)
+        .flat_map(|x| it![x, s / x])
+        .dedup()
+        .sorted()
+        .collect::<Vec<_>>();
+
+    let ans = m
+        .citer()
+        .rev()
+        .find(|&g| {
+            let r = a.citer().map(|aa| aa % g).collect::<Vec<_>>();
+            let t = r.citer().sum::<usize>();
+            assert!(t % g == 0);
+
+            let d = n - t / g;
+
+            let e = r.citer().sorted().take(d).sum::<usize>();
+
+            e <= k
+        })
+        .unwrap();
+    println!("{}", ans);
+}

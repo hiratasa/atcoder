@@ -148,4 +148,38 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (a, b, q) = read_tuple!(usize, usize, usize);
+
+    let s = read_vec(a, || read::<i64>());
+    let t = read_vec(b, || read::<i64>());
+    let x = read_vec(q, || read::<i64>());
+
+    x.citer()
+        .map(|xx| {
+            let si1 = s
+                .binary_search_by(|&ss| ss.cmp(&xx).then(Ordering::Greater))
+                .err();
+            let si0 = si1.and_then(|si1| si1.checked_sub(1));
+            let ti1 = t
+                .binary_search_by(|&tt| tt.cmp(&xx).then(Ordering::Greater))
+                .err();
+            let ti0 = ti1.and_then(|ti1| ti1.checked_sub(1));
+
+            iproduct!(
+                si0.citer().chain(si1.filter(|&idx| idx < a).citer()),
+                ti0.citer().chain(ti1.filter(|&idx| idx < b).citer())
+            )
+            .map(|(si, ti)| {
+                let ss = s[si];
+                let tt = t[ti];
+
+                min((ss - xx).abs(), (tt - xx).abs()) + (ss - tt).abs()
+            })
+            .min()
+            .unwrap()
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
+}

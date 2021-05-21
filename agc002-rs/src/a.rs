@@ -148,4 +148,17 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (a, b) = read_tuple!(i64, i64);
+
+    let ans = if a <= 0 && b >= 0 {
+        "Zero"
+    } else if a > 0 {
+        "Positive"
+    } else if ((-a) - max(0, -b - 1)) % 2 > 0 {
+        "Negative"
+    } else {
+        "Positive"
+    };
+    println!("{}", ans);
+}

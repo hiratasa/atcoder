@@ -148,4 +148,60 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
+
+    let ans = itertools::unfold(
+        (
+            b.clone(),
+            b.citer()
+                .enumerate()
+                .map(|t| (t.1, t.0))
+                .collect::<BinaryHeap<_>>(),
+        ),
+        |(c, q)| {
+            let (v, idx) = q.pop()?;
+
+            if v == a[idx] {
+                return Some(Some(0));
+            }
+
+            let prev = c[(idx + n - 1) % n];
+            let next = c[(idx + 1) % n];
+            let s = prev + next;
+
+            if !(s < v) {
+                return Some(None);
+            }
+
+            if v % s <= a[idx] && (v - a[idx]) % s != 0 {
+                return Some(None);
+            }
+
+            c[idx] = max(v % s, a[idx]);
+
+            let t = (v - c[idx]) / s;
+
+            if c[idx] != a[idx] {
+                q.push((c[idx], idx));
+            }
+
+            Some(Some(t))
+        },
+    )
+    .try_fold(0usize, |ans, opt_t| {
+        if let Some(t) = opt_t {
+            Some(ans + t)
+        } else {
+            None
+        }
+    });
+
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    };
+}

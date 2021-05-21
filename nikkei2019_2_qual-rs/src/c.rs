@@ -137,4 +137,57 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
+
+    let a = a
+        .citer()
+        .enumerate()
+        .sorted_by_key(|&(i, _aa)| b[i])
+        .map(|t| t.1)
+        .collect::<Vec<_>>();
+    let b = b.citer().sorted().collect::<Vec<_>>();
+
+    let ai_sorted = a
+        .citer()
+        .enumerate()
+        .map(|t| (t.1, t.0))
+        .sorted()
+        .collect::<Vec<_>>();
+
+    if let Some(t) =
+        izip!(ai_sorted.citer(), b.citer())
+            .enumerate()
+            .try_fold(true, |t, (i, ((aa, _), bb))| {
+                if aa > bb {
+                    None
+                } else if i < n - 1 && ai_sorted[i + 1].0 <= bb {
+                    Some(false)
+                } else {
+                    Some(t)
+                }
+            })
+    {
+        if t {
+            let p = iterate(0, |&i| ai_sorted[i].1)
+                .skip(1)
+                .position(|idx| idx == 0)
+                .unwrap()
+                + 1;
+            if p == n {
+                println!("No");
+            } else {
+                println!("Yes");
+            }
+        } else {
+            println!("Yes");
+            return;
+        }
+    } else {
+        println!("No");
+        return;
+    };
+}

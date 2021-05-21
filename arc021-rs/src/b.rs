@@ -142,34 +142,21 @@ fn main() {
 
     let b = read_vec(l, || read::<usize>());
 
-    let ans = (0..31)
-        .rev()
-        .map(|i| {
-            (0..=1).find_map(|c| {
-                let a = b
-                    .citer()
-                    .map(|bb| (bb >> i) & 1)
-                    .scan(c, |prev, d| Some(replace(prev, *prev ^ d)))
-                    .collect_vec();
-                if (a[0] ^ a[l - 1]) == ((b[l - 1] >> i) & 1) {
-                    Some(a)
-                } else {
-                    None
-                }
-            })
+    let a = b
+        .citer()
+        .scan(0, |aa, bb| {
+            let aaa = *aa;
+            *aa ^= bb;
+            Some(aaa)
         })
-        .try_fold(vec![0; l], |acc, a| {
-            Some(
-                izip!(acc.into_iter(), a?.citer())
-                    .map(|(a0, a1)| (a0 << 1) ^ a1)
-                    .collect_vec(),
-            )
-        });
-    if let Some(a) = ans {
-        for aa in a {
-            println!("{}", aa);
-        }
-    } else {
+        .collect::<Vec<_>>();
+
+    if a[0] ^ a[l - 1] != b[l - 1] {
         println!("-1");
+        return;
+    }
+
+    for aa in a {
+        println!("{}", aa);
     }
 }

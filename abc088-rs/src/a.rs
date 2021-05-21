@@ -137,4 +137,13 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a: usize = read();
+
+    if n % 500 <= a {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
+}

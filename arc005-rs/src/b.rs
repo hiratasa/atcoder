@@ -14,7 +14,11 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -33,6 +37,46 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let mut c = $c;
+        c.push($x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -88,55 +132,64 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
 fn main() {
     let (x, y, w) = read_tuple!(usize, usize, String);
 
     let c = read_vec(9, || read_str());
 
-    let (dx, dy) = w.chars().fold((0i64, 0i64), |(dx, dy), c| match c {
-        'R' => (dx + 1, dy),
-        'L' => (dx - 1, dy),
-        'U' => (dx, dy - 1),
-        'D' => (dx, dy + 1),
+    let t = c
+        .iter()
+        .map(|row| {
+            row.citer()
+                .skip(1)
+                .rev()
+                .chain(row.citer())
+                .chain(row.citer().rev().skip(1))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let t2 = (0..25)
+        .map(|i| {
+            if i < 8 {
+                t[8 - i].clone()
+            } else if i < 17 {
+                t[i - 8].clone()
+            } else {
+                t[24 - i].clone()
+            }
+        })
+        .collect::<Vec<_>>();
+    let (dx, dy) = match w.as_str() {
+        "R" => (1i32, 0i32),
+        "L" => (-1, 0),
+        "U" => (0, -1),
+        "D" => (0, 1),
+        "RU" => (1, -1),
+        "RD" => (1, 1),
+        "LU" => (-1, -1),
+        "LD" => (-1, 1),
         _ => unreachable!(),
-    });
-
-    let dx = if dx == -1 && x == 1 {
-        1
-    } else if dx == 1 && x == 9 {
-        -1
-    } else {
-        dx
     };
 
-    let dy = if dy == -1 && y == 1 {
-        1
-    } else if dy == 1 && y == 9 {
-        -1
-    } else {
-        dy
-    };
-
-    let ans = successors(Some((x - 1, y - 1, dx, dy)), |&(x, y, dx, dy)| {
-        let nx = (x as i64 + dx) as usize;
-        let ny = (y as i64 + dy) as usize;
-
-        if nx == 0 || nx == 8 {
-            if ny == 0 || ny == 8 {
-                Some((nx, ny, -dx, -dy))
-            } else {
-                Some((nx, ny, -dx, dy))
-            }
-        } else {
-            if ny == 0 || ny == 8 {
-                Some((nx, ny, dx, -dy))
-            } else {
-                Some((nx, ny, dx, dy))
-            }
-        }
-    })
-    .take(4)
-    .map(|(x, y, _, _)| c[y][x])
-    .collect::<String>();
-    println!("{}", ans);
+    let ans = (0..4)
+        .map(|i| (x as i32 - 1 + i * dx, y as i32 - 1 + i * dy))
+        .map(|(xx, yy)| t2[(yy + 8) as usize][(xx + 8) as usize])
+        .collect::<Vec<_>>();
+    println!("{}", ans.citer().join(""));
 }

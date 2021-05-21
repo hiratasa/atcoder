@@ -148,4 +148,23 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let ab = read_vec(n, || read_tuple!(usize, usize));
+
+    const M: usize = 1000000;
+    let c = ab.citer().fold(vec![0i64; M + 2], |mut c, (a, b)| {
+        c[a] += 1;
+        c[b + 1] -= 1;
+        c
+    });
+
+    let ans = (0..=M)
+        .scan(0, |x, i| {
+            *x += c[i];
+            Some(*x)
+        })
+        .max()
+        .unwrap();
+    println!("{}", ans);
+}

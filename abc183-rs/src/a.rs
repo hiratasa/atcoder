@@ -148,4 +148,9 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let x: i64 = read();
+
+    let ans = max(x, 0);
+    println!("{}", ans);
+}

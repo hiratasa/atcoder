@@ -148,4 +148,21 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let ab = read_vec(n, || read_tuple!(i64, i64));
+
+    let ans = ab
+        .citer()
+        .sorted_by_key(|&(a, b)| Reverse(a + b))
+        .scan(false, |turn, (a, b)| {
+            *turn = !*turn;
+            if *turn {
+                Some(a)
+            } else {
+                Some(-b)
+            }
+        })
+        .sum::<i64>();
+    println!("{}", ans);
+}

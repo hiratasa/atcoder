@@ -137,4 +137,56 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    let (_, d) = a.citer().chain(a.citer()).enumerate().fold(
+        (vec![None; 200001], vec![0; n]),
+        |(mut last_pos, mut d), (i, aa)| {
+            if let Some(p) = last_pos[aa] {
+                d[p % n] = i - p + 1;
+            }
+            last_pos[aa] = Some(i);
+
+            (last_pos, d)
+        },
+    );
+
+    let dd = iterate(d, |prev| {
+        (0..n)
+            .map(|i| prev[i].saturating_add(prev[(i + prev[i]) % n]))
+            .collect()
+    })
+    .take(60)
+    .collect::<Vec<_>>();
+
+    let p = (0..60).rev().fold(0usize, |prev, i| {
+        if prev.saturating_add(dd[i][prev % n]) < n * k {
+            prev + dd[i][prev % n]
+        } else {
+            prev
+        }
+    });
+    assert!(p >= n * (k - 1));
+    let p = p % n;
+
+    let (ans, _) = a[p..]
+        .citer()
+        .fold((vec![], vec![false; 200001]), |(mut ans, mut seen), aa| {
+            if seen[aa] {
+                while let Some(bb) = ans.pop() {
+                    seen[bb] = false;
+                    if bb == aa {
+                        break;
+                    }
+                }
+            } else {
+                ans.push(aa);
+                seen[aa] = true;
+            }
+
+            (ans, seen)
+        });
+    println!("{}", ans.citer().join(" "));
+}

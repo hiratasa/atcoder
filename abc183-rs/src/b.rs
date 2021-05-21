@@ -148,4 +148,9 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (sx, sy, gx, gy) = read_tuple!(f64, f64, f64, f64);
+
+    let ans = (sy * gx + gy * sx) / (gy + sy);
+    println!("{}", ans);
+}

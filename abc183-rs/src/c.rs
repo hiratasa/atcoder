@@ -148,4 +148,22 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+
+    let t = read_mat::<usize>(n);
+
+    let ans = (1..n)
+        .permutations(n - 1)
+        .map(|p| {
+            once(0)
+                .chain(p.into_iter())
+                .chain(once(0))
+                .tuple_windows()
+                .map(|(x, y)| t[x][y])
+                .sum::<usize>()
+        })
+        .filter(|&x| x == k)
+        .count();
+    println!("{}", ans);
+}

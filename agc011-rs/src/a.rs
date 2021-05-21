@@ -137,4 +137,28 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, c, k) = read_tuple!(usize, usize, usize);
+    let t = read_vec(n, || read::<usize>());
+
+    let (_, ans) = t.citer().sorted().chain(once(usize::MAX)).fold(
+        (VecDeque::new(), 0),
+        |(mut q, ans), tt| {
+            let mut m = 0;
+            while matches!(q.front(), Some(&tt2) if tt2 + k < tt) {
+                q.pop_front();
+                m += 1;
+            }
+
+            while m % c > 0 && !q.is_empty() {
+                q.pop_front();
+                m += 1;
+            }
+
+            q.push_back(tt);
+
+            (q, ans + (m + c - 1) / c)
+        },
+    );
+    println!("{}", ans);
+}
