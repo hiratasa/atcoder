@@ -148,4 +148,20 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let t = if n % 2 == 0 { n + 1 } else { n };
+    let edges = (1..=n)
+        .flat_map(|i| {
+            (i + 1..=n)
+                .filter(move |&j| i + j != t)
+                .map(move |j| (i, j))
+        })
+        .collect_vec();
+
+    println!("{}", edges.len());
+    for (i, j) in edges {
+        println!("{} {}", i, j);
+    }
+}

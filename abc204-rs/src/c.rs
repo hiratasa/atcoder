@@ -294,26 +294,31 @@ mod detail {
     }
 }
 
-type Graph = detail::WeightedGraph;
+type Graph = detail::UnweightedGraph;
 
-#[allow(dead_code)]
-fn dfs(g: &Graph, v: usize, p: usize, dist: usize, dists: &mut [usize]) {
-    dists[v] = dist;
-    g.out_edges[v]
-        .iter()
-        .filter(|&e| e.to != p)
-        .for_each(|e| dfs(g, e.to, v, dist + e.label, dists))
+fn dfs(g: &Graph, v: usize, visited: &mut [bool]) -> usize {
+    if visited[v] {
+        return 0;
+    }
+
+    visited[v] = true;
+
+    1 + g.out_edges[v]
+        .citer()
+        .map(|edge| dfs(g, edge.to, visited))
+        .sum::<usize>()
 }
 
 fn main() {
-    let n: usize = read();
+    let (n, m) = read_tuple!(usize, usize);
 
-    let uvw = read_vec(n - 1, || read_tuple!(usize, usize, usize));
+    let ab = read_vec(m, || read_tuple!(usize, usize));
 
-    let g = Graph::from_edges1_undirected(n, uvw);
+    let g = Graph::from_edges1_directed(n, ab);
 
-    let mut dists = vec![0; n];
-    dfs(&g, 0, n, 0, &mut dists);
+    let ans = (0..n)
+        .map(|v| dfs(&g, v, &mut vec![false; n]))
+        .sum::<usize>();
 
-    dists.citer().map(|d| d % 2).for_each(|c| println!("{}", c));
+    println!("{}", ans);
 }

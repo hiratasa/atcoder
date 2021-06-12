@@ -192,6 +192,7 @@ mod detail {
             }
         }
     }
+
     pub type UnweightedEdge = Edge<()>;
     pub type WeightedEdge = Edge<usize>;
     impl std::convert::From<(usize, usize)> for UnweightedEdge {
@@ -211,6 +212,16 @@ mod detail {
     }
     impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
         fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, usize, usize)> for Edge<(usize, usize)> {
+        fn from(t: (usize, usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, (t.2, t.3))
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize, usize)> for Edge<(usize, usize)> {
+        fn from(t: &(usize, usize, usize, usize)) -> Self {
             Edge::from(*t)
         }
     }
@@ -294,26 +305,65 @@ mod detail {
     }
 }
 
-type Graph = detail::WeightedGraph;
+type Graph = detail::Graph<(usize, usize)>;
 
-#[allow(dead_code)]
-fn dfs(g: &Graph, v: usize, p: usize, dist: usize, dists: &mut [usize]) {
-    dists[v] = dist;
-    g.out_edges[v]
-        .iter()
-        .filter(|&e| e.to != p)
-        .for_each(|e| dfs(g, e.to, v, dist + e.label, dists))
+fn calc_min_arv(c: usize, d: usize) -> (usize, usize) {
+    let t0 = ((d as f64).sqrt() as usize).saturating_sub(1);
+    let t1 = t0 + 1;
+
+    if t0 + d / (t0 + 1) <= t1 + d / (t1 + 1) {
+        (t0, c + t0 + d / (t0 + 1))
+    } else {
+        (t1, c + t1 + d / (t1 + 1))
+    }
+}
+
+fn calc_arv(c: usize, d: usize, t: usize) -> usize {
+    let (t0, w) = calc_min_arv(c, d);
+
+    if t <= t0 {
+        w
+    } else {
+        c + t + d / (t + 1)
+    }
+}
+
+fn dijkstra1(g: &Graph, src: usize, dst: usize) -> Option<usize> {
+    let n = g.size();
+    let mut q = std::collections::BinaryHeap::new();
+    let mut costs = vec![std::usize::MAX; n];
+    q.push(std::cmp::Reverse((0, src)));
+    costs[src] = 0;
+    while let Some(std::cmp::Reverse((cost, v))) = q.pop() {
+        if cost > costs[v] {
+            continue;
+        }
+        if v == dst {
+            return Some(cost);
+        }
+        for &edge in &g.out_edges[v] {
+            let next_cost = calc_arv(edge.label.0, edge.label.1, cost);
+            if next_cost < costs[edge.to] {
+                q.push(std::cmp::Reverse((next_cost, edge.to)));
+                costs[edge.to] = next_cost;
+            }
+        }
+    }
+    None
 }
 
 fn main() {
-    let n: usize = read();
+    let (n, m) = read_tuple!(usize, usize);
 
-    let uvw = read_vec(n - 1, || read_tuple!(usize, usize, usize));
+    let abcd = read_vec(m, || read_tuple!(usize, usize, usize, usize));
 
-    let g = Graph::from_edges1_undirected(n, uvw);
+    let g = Graph::from_edges1_undirected(n, abcd);
 
-    let mut dists = vec![0; n];
-    dfs(&g, 0, n, 0, &mut dists);
+    let ans = dijkstra1(&g, 0, n - 1);
 
-    dists.citer().map(|d| d % 2).for_each(|c| println!("{}", c));
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }

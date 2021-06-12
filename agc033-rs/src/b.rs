@@ -148,4 +148,52 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (h, w, n) = read_tuple!(i64, i64, usize);
+    let (sr, sc) = read_tuple!(i64, i64);
+    let s = read_str();
+    let t = read_str();
+
+    let ans = if let Some((l, r, t, b)) = t
+        .citer()
+        .map(|x| (1, x))
+        .rev()
+        .interleave(s.citer().map(|x| (0, x)).rev())
+        .try_fold((0i64, w + 1, 0i64, h + 1), |(l, r, t, b), (turn, d)| {
+            let (l, r, t, b) = if turn == 0 {
+                match d {
+                    'L' => (l + 1, r, t, b),
+                    'R' => (l, r - 1, t, b),
+                    'U' => (l, r, t + 1, b),
+                    'D' => (l, r, t, b - 1),
+                    _ => unreachable!(),
+                }
+            } else {
+                match d {
+                    'L' => (l, min(w + 1, r + 1), t, b),
+                    'R' => (max(l - 1, 0), r, t, b),
+                    'U' => (l, r, t, min(h + 1, b + 1)),
+                    'D' => (l, r, max(t - 1, 0), b),
+                    _ => unreachable!(),
+                }
+            };
+
+            if l + 1 == r || t + 1 == b {
+                None
+            } else {
+                Some((l, r, t, b))
+            }
+        }) {
+        eprintln!("{} {} {} {}", l, r, t, b);
+        t < sr && sr < b && l < sc && sc < r
+    } else {
+        eprintln!("none");
+        false
+    };
+
+    if ans {
+        println!("YES");
+    } else {
+        println!("NO");
+    }
+}

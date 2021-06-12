@@ -148,74 +148,37 @@ where
 {
 }
 
-#[derive(Clone, Copy, Debug)]
-enum UnionFindNode {
-    Root { size: usize },
-    Child { parent: usize },
-}
-struct UnionFind {
-    g: Vec<UnionFindNode>,
-}
-#[allow(dead_code)]
-impl UnionFind {
-    fn new(n: usize) -> UnionFind {
-        use UnionFindNode::*;
-        UnionFind {
-            g: (0..n).map(|_| Root { size: 1 }).collect(),
-        }
-    }
-    fn root(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let p = match self.g[v] {
-            Root { size: _ } => return v,
-            Child { parent: p } => p,
-        };
-        let r = self.root(p);
-        self.g[v] = Child { parent: r };
-        r
-    }
-    fn unite(&mut self, v: usize, u: usize) -> bool {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        let ru = self.root(u);
-        if rv == ru {
-            return false;
-        }
-        let size_rv = self.size(rv);
-        let size_ru = self.size(ru);
-        let (rsmall, rlarge) = if size_rv < size_ru {
-            (rv, ru)
-        } else {
-            (ru, rv)
-        };
-        self.g[rsmall] = Child { parent: rlarge };
-        self.g[rlarge] = Root {
-            size: size_rv + size_ru,
-        };
-        true
-    }
-    fn same(&mut self, v: usize, u: usize) -> bool {
-        self.root(v) == self.root(u)
-    }
-    fn size(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        match self.g[rv] {
-            Root { size } => size,
-            Child { parent: _ } => unreachable!(),
-        }
-    }
-}
-
 fn main() {
     let (n, m) = read_tuple!(usize, usize);
-    let xyz = read_vec(m, || read_tuple!(usize, usize, usize));
+    let xy = read_vec(m, || read_tuple!(usize, usize));
 
-    let mut uf = xyz.citer().fold(UnionFind::new(n), |mut uf, (x, y, _z)| {
-        uf.unite(x - 1, y - 1);
-        uf
-    });
+    let mut dp0 = vec![false; 2 * n + 1];
+    dp0[n] = true;
+    let dp = xy
+        .citer()
+        .sorted()
+        .group_by(|&t| t.0)
+        .into_iter()
+        .map(|(x, it)| (x, it.map(|t| t.1).collect::<Vec<_>>()))
+        .fold(dp0, |mut dp, (_x, ys)| {
+            let t = ys
+                .citer()
+                .map(|y| {
+                    (
+                        y,
+                        y.checked_sub(1).map_or(false, |yy| dp[yy])
+                            || dp.get(y + 1).copied().unwrap_or(false),
+                    )
+                })
+                .collect::<Vec<_>>();
 
-    let ans = (0..n).filter(|&i| uf.root(i) == i).count();
+            for (y, a) in t {
+                dp[y] = a;
+            }
+
+            dp
+        });
+
+    let ans = dp.citer().filter(|&x| x).count();
     println!("{}", ans);
 }

@@ -148,4 +148,61 @@ where
 {
 }
 
-fn main() {}
+fn calc(n: u32, first: bool, d: i64) -> i64 {
+    if n == 0 {
+        if d == 0 {
+            1
+        } else {
+            0
+        }
+    } else if n == 1 {
+        if d == 0 {
+            if first {
+                9
+            } else {
+                10
+            }
+        } else {
+            0
+        }
+    } else {
+        let x = (10i64.pow(n - 1) - 1) / 9;
+
+        if d % 10 < 0 {
+            let y0 = (d % 10).abs();
+            let c0 = 10 - y0;
+
+            let y1 = 10 - y0;
+            let c1 = if first { 9 - y1 } else { 10 - y1 };
+
+            c0 * calc(n - 2, false, (d + x * y0) / 10) + c1 * calc(n - 2, false, (d - x * y1) / 10)
+        } else if d % 10 == 0 {
+            let c = if first { 9 } else { 10 };
+            c * calc(n - 2, false, d / 10)
+        } else {
+            let y0 = (d % 10).abs();
+            let c0 = if first { 9 - y0 } else { 10 - y0 };
+
+            let y1 = 10 - y0;
+            let c1 = 10 - y1;
+
+            c0 * calc(n - 2, false, (d - x * y0) / 10)
+                + c1 * calc(n - 2, false, (d + x * y1) / 10 + 1)
+        }
+    }
+}
+
+fn main() {
+    let d: i64 = read();
+
+    if d % 9 > 0 {
+        println!("0");
+        return;
+    }
+
+    let ans = (1..=18)
+        .map(|i| calc(i, true, d / 9))
+        .inspect(|x| eprintln!("{}", x))
+        .sum::<i64>();
+    println!("{}", ans);
+}

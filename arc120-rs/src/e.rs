@@ -148,74 +148,85 @@ where
 {
 }
 
-#[derive(Clone, Copy, Debug)]
-enum UnionFindNode {
-    Root { size: usize },
-    Child { parent: usize },
-}
-struct UnionFind {
-    g: Vec<UnionFindNode>,
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
+        }
+    }
+    begin
 }
 #[allow(dead_code)]
-impl UnionFind {
-    fn new(n: usize) -> UnionFind {
-        use UnionFindNode::*;
-        UnionFind {
-            g: (0..n).map(|_| Root { size: 1 }).collect(),
-        }
-    }
-    fn root(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let p = match self.g[v] {
-            Root { size: _ } => return v,
-            Child { parent: p } => p,
-        };
-        let r = self.root(p);
-        self.g[v] = Child { parent: r };
-        r
-    }
-    fn unite(&mut self, v: usize, u: usize) -> bool {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        let ru = self.root(u);
-        if rv == ru {
-            return false;
-        }
-        let size_rv = self.size(rv);
-        let size_ru = self.size(ru);
-        let (rsmall, rlarge) = if size_rv < size_ru {
-            (rv, ru)
-        } else {
-            (ru, rv)
-        };
-        self.g[rsmall] = Child { parent: rlarge };
-        self.g[rlarge] = Root {
-            size: size_rv + size_ru,
-        };
-        true
-    }
-    fn same(&mut self, v: usize, u: usize) -> bool {
-        self.root(v) == self.root(u)
-    }
-    fn size(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        match self.g[rv] {
-            Root { size } => size,
-            Child { parent: _ } => unreachable!(),
-        }
-    }
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-    let xyz = read_vec(m, || read_tuple!(usize, usize, usize));
+    let n: usize = read();
+    let a = read_row::<i64>();
 
-    let mut uf = xyz.citer().fold(UnionFind::new(n), |mut uf, (x, y, _z)| {
-        uf.unite(x - 1, y - 1);
-        uf
+    let b = a
+        .citer()
+        .tuple_windows()
+        .map(|(a0, a1)| (a1 - a0) / 2)
+        .collect::<Vec<_>>();
+    let c = once(0).chain(b.citer()).cumsum::<i64>().collect::<Vec<_>>();
+
+    // eprintln!("{:?}", c);
+    let ans = lower_bound_int(0, (a[n - 1] - a[0]) / 2, |t| {
+        let (_p0, p1) = if let Some((p0, p1)) = (0..n - 1).try_fold((None, None), |(p0, p1), i| {
+            let j = c
+                .binary_search_by(|cc| cc.cmp(&(c[i + 1] - t)).then(Ordering::Greater))
+                .unwrap_err();
+            if j > i {
+                return None;
+            }
+
+            if (matches!(p0, None if c[i + 1] > t) || matches!(p0, Some(p0) if p0 < j))
+                && (matches!(p1, None if c[i + 1] > t)
+                    || matches!(p1, Some(p1) if p1 < j || p1 + 1== i))
+            {
+                Some((p0, p1))
+            } else {
+                Some((p1, Some(i)))
+            }
+        }) {
+            (p0, p1)
+        } else {
+            return Ordering::Less;
+        };
+
+        if c[n - 1] - c[p1.unwrap()] <= t {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
     });
-
-    let ans = (0..n).filter(|&i| uf.root(i) == i).count();
     println!("{}", ans);
 }

@@ -148,74 +148,52 @@ where
 {
 }
 
-#[derive(Clone, Copy, Debug)]
-enum UnionFindNode {
-    Root { size: usize },
-    Child { parent: usize },
-}
-struct UnionFind {
-    g: Vec<UnionFindNode>,
-}
-#[allow(dead_code)]
-impl UnionFind {
-    fn new(n: usize) -> UnionFind {
-        use UnionFindNode::*;
-        UnionFind {
-            g: (0..n).map(|_| Root { size: 1 }).collect(),
-        }
-    }
-    fn root(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let p = match self.g[v] {
-            Root { size: _ } => return v,
-            Child { parent: p } => p,
-        };
-        let r = self.root(p);
-        self.g[v] = Child { parent: r };
-        r
-    }
-    fn unite(&mut self, v: usize, u: usize) -> bool {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        let ru = self.root(u);
-        if rv == ru {
-            return false;
-        }
-        let size_rv = self.size(rv);
-        let size_ru = self.size(ru);
-        let (rsmall, rlarge) = if size_rv < size_ru {
-            (rv, ru)
-        } else {
-            (ru, rv)
-        };
-        self.g[rsmall] = Child { parent: rlarge };
-        self.g[rlarge] = Root {
-            size: size_rv + size_ru,
-        };
-        true
-    }
-    fn same(&mut self, v: usize, u: usize) -> bool {
-        self.root(v) == self.root(u)
-    }
-    fn size(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        match self.g[rv] {
-            Root { size } => size,
-            Child { parent: _ } => unreachable!(),
-        }
-    }
-}
-
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-    let xyz = read_vec(m, || read_tuple!(usize, usize, usize));
+    let n: usize = read();
 
-    let mut uf = xyz.citer().fold(UnionFind::new(n), |mut uf, (x, y, _z)| {
-        uf.unite(x - 1, y - 1);
-        uf
+    let xy = read_vec(n, || read_tuple!(i64, i64));
+
+    let x_sorted = (0..n).sorted_by_key(|&i| xy[i]).collect::<Vec<_>>();
+    let y_sorted = (0..n)
+        .sorted_by_key(|&i| (xy[i].1, xy[i].0))
+        .collect::<Vec<_>>();
+
+    let distance = |i: usize, j: usize| max((xy[i].0 - xy[j].0).abs(), (xy[i].1 - xy[j].1).abs());
+
+    let t = (0..n).fold(vec![], |mut t, i| {
+        t.extend(
+            x_sorted[..3]
+                .citer()
+                .filter(|&j| j > i)
+                .map(|j| (distance(i, j), (i, j))),
+        );
+        t.extend(
+            x_sorted[n - 3..]
+                .citer()
+                .filter(|&j| j > i)
+                .map(|j| (distance(i, j), (i, j))),
+        );
+        t.extend(
+            y_sorted[..3]
+                .citer()
+                .filter(|&j| j > i)
+                .map(|j| (distance(i, j), (i, j))),
+        );
+        t.extend(
+            y_sorted[n - 3..]
+                .citer()
+                .filter(|&j| j > i)
+                .map(|j| (distance(i, j), (i, j))),
+        );
+
+        t.citer()
+            .sorted_by_key(|&t| Reverse(t))
+            .dedup()
+            .take(2)
+            .collect()
     });
 
-    let ans = (0..n).filter(|&i| uf.root(i) == i).count();
+    let ans = t[1].0;
+
     println!("{}", ans);
 }

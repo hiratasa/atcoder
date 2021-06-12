@@ -148,74 +148,22 @@ where
 {
 }
 
-#[derive(Clone, Copy, Debug)]
-enum UnionFindNode {
-    Root { size: usize },
-    Child { parent: usize },
-}
-struct UnionFind {
-    g: Vec<UnionFindNode>,
-}
-#[allow(dead_code)]
-impl UnionFind {
-    fn new(n: usize) -> UnionFind {
-        use UnionFindNode::*;
-        UnionFind {
-            g: (0..n).map(|_| Root { size: 1 }).collect(),
-        }
-    }
-    fn root(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let p = match self.g[v] {
-            Root { size: _ } => return v,
-            Child { parent: p } => p,
-        };
-        let r = self.root(p);
-        self.g[v] = Child { parent: r };
-        r
-    }
-    fn unite(&mut self, v: usize, u: usize) -> bool {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        let ru = self.root(u);
-        if rv == ru {
-            return false;
-        }
-        let size_rv = self.size(rv);
-        let size_ru = self.size(ru);
-        let (rsmall, rlarge) = if size_rv < size_ru {
-            (rv, ru)
-        } else {
-            (ru, rv)
-        };
-        self.g[rsmall] = Child { parent: rlarge };
-        self.g[rlarge] = Root {
-            size: size_rv + size_ru,
-        };
-        true
-    }
-    fn same(&mut self, v: usize, u: usize) -> bool {
-        self.root(v) == self.root(u)
-    }
-    fn size(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        match self.g[rv] {
-            Root { size } => size,
-            Child { parent: _ } => unreachable!(),
-        }
-    }
-}
-
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-    let xyz = read_vec(m, || read_tuple!(usize, usize, usize));
+    let (n, k) = read_tuple!(usize, usize);
 
-    let mut uf = xyz.citer().fold(UnionFind::new(n), |mut uf, (x, y, _z)| {
-        uf.unite(x - 1, y - 1);
-        uf
-    });
+    let ab = read_vec(n, || read_tuple!(usize, usize));
 
-    let ans = (0..n).filter(|&i| uf.root(i) == i).count();
+    let ans = ab
+        .citer()
+        .sorted()
+        .chain(once((usize::MAX, 0)))
+        .try_fold((0, k), |(c, kk), (a, b)| {
+            if kk < a - c {
+                Err(c + kk)
+            } else {
+                Ok((a, kk - (a - c) + b))
+            }
+        })
+        .unwrap_err();
     println!("{}", ans);
 }

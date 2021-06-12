@@ -148,74 +148,67 @@ where
 {
 }
 
-#[derive(Clone, Copy, Debug)]
-enum UnionFindNode {
-    Root { size: usize },
-    Child { parent: usize },
-}
-struct UnionFind {
-    g: Vec<UnionFindNode>,
-}
-#[allow(dead_code)]
-impl UnionFind {
-    fn new(n: usize) -> UnionFind {
-        use UnionFindNode::*;
-        UnionFind {
-            g: (0..n).map(|_| Root { size: 1 }).collect(),
-        }
-    }
-    fn root(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let p = match self.g[v] {
-            Root { size: _ } => return v,
-            Child { parent: p } => p,
-        };
-        let r = self.root(p);
-        self.g[v] = Child { parent: r };
-        r
-    }
-    fn unite(&mut self, v: usize, u: usize) -> bool {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        let ru = self.root(u);
-        if rv == ru {
-            return false;
-        }
-        let size_rv = self.size(rv);
-        let size_ru = self.size(ru);
-        let (rsmall, rlarge) = if size_rv < size_ru {
-            (rv, ru)
-        } else {
-            (ru, rv)
-        };
-        self.g[rsmall] = Child { parent: rlarge };
-        self.g[rlarge] = Root {
-            size: size_rv + size_ru,
-        };
-        true
-    }
-    fn same(&mut self, v: usize, u: usize) -> bool {
-        self.root(v) == self.root(u)
-    }
-    fn size(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        match self.g[rv] {
-            Root { size } => size,
-            Child { parent: _ } => unreachable!(),
-        }
-    }
-}
-
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-    let xyz = read_vec(m, || read_tuple!(usize, usize, usize));
+    let n: usize = read();
 
-    let mut uf = xyz.citer().fold(UnionFind::new(n), |mut uf, (x, y, _z)| {
-        uf.unite(x - 1, y - 1);
-        uf
+    let ac = read_vec(2 * n, || read_tuple!(i64, char));
+
+    let mut nums = ac.citer().fold(vec![vec![]; 3], |mut nums, (a, c)| {
+        match c {
+            'R' => nums[0].push(a),
+            'G' => nums[1].push(a),
+            'B' => nums[2].push(a),
+            _ => unreachable!(),
+        };
+        nums
     });
 
-    let ans = (0..n).filter(|&i| uf.root(i) == i).count();
+    if nums.iter().all(|v| v.len() % 2 == 0) {
+        println!("0");
+        return;
+    }
+
+    if nums[0].len() % 2 == 0 {
+        nums.swap(0, 2);
+    }
+
+    if nums[1].len() % 2 == 0 {
+        nums.swap(1, 2);
+    }
+
+    assert!(nums[0].len() % 2 > 0);
+    assert!(nums[1].len() % 2 > 0);
+    assert!(nums[2].len() % 2 == 0);
+
+    nums[0].sort();
+    nums[1].sort();
+    nums[2].sort();
+
+    let calc_min_match = |nums0: &[i64], nums1: &[i64]| {
+        assert!(!nums0.is_empty());
+        nums0
+            .citer()
+            .map(|a| {
+                let idx = nums1
+                    .binary_search_by(|&b| b.cmp(&a).then(Ordering::Greater))
+                    .unwrap_err();
+
+                let x = nums1.get(idx).map_or(std::i64::MAX, |b| (a - b).abs());
+                let y = idx
+                    .checked_sub(1)
+                    .and_then(|j| nums1.get(j))
+                    .map_or(std::i64::MAX, |b| (a - b).abs());
+
+                min(x, y)
+            })
+            .min()
+            .unwrap()
+    };
+
+    let ans0 = calc_min_match(&nums[0], &nums[1]);
+    let ans1 =
+        calc_min_match(&nums[0], &nums[2]).saturating_add(calc_min_match(&nums[1], &nums[2]));
+    let ans = min(ans0, ans1);
+
     println!("{}", ans);
 }

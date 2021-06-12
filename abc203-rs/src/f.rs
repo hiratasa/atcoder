@@ -148,74 +148,36 @@ where
 {
 }
 
-#[derive(Clone, Copy, Debug)]
-enum UnionFindNode {
-    Root { size: usize },
-    Child { parent: usize },
-}
-struct UnionFind {
-    g: Vec<UnionFindNode>,
-}
-#[allow(dead_code)]
-impl UnionFind {
-    fn new(n: usize) -> UnionFind {
-        use UnionFindNode::*;
-        UnionFind {
-            g: (0..n).map(|_| Root { size: 1 }).collect(),
-        }
-    }
-    fn root(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let p = match self.g[v] {
-            Root { size: _ } => return v,
-            Child { parent: p } => p,
-        };
-        let r = self.root(p);
-        self.g[v] = Child { parent: r };
-        r
-    }
-    fn unite(&mut self, v: usize, u: usize) -> bool {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        let ru = self.root(u);
-        if rv == ru {
-            return false;
-        }
-        let size_rv = self.size(rv);
-        let size_ru = self.size(ru);
-        let (rsmall, rlarge) = if size_rv < size_ru {
-            (rv, ru)
-        } else {
-            (ru, rv)
-        };
-        self.g[rsmall] = Child { parent: rlarge };
-        self.g[rlarge] = Root {
-            size: size_rv + size_ru,
-        };
-        true
-    }
-    fn same(&mut self, v: usize, u: usize) -> bool {
-        self.root(v) == self.root(u)
-    }
-    fn size(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        match self.g[rv] {
-            Root { size } => size,
-            Child { parent: _ } => unreachable!(),
-        }
-    }
-}
-
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-    let xyz = read_vec(m, || read_tuple!(usize, usize, usize));
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
 
-    let mut uf = xyz.citer().fold(UnionFind::new(n), |mut uf, (x, y, _z)| {
-        uf.unite(x - 1, y - 1);
-        uf
+    let b = once(0).chain(a.citer().sorted()).collect::<Vec<_>>();
+
+    const M: usize = 30;
+    let mut costs = vec![vec![usize::MAX; M + 1]; n + 1];
+    costs[n][0] = 0;
+    let costs = (1..=n).rev().fold(costs, |mut costs, i| {
+        let idx = b
+            .binary_search_by(|&bb| (2 * bb).cmp(&b[i]).then(Ordering::Less))
+            .unwrap_err()
+            - 1;
+
+        for j in 0..M {
+            costs[idx][j + 1] = min(costs[idx][j + 1], costs[i][j]);
+        }
+
+        for j in 0..=M {
+            costs[i - 1][j] = min(costs[i - 1][j], costs[i][j].saturating_add(1));
+        }
+
+        costs
     });
 
-    let ans = (0..n).filter(|&i| uf.root(i) == i).count();
-    println!("{}", ans);
+    let ans = costs[0]
+        .citer()
+        .enumerate()
+        .find(|&(_i, kk)| kk <= k)
+        .unwrap();
+    println!("{} {}", ans.0, ans.1);
 }
