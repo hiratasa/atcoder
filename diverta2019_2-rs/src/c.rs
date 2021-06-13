@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, Either, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -148,4 +148,31 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a = read_row::<i64>();
+
+    let (mut b, mut c): (Vec<_>, Vec<_>) =
+        a.into_iter().sorted().enumerate().partition_map(|(i, aa)| {
+            if i == 0 || (aa < 0 && i != n - 1) {
+                Either::Left(aa)
+            } else {
+                Either::Right(aa)
+            }
+        });
+
+    let mut ops = vec![];
+    for cc in c.citer().take(c.len() - 1) {
+        ops.push((b[0], cc));
+        b[0] -= cc;
+    }
+    for bb in b.citer() {
+        ops.push((c[c.len() - 1], bb));
+        *c.last_mut().unwrap() -= bb;
+    }
+
+    println!("{}", c[c.len() - 1]);
+    for (x, y) in ops {
+        println!("{} {}", x, y);
+    }
+}

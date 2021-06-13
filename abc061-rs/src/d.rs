@@ -297,10 +297,10 @@ mod detail {
 type Graph = detail::WeightedGraph;
 
 fn main() {
-    let (n, m, p) = read_tuple!(usize, usize, i64);
+    let (n, m) = read_tuple!(usize, usize);
     let abc = read_vec(m, || read_tuple!(usize, usize, i64));
 
-    let g = Graph::from_edges1_directed(n, abc.into_iter().map(|(a, b, c)| (a, b, c - p)));
+    let g = Graph::from_edges1_directed(n, abc);
 
     let mut scores = vec![std::i64::MIN; n];
     scores[0] = 0;
@@ -325,8 +325,8 @@ fn main() {
     }
 
     if scores[n - 1] == std::i64::MAX {
-        println!("-1");
+        println!("inf");
     } else {
-        println!("{}", max(0, scores[n - 1]));
+        println!("{}", scores[n - 1]);
     }
 }

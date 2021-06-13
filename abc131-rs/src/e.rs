@@ -148,4 +148,25 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+
+    if k > (n - 1) * (n - 2) / 2 {
+        println!("-1");
+        return;
+    }
+
+    let r = (n - 1) * (n - 2) / 2 - k;
+    println!("{}", n - 1 + r);
+
+    for i in 2..=n {
+        println!("{} {}", 1, i);
+    }
+
+    (2..=n)
+        .flat_map(|i| (i + 1..=n).map(move |j| (i, j)))
+        .take(r)
+        .for_each(|(i, j)| {
+            println!("{} {}", i, j);
+        })
+}

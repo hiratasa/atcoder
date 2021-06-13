@@ -150,23 +150,15 @@ where
 
 fn main() {
     let n: usize = read();
-    let a = read_col::<usize>(n);
 
-    let ans = a
-        .citer()
-        .fold(vec![], |mut v, aa| {
-            let idx = v
-                .binary_search_by(|u| aa.cmp(&u).then(Ordering::Less))
-                .unwrap_err();
+    let a = read_row::<i64>();
+    let b = a.citer().sorted().collect::<Vec<_>>();
 
-            if idx == v.len() {
-                v.push(aa);
-            } else {
-                v[idx] = aa;
-            }
-
-            v
-        })
-        .len();
+    let x = b[n / 2] as f64 / 2.0;
+    let ans = a.citer().sum::<i64>() as f64 / n as f64 + x
+        - a.citer()
+            .map(|aa| f64::min(2.0 * x, aa as f64))
+            .sum::<f64>()
+            / n as f64;
     println!("{}", ans);
 }

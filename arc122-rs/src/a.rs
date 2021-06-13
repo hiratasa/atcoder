@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -345,31 +356,21 @@ impl<M: Modulus> num::One for Mod<M> {
 fn main() {
     type Mod = Mod1000000007;
 
-    let l = read_str()
-        .into_iter()
-        .map(|c| c.to_digit(10).unwrap())
-        .collect_vec();
-    let dp = l.citer().fold([Mod::one(), Mod::zero()], |dp, d| {
-        let mut next = [Mod::zero(), Mod::zero()];
-        for i in 0..=1 {
-            for j in 0..=1 {
-                for k in 0..=1 {
-                    if j == 1 && k == 1 {
-                        continue;
-                    }
-                    if i == 0 && j ^ k > d {
-                        continue;
-                    }
+    let n: usize = read();
+    let a = read_row::<usize>();
 
-                    next[i | (j ^ k < d) as usize] += dp[i];
-                }
-            }
-        }
+    let dp = a.citer().skip(1).fold(
+        (Mod::new(a[0]), Mod::zero(), Mod::one(), Mod::zero()),
+        |(dp_pos, dp_neg, dp2_pos, dp2_neg), aa| {
+            (
+                dp_pos + dp2_pos * aa + dp_neg + dp2_neg * aa,
+                dp_pos - dp2_pos * aa,
+                dp2_pos + dp2_neg,
+                dp2_pos,
+            )
+        },
+    );
+    let ans = dp.0 + dp.1;
 
-        // eprintln!("{:?}", next);
-        next
-    });
-
-    let ans = dp[0] + dp[1];
     println!("{}", ans);
 }

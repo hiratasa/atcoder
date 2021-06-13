@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -345,31 +356,21 @@ impl<M: Modulus> num::One for Mod<M> {
 fn main() {
     type Mod = Mod1000000007;
 
-    let l = read_str()
-        .into_iter()
-        .map(|c| c.to_digit(10).unwrap())
-        .collect_vec();
-    let dp = l.citer().fold([Mod::one(), Mod::zero()], |dp, d| {
-        let mut next = [Mod::zero(), Mod::zero()];
-        for i in 0..=1 {
-            for j in 0..=1 {
-                for k in 0..=1 {
-                    if j == 1 && k == 1 {
-                        continue;
-                    }
-                    if i == 0 && j ^ k > d {
-                        continue;
-                    }
+    let s = read_str();
 
-                    next[i | (j ^ k < d) as usize] += dp[i];
-                }
+    let dp = s
+        .citer()
+        .fold(vvec![Mod::one(); Mod::zero(); 13], |dp, c| match c {
+            '?' => (0..13)
+                // 4 is inverse of 10 for mod13
+                .map(|i| (0..=9).map(|d| dp[(i + 13 - d) * 4 % 13]).sum::<Mod>())
+                .collect(),
+            _ => {
+                let d = c.to_digit(10).unwrap() as usize;
+
+                (0..13).map(|i| dp[(i + 13 - d) * 4 % 13]).collect()
             }
-        }
-
-        // eprintln!("{:?}", next);
-        next
-    });
-
-    let ans = dp[0] + dp[1];
+        });
+    let ans = dp[5];
     println!("{}", ans);
 }

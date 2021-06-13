@@ -148,4 +148,24 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let v = read_row::<i64>();
+
+    let ans = iproduct!(0..=n, 0..=n)
+        .filter(|&(l, r)| l + r <= k && l + r <= n)
+        .map(|(l, r)| {
+            let a = k - (l + r);
+
+            chain(&v[..l], &v[n - r..])
+                .copied()
+                .sorted()
+                .enumerate()
+                .skip_while(|&(i, vv)| i < a && vv < 0)
+                .map(|t| t.1)
+                .sum::<i64>()
+        })
+        .max()
+        .unwrap();
+    println!("{}", ans);
+}

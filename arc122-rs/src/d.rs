@@ -148,25 +148,69 @@ where
 {
 }
 
+fn find_smallest_combi(a: &[usize], idxs0: &[usize], idxs1: &[usize], bit_idx: usize) -> usize {
+    assert!(!idxs0.is_empty());
+    assert!(!idxs1.is_empty());
+
+    if bit_idx == 0 {
+        0
+    } else {
+        let b = bit_idx - 1;
+        let (idxs00, idxs01): (Vec<_>, Vec<_>) = idxs0.citer().partition(|&i| (a[i] >> b) & 1 == 0);
+        let (idxs10, idxs11): (Vec<_>, Vec<_>) = idxs1.citer().partition(|&i| (a[i] >> b) & 1 == 0);
+
+        let c = iproduct!(
+            [&idxs00, &idxs01]
+                .citer()
+                .enumerate()
+                .filter(|&(_, idxs)| !idxs.is_empty()),
+            [&idxs10, &idxs11]
+                .citer()
+                .enumerate()
+                .filter(|&(_, idxs)| !idxs.is_empty())
+        )
+        .map(|((x0, _), (x1, _))| x0 ^ x1)
+        .min()
+        .unwrap();
+
+        iproduct!(
+            [&idxs00, &idxs01]
+                .citer()
+                .enumerate()
+                .filter(|&(_, idxs)| !idxs.is_empty()),
+            [&idxs10, &idxs11]
+                .citer()
+                .enumerate()
+                .filter(|&(_, idxs)| !idxs.is_empty())
+        )
+        .filter(|&((x0, _), (x1, _))| x0 ^ x1 == c)
+        .map(|((_, t), (_, u))| find_smallest_combi(&a, t, u, b) | (c << b))
+        .min()
+        .unwrap()
+    }
+}
+
+fn solve(a: &[usize], idxs: &[usize], bit_idx: usize) -> usize {
+    if bit_idx == 0 {
+        0
+    } else {
+        let b = bit_idx - 1;
+        let (idxs0, idxs1): (Vec<_>, Vec<_>) =
+            idxs.citer().partition(|&idx| (a[idx] >> b) & 1 == 0);
+        if idxs0.is_empty() || idxs1.is_empty() {
+            solve(&a, &idxs, b)
+        } else if idxs1.len() % 2 == 0 {
+            max(solve(&a, &idxs0, b), solve(&a, &idxs1, b))
+        } else {
+            find_smallest_combi(&a, &idxs0, &idxs1, b) | (1 << b)
+        }
+    }
+}
+
 fn main() {
     let n: usize = read();
-    let a = read_col::<usize>(n);
+    let a = read_row::<usize>();
 
-    let ans = a
-        .citer()
-        .fold(vec![], |mut v, aa| {
-            let idx = v
-                .binary_search_by(|u| aa.cmp(&u).then(Ordering::Less))
-                .unwrap_err();
-
-            if idx == v.len() {
-                v.push(aa);
-            } else {
-                v[idx] = aa;
-            }
-
-            v
-        })
-        .len();
+    let ans = solve(&a, &(0..2 * n).collect::<Vec<_>>(), 30);
     println!("{}", ans);
 }

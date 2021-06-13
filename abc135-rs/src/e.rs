@@ -148,25 +148,4 @@ where
 {
 }
 
-fn main() {
-    let n: usize = read();
-    let a = read_col::<usize>(n);
-
-    let ans = a
-        .citer()
-        .fold(vec![], |mut v, aa| {
-            let idx = v
-                .binary_search_by(|u| aa.cmp(&u).then(Ordering::Less))
-                .unwrap_err();
-
-            if idx == v.len() {
-                v.push(aa);
-            } else {
-                v[idx] = aa;
-            }
-
-            v
-        })
-        .len();
-    println!("{}", ans);
-}
+fn main() {}
