@@ -149,26 +149,14 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let intervals = read_vec(n, || read_tuple!(usize, i64, i64));
 
-    let ab = read_vec(n, || read_tuple!(usize, usize));
-
-    let t = ab.citer().fold(vec![vec![]; m], |mut t, (a, b)| {
-        if a <= m {
-            t[m - a].push(b);
-        }
-
-        t
-    });
-
-    let ans = t
-        .iter()
-        .rev()
-        .scan(BinaryHeap::new(), |q, r| {
-            q.extend(r);
-
-            Some(q.pop().unwrap_or(0))
-        })
-        .sum::<usize>();
+    let ans = intervals
+        .into_iter()
+        .map(|(t, l, r)| (2 * l + (t >= 3) as i64, 2 * r + (t % 2 > 0) as i64))
+        .tuple_combinations()
+        .filter(|&((l0, r0), (l1, r1))| !(r0 <= l1 || r1 <= l0))
+        .count();
     println!("{}", ans);
 }

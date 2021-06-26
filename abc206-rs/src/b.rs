@@ -149,26 +149,8 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
 
-    let ab = read_vec(n, || read_tuple!(usize, usize));
-
-    let t = ab.citer().fold(vec![vec![]; m], |mut t, (a, b)| {
-        if a <= m {
-            t[m - a].push(b);
-        }
-
-        t
-    });
-
-    let ans = t
-        .iter()
-        .rev()
-        .scan(BinaryHeap::new(), |q, r| {
-            q.extend(r);
-
-            Some(q.pop().unwrap_or(0))
-        })
-        .sum::<usize>();
+    let ans = (0..).cumsum::<usize>().position(|x| x >= n).unwrap();
     println!("{}", ans);
 }

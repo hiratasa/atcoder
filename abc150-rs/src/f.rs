@@ -148,27 +148,70 @@ where
 {
 }
 
-fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+#[allow(dead_code)]
+fn z_algorithm<T: std::cmp::Eq>(s: &[T]) -> Vec<usize> {
+    let n = s.len();
 
-    let ab = read_vec(n, || read_tuple!(usize, usize));
+    // z[i] = max_{j<n} s[0:j] = s[i:i+j]
+    let mut z = vec![0; n];
+    z[0] = n;
 
-    let t = ab.citer().fold(vec![vec![]; m], |mut t, (a, b)| {
-        if a <= m {
-            t[m - a].push(b);
+    let mut l = 0;
+    let mut r = 0;
+    for i in 1..n {
+        // assert!(s[l..r] == s[0..r - l]);
+        if i < r && z[i - l] < r - i {
+            z[i] = z[i - l];
+        } else {
+            // i < rなら、 z[i - l] >= r - i なので、
+            // s[i..r] (=s[i-l..r-l]) = s[0..r-i] が保証されている
+            // i >= r なら再計算
+            l = i;
+            r = std::cmp::max(i, r);
+            while r < n && s[r] == s[r - l] {
+                r += 1;
+            }
+            z[i] = r - l;
         }
+    }
 
-        t
-    });
+    z
+}
 
-    let ans = t
-        .iter()
-        .rev()
-        .scan(BinaryHeap::new(), |q, r| {
-            q.extend(r);
+// textからpatternの出現箇所を全部検索
+#[allow(dead_code)]
+fn find_all<T: Eq>(text: &Vec<T>, pattern: &Vec<T>) -> Vec<usize> {
+    // pattern + text
+    let s = pattern.iter().chain(text.iter()).collect::<Vec<_>>();
 
-            Some(q.pop().unwrap_or(0))
-        })
-        .sum::<usize>();
-    println!("{}", ans);
+    let z = z_algorithm(&s);
+
+    (0..text.len())
+        .filter(|&i| z[pattern.len() + i] >= pattern.len())
+        .collect()
+}
+
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
+
+    let c = a
+        .citer()
+        .chain(a.citer())
+        .tuple_windows()
+        .map(|(x, y)| x ^ y)
+        .take(2 * n - 2)
+        .collect::<Vec<_>>();
+    let d = b
+        .citer()
+        .tuple_windows()
+        .map(|(x, y)| x ^ y)
+        .collect::<Vec<_>>();
+
+    let pos = find_all(&c, &d);
+
+    pos.into_iter()
+        .map(|k| (k, a[k] ^ b[0]))
+        .for_each(|(k, x)| println!("{} {}", k, x));
 }

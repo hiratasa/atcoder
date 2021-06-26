@@ -379,37 +379,22 @@ fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>
 fn main() {
     type Mod = Mod1000000007;
 
-    let n: usize = read();
-    let a = read_row::<usize>();
+    let (n, m, k) = read_tuple!(usize, usize, usize);
 
-    let d = a
-        .citer()
-        .enumerate()
-        .scan(vec![None; n], |pos, (i, aa)| {
-            if let Some(p) = pos[aa - 1] {
-                Some(Some(i - p))
-            } else {
-                pos[aa - 1] = Some(i);
-                Some(None)
-            }
-        })
-        .flatten()
-        .next()
-        .unwrap();
+    if n > m + k {
+        println!("0");
+        return;
+    }
 
-    let (fact, _, inv_fact) = generate_fact(n + 1);
-
-    let combi = |n: usize, m: usize| {
-        if m > n {
+    let (fact, _, inv_fact) = generate_fact(n + m);
+    let combi = |n: usize, r: usize| -> Mod1000000007 {
+        if r > n {
             Mod::zero()
         } else {
-            fact[n] * inv_fact[n - m] * inv_fact[m]
+            fact[n] * inv_fact[n - r] * inv_fact[r]
         }
     };
 
-    (1..=n + 1)
-        .map(|k| combi(n + 1, k) - combi(n + 1 - (d + 1), k - 1))
-        .for_each(|ans| {
-            println!("{}", ans);
-        });
+    let ans = combi(n + m, n) - combi(n + m, m + k + 1);
+    println!("{}", ans);
 }

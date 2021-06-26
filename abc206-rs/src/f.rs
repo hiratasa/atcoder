@@ -149,26 +149,36 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let t: usize = read();
 
-    let ab = read_vec(n, || read_tuple!(usize, usize));
+    for _ in 0..t {
+        let n: usize = read();
+        let lr = read_vec(n, || read_tuple!(usize, usize));
 
-    let t = ab.citer().fold(vec![vec![]; m], |mut t, (a, b)| {
-        if a <= m {
-            t[m - a].push(b);
+        let mut g = vec![vec![0; 101]; 101];
+        for len in 1..=100 {
+            for i in 0..=100 - len {
+                let j = i + len;
+
+                g[i][j] = lr
+                    .citer()
+                    .filter(|&(l, r)| i <= l && r <= j)
+                    .map(|(l, r)| g[i][l] ^ g[r][j])
+                    .sorted()
+                    .dedup()
+                    .chain(once(usize::MAX))
+                    .enumerate()
+                    .find(|&(i, x)| i != x)
+                    .unwrap()
+                    .0;
+                // eprintln!("g[{}][{}] = {}", i, j, g[i][j]);
+            }
         }
 
-        t
-    });
-
-    let ans = t
-        .iter()
-        .rev()
-        .scan(BinaryHeap::new(), |q, r| {
-            q.extend(r);
-
-            Some(q.pop().unwrap_or(0))
-        })
-        .sum::<usize>();
-    println!("{}", ans);
+        if g[0][100] > 0 {
+            println!("Alice");
+        } else {
+            println!("Bob");
+        }
+    }
 }

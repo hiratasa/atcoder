@@ -148,4 +148,35 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_str();
+    let t = read_str();
+
+    let (last, dist_to_next) = s.citer().enumerate().rev().cycle().take(s.len() * 2).fold(
+        (vec![None; 26], vec![vec![None; 26]; s.len()]),
+        |(mut last, mut dist_to_next), (i, c)| {
+            for j in 0..26 {
+                dist_to_next[i][j] = last[j].map(|p| (p + s.len() - i - 1) % s.len() + 1);
+            }
+
+            last[c as usize - 'a' as usize] = Some(i);
+
+            (last, dist_to_next)
+        },
+    );
+
+    let ans = last[t[0] as usize - 'a' as usize].and_then(|p| {
+        t[1..]
+            .citer()
+            .try_fold(p, |p, c| {
+                dist_to_next[p % s.len()][c as usize - 'a' as usize].map(|d| p + d)
+            })
+            .map(|p| p + 1)
+    });
+
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}

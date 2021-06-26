@@ -148,27 +148,78 @@ where
 {
 }
 
-fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-
-    let ab = read_vec(n, || read_tuple!(usize, usize));
-
-    let t = ab.citer().fold(vec![vec![]; m], |mut t, (a, b)| {
-        if a <= m {
-            t[m - a].push(b);
+#[derive(Clone, Copy, Debug)]
+enum UnionFindNode {
+    Root { size: usize },
+    Child { parent: usize },
+}
+struct UnionFind {
+    g: Vec<UnionFindNode>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        use UnionFindNode::*;
+        UnionFind {
+            g: (0..n).map(|_| Root { size: 1 }).collect(),
         }
+    }
+    fn root(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let p = match self.g[v] {
+            Root { size: _ } => return v,
+            Child { parent: p } => p,
+        };
+        let r = self.root(p);
+        self.g[v] = Child { parent: r };
+        r
+    }
+    fn unite(&mut self, v: usize, u: usize) -> bool {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        let ru = self.root(u);
+        if rv == ru {
+            return false;
+        }
+        let size_rv = self.size(rv);
+        let size_ru = self.size(ru);
+        let (rsmall, rlarge) = if size_rv < size_ru {
+            (rv, ru)
+        } else {
+            (ru, rv)
+        };
+        self.g[rsmall] = Child { parent: rlarge };
+        self.g[rlarge] = Root {
+            size: size_rv + size_ru,
+        };
+        true
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+    fn size(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        match self.g[rv] {
+            Root { size } => size,
+            Child { parent: _ } => unreachable!(),
+        }
+    }
+}
 
-        t
-    });
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
 
-    let ans = t
-        .iter()
-        .rev()
-        .scan(BinaryHeap::new(), |q, r| {
-            q.extend(r);
+    const M: usize = 200001;
+    let mut uf = UnionFind::new(M);
 
-            Some(q.pop().unwrap_or(0))
-        })
+    for i in 0..n {
+        uf.unite(a[i], a[n - 1 - i]);
+    }
+
+    let ans = (0..M)
+        .map(|i| if uf.root(i) == i { uf.size(i) - 1 } else { 0 })
         .sum::<usize>();
     println!("{}", ans);
 }

@@ -148,6 +148,152 @@ where
 {
 }
 
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
+        }
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
+        }
+    }
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+    }
+}
+
 use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
@@ -353,6 +499,57 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
+type Graph = detail::UnweightedGraph;
+
+fn dfs(
+    g: &Graph,
+    fact: &[Mod1000000007],
+    inv_fact: &[Mod1000000007],
+    v: usize,
+    p: usize,
+    sz: &mut [usize],
+    c: &mut [Mod1000000007],
+) {
+    let combi = |n: usize, m: usize| fact[n] * inv_fact[m] * inv_fact[n - m];
+
+    let (s, cc) = g.out_edges[v]
+        .iter()
+        .map(|e| e.to)
+        .filter(|&u| u != p)
+        .fold((0, Mod::one()), |(s, cc), u| {
+            dfs(g, fact, inv_fact, u, v, sz, c);
+            (s + sz[u], combi(s + sz[u], s) * cc * c[u])
+        });
+    sz[v] = s + 1;
+    c[v] = cc;
+}
+
+fn dfs2(
+    g: &Graph,
+    fact: &[Mod1000000007],
+    inv_fact: &[Mod1000000007],
+    sz: &[usize],
+    c: &[Mod1000000007],
+    c0: Mod1000000007,
+    v: usize,
+    p: usize,
+    ans: &mut [Mod1000000007],
+) {
+    let combi = |n: usize, m: usize| fact[n] * inv_fact[m] * inv_fact[n - m];
+
+    let n = g.size();
+    ans[v] = combi(n - 1, sz[v] - 1) * c0 * c[v];
+
+    g.out_edges[v]
+        .iter()
+        .map(|e| e.to)
+        .filter(|&u| u != p)
+        .for_each(|u| {
+            let c1 = ans[v] / c[u] / combi(n - 1, sz[u]);
+            dfs2(g, fact, inv_fact, sz, c, c1, u, v, ans);
+        });
+}
+
 #[allow(dead_code)]
 fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
     let fact: Vec<_> = std::iter::once(Mod::one())
@@ -377,39 +574,25 @@ fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>
 }
 
 fn main() {
-    type Mod = Mod1000000007;
-
     let n: usize = read();
-    let a = read_row::<usize>();
+    let ab = read_vec(n - 1, || read_tuple!(usize, usize));
 
-    let d = a
-        .citer()
-        .enumerate()
-        .scan(vec![None; n], |pos, (i, aa)| {
-            if let Some(p) = pos[aa - 1] {
-                Some(Some(i - p))
-            } else {
-                pos[aa - 1] = Some(i);
-                Some(None)
-            }
-        })
-        .flatten()
-        .next()
-        .unwrap();
+    let g = Graph::from_edges1_undirected(n, ab);
 
-    let (fact, _, inv_fact) = generate_fact(n + 1);
+    let (fact, _, inv_fact) = generate_fact(n);
 
-    let combi = |n: usize, m: usize| {
-        if m > n {
-            Mod::zero()
-        } else {
-            fact[n] * inv_fact[n - m] * inv_fact[m]
-        }
-    };
+    let mut sz = vec![0; n];
+    let mut c = vec![Mod::zero(); n];
+    dfs(&g, &fact, &inv_fact, 0, n, &mut sz, &mut c);
 
-    (1..=n + 1)
-        .map(|k| combi(n + 1, k) - combi(n + 1 - (d + 1), k - 1))
-        .for_each(|ans| {
-            println!("{}", ans);
-        });
+    // eprintln!("{:?}", sz);
+    // eprintln!("{:?}", c);
+
+    let mut ans = vec![Mod::zero(); n];
+
+    dfs2(&g, &fact, &inv_fact, &sz, &c, Mod::one(), 0, n, &mut ans);
+
+    for i in 0..n {
+        println!("{}", ans[i]);
+    }
 }

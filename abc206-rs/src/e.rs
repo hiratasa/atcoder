@@ -149,25 +149,28 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let (l, r) = read_tuple!(usize, usize);
 
-    let ab = read_vec(n, || read_tuple!(usize, usize));
+    let t = once(0)
+        .chain((1..=r).map(|g| (r / g - (l - 1) / g).pow(2)))
+        .collect::<Vec<_>>();
+    let s = (1..=r).rev().fold(t, |mut s, i| {
+        s[i] -= (2..)
+            .map(|j| i * j)
+            .take_while(|&j| j <= r)
+            .map(|j| s[j])
+            .sum::<usize>();
 
-    let t = ab.citer().fold(vec![vec![]; m], |mut t, (a, b)| {
-        if a <= m {
-            t[m - a].push(b);
-        }
-
-        t
+        s
     });
 
-    let ans = t
-        .iter()
-        .rev()
-        .scan(BinaryHeap::new(), |q, r| {
-            q.extend(r);
+    let ans = (2..=r)
+        .map(|g| {
+            // どちらかがg自身であるようなペアの数を引く
+            let x = if l <= g && g <= r { 2 * (r / g) - 1 } else { 0 };
 
-            Some(q.pop().unwrap_or(0))
+            // eprintln!("{} {} {}", g, s[g], x);
+            s[g] - x
         })
         .sum::<usize>();
     println!("{}", ans);

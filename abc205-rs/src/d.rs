@@ -148,27 +148,62 @@ where
 {
 }
 
-fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-
-    let ab = read_vec(n, || read_tuple!(usize, usize));
-
-    let t = ab.citer().fold(vec![vec![]; m], |mut t, (a, b)| {
-        if a <= m {
-            t[m - a].push(b);
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
         }
+    }
+    begin
+}
+#[allow(dead_code)]
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
+}
 
-        t
-    });
+fn main() {
+    let (n, q) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
 
-    let ans = t
-        .iter()
-        .rev()
-        .scan(BinaryHeap::new(), |q, r| {
-            q.extend(r);
+    let b = a.citer().sorted().dedup().collect::<Vec<_>>();
+    let m = b.len();
 
-            Some(q.pop().unwrap_or(0))
-        })
-        .sum::<usize>();
-    println!("{}", ans);
+    for _ in 0..q {
+        let k = read::<usize>();
+
+        let idx = lower_bound_int(0, m, |idx| {
+            let c = b[idx] - (idx + 1);
+
+            c.cmp(&k)
+        });
+
+        let ans = k + idx;
+        println!("{}", ans);
+    }
 }

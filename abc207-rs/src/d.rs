@@ -148,27 +148,63 @@ where
 {
 }
 
+use ordered_float::OrderedFloat;
+
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let ab = read_vec(n, || read_tuple!(i64, i64));
+    let cd = read_vec(n, || read_tuple!(i64, i64));
 
-    let ab = read_vec(n, || read_tuple!(usize, usize));
+    if n == 1 {
+        println!("Yes");
+        return;
+    }
 
-    let t = ab.citer().fold(vec![vec![]; m], |mut t, (a, b)| {
-        if a <= m {
-            t[m - a].push(b);
-        }
+    let ans = (0..n).any(|i| {
+        let ab1 = (1..n)
+            .map(|j| ab[j])
+            .map(|(x, y)| (x - ab[0].0, y - ab[0].1))
+            .sorted_by_key(|&(x, y)| (OrderedFloat(f64::atan2(y as f64, x as f64)), x, y))
+            .collect::<Vec<_>>();
+        let cd1 = (0..n)
+            .filter(|&j| j != i)
+            .map(|j| cd[j])
+            .map(|(x, y)| (x - cd[i].0, y - cd[i].1))
+            .collect::<Vec<_>>();
+        let t0 = f64::atan2(ab1[0].1 as f64, ab1[0].0 as f64);
 
-        t
+        (0..n - 1).any(|j| {
+            let t1 = f64::atan2(cd1[j].1 as f64, cd1[j].0 as f64);
+            let t = t1 - t0;
+            let cd2 = chain(cd1[j..].citer(), cd1[..j].citer())
+                .map(|(x, y)| {
+                    (
+                        t.cos() * x as f64 + t.sin() * y as f64,
+                        -t.sin() * x as f64 + t.cos() * y as f64,
+                    )
+                })
+                .collect::<Vec<_>>();
+            const EPS: f64 = 1.0e-6;
+            if cd2
+                .citer()
+                .any(|(x, y)| (x - x.round()).abs() > EPS || (y - y.round()).abs() > EPS)
+            {
+                return false;
+            }
+
+            izip!(
+                ab1.citer(),
+                cd2.citer()
+                    .map(|(x, y)| (x.round() as i64, y.round() as i64))
+                    .sorted_by_key(|&(x, y)| (OrderedFloat(f64::atan2(y as f64, x as f64)), x, y))
+            )
+            .all(|(p0, p1)| p0 == p1)
+        })
     });
 
-    let ans = t
-        .iter()
-        .rev()
-        .scan(BinaryHeap::new(), |q, r| {
-            q.extend(r);
-
-            Some(q.pop().unwrap_or(0))
-        })
-        .sum::<usize>();
-    println!("{}", ans);
+    if ans {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
 }

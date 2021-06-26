@@ -149,26 +149,13 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let (a, b, c, d) = read_tuple!(usize, usize, usize, usize);
 
-    let ab = read_vec(n, || read_tuple!(usize, usize));
-
-    let t = ab.citer().fold(vec![vec![]; m], |mut t, (a, b)| {
-        if a <= m {
-            t[m - a].push(b);
-        }
-
-        t
-    });
-
-    let ans = t
-        .iter()
-        .rev()
-        .scan(BinaryHeap::new(), |q, r| {
-            q.extend(r);
-
-            Some(q.pop().unwrap_or(0))
-        })
-        .sum::<usize>();
-    println!("{}", ans);
+    // a + nb <= ncd
+    // <=> a <= (cd - b) * n
+    if c * d <= b {
+        println!("-1");
+    } else {
+        println!("{}", (a + c * d - b - 1) / (c * d - b));
+    }
 }

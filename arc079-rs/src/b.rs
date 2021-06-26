@@ -137,4 +137,29 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let k: i64 = read();
+
+    let ans = (2..=50)
+        .find_map(|n| {
+            let a = (0..n)
+                .map(|i| {
+                    if i < k % n {
+                        n - 1 - k + (k / n + 1) * (n + 1)
+                    } else {
+                        n - 1 - k + k / n * (n + 1)
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if a.citer().all(|x| x >= 0 && x <= 10000000000000000 + 1000) {
+                Some(a)
+            } else {
+                None
+            }
+        })
+        .unwrap();
+
+    println!("{}", ans.len());
+    println!("{}", ans.citer().join(" "));
+}

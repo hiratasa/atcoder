@@ -353,63 +353,32 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-#[allow(dead_code)]
-fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
-    let fact: Vec<_> = std::iter::once(Mod::one())
-        .chain((1..=n).scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        }))
-        .collect();
-    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
-        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
-        inv
-    });
-    let inv_fact: Vec<_> = inv
-        .iter()
-        .copied()
-        .scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        })
-        .collect();
-    (fact, inv, inv_fact)
-}
-
 fn main() {
     type Mod = Mod1000000007;
 
     let n: usize = read();
     let a = read_row::<usize>();
 
-    let d = a
-        .citer()
-        .enumerate()
-        .scan(vec![None; n], |pos, (i, aa)| {
-            if let Some(p) = pos[aa - 1] {
-                Some(Some(i - p))
-            } else {
-                pos[aa - 1] = Some(i);
-                Some(None)
+    let (dp, _, _) = a.citer().enumerate().fold(
+        (
+            vvec![vvec![Mod::one(); Mod::zero(); n + 1]; vec![Mod::zero(); n + 1]; n + 1],
+            vec![0; n + 1],
+            vec![vec![0; n + 1]; n + 1],
+        ),
+        |(mut dp, mut r, mut ridxs), (i, aa)| {
+            for j in 1..=n {
+                r[j] = (r[j] + aa) % j;
+
+                let k = ridxs[j][r[j]];
+                let t = dp[k][j] + dp[k][j - 1];
+                dp[i + 1][j] = t;
+
+                ridxs[j][r[j]] = i + 1;
             }
-        })
-        .flatten()
-        .next()
-        .unwrap();
 
-    let (fact, _, inv_fact) = generate_fact(n + 1);
-
-    let combi = |n: usize, m: usize| {
-        if m > n {
-            Mod::zero()
-        } else {
-            fact[n] * inv_fact[n - m] * inv_fact[m]
-        }
-    };
-
-    (1..=n + 1)
-        .map(|k| combi(n + 1, k) - combi(n + 1 - (d + 1), k - 1))
-        .for_each(|ans| {
-            println!("{}", ans);
-        });
+            (dp, r, ridxs)
+        },
+    );
+    let ans = dp[n].citer().sum::<Mod>();
+    println!("{}", ans);
 }
