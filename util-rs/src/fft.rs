@@ -162,7 +162,12 @@ fn fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
     assert!((M::modulus() - 1) % n == 0);
     let g = primitive_root(M::modulus());
     let c = pow_mod(g, (M::modulus() - 1) / n, M::modulus());
-    fft(f, &(0..n).map(|i| Mod::new(c).pow(i)).collect::<Vec<_>>());
+    fft(
+        f,
+        &(0..n)
+            .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
+            .collect::<Vec<_>>(),
+    );
 }
 
 #[allow(dead_code)]
@@ -173,7 +178,12 @@ fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
     let g = primitive_root(M::modulus());
     // let c = pow_mod(g, (modulus() - 1) / n, modulus()).inv();
     let c = pow_mod(g, (M::modulus() - 1) / n * (n - 1), M::modulus());
-    fft(f, &(0..n).map(|i| Mod::new(c).pow(i)).collect::<Vec<_>>());
+    fft(
+        f,
+        &(0..n)
+            .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
+            .collect::<Vec<_>>(),
+    );
     for x in f {
         *x /= n;
     }
