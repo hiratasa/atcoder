@@ -190,7 +190,7 @@ fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
 }
 
 #[allow(dead_code)]
-fn convolution_mod<M: Modulus>(p: &Vec<Mod<M>>, q: &Vec<Mod<M>>) -> Vec<Mod<M>> {
+pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
     let n0 = p.len();
     let n1 = q.len();
 

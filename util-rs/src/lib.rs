@@ -5,6 +5,7 @@ mod extgcd;
 mod fact;
 mod fft;
 mod floor_sum;
+mod fps;
 mod graph;
 mod iterext;
 mod max_flow;
