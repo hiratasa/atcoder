@@ -148,6 +148,211 @@ where
 {
 }
 
+use num::{One, Zero};
+#[allow(dead_code)]
+pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
+    let mut y = 1;
+    while p > 0 {
+        if p & 1 > 0 {
+            y = y * x % m;
+        }
+        x = x * x % m;
+        p >>= 1;
+    }
+    y
+}
+pub trait Modulus: Copy + Eq {
+    fn modulus() -> usize;
+}
+macro_rules! define_static_mod {
+    ($ m : expr , $ modulus : ident , $ mod : ident ) => {
+        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        pub struct $modulus();
+        impl Modulus for $modulus {
+            fn modulus() -> usize {
+                $m
+            }
+        }
+        #[allow(dead_code)]
+        pub type $mod = Mod<$modulus>;
+    };
+}
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
+define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+#[allow(dead_code)]
+impl<M: Modulus> Mod<M> {
+    pub fn modulus() -> usize {
+        M::modulus()
+    }
+    pub fn new(n: usize) -> Self {
+        Mod(n % M::modulus(), std::marker::PhantomData)
+    }
+    pub fn pow(self, p: usize) -> Self {
+        Mod::new(pow_mod(self.0, p, M::modulus()))
+    }
+    pub fn inv(self) -> Self {
+        let (_zero, g, _u, v) = std::iter::successors(
+            Some((self.0 as i64, M::modulus() as i64, 1, 0)),
+            |&(a, b, u, v)| {
+                if a == 0 {
+                    None
+                } else {
+                    Some((b % a, a, -u * (b / a) + v, u))
+                }
+            },
+        )
+        .last()
+        .unwrap();
+        assert_eq!(
+            g,
+            1,
+            "gcd({}, {}) must be 1 but {}.",
+            self.0,
+            M::modulus(),
+            g
+        );
+        Mod::new((v + M::modulus() as i64) as usize)
+    }
+}
+impl<M> std::fmt::Display for Mod<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+impl<M> std::fmt::Debug for Mod<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+impl<T, M: Modulus> std::convert::From<T> for Mod<M>
+where
+    usize: std::convert::TryFrom<T>,
+{
+    fn from(v: T) -> Self {
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
+    }
+}
+impl<M: Modulus> std::str::FromStr for Mod<M> {
+    type Err = <usize as std::str::FromStr>::Err;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        usize::from_str(s).map(|n| Mod::new(n))
+    }
+}
+impl<M: Modulus> std::ops::Neg for Mod<M> {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Mod::new(M::modulus() - self.0)
+    }
+}
+impl<T, M: Modulus> std::ops::Add<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    type Output = Self;
+    fn add(self, rhs: T) -> Self {
+        Mod::new(self.0 + rhs.into().0)
+    }
+}
+impl<T, M: Modulus> std::ops::AddAssign<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    fn add_assign(&mut self, rhs: T) {
+        *self = *self + rhs;
+    }
+}
+impl<T, M: Modulus> std::ops::Sub<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    type Output = Self;
+    fn sub(self, rhs: T) -> Self {
+        Mod::new(self.0 + M::modulus() - rhs.into().0)
+    }
+}
+impl<T, M: Modulus> std::ops::SubAssign<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    fn sub_assign(&mut self, rhs: T) {
+        *self = *self - rhs;
+    }
+}
+impl<T, M: Modulus> std::ops::Mul<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    type Output = Self;
+    fn mul(self, rhs: T) -> Self {
+        Mod::new(self.0 * rhs.into().0)
+    }
+}
+impl<T, M: Modulus> std::ops::MulAssign<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    fn mul_assign(&mut self, rhs: T) {
+        *self = *self * rhs;
+    }
+}
+impl<T, M: Modulus> std::ops::Div<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    type Output = Self;
+    fn div(self, rhs: T) -> Self {
+        if self.0 == 0 {
+            self
+        } else {
+            self * rhs.into().inv()
+        }
+    }
+}
+impl<T, M: Modulus> std::ops::DivAssign<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    fn div_assign(&mut self, rhs: T) {
+        *self = *self / rhs;
+    }
+}
+impl<M: Modulus> std::iter::Product for Mod<M> {
+    fn product<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.fold(Mod::one(), |p, a| p * a)
+    }
+}
+impl<M: Modulus> std::iter::Sum for Mod<M> {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.fold(Mod::zero(), |p, a| p + a)
+    }
+}
+impl<M: Modulus> num::Zero for Mod<M> {
+    fn zero() -> Self {
+        Mod::new(0)
+    }
+    fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+}
+impl<M: Modulus> num::One for Mod<M> {
+    fn one() -> Self {
+        Mod::new(1)
+    }
+    fn is_one(&self) -> bool {
+        self.0 == 1
+    }
+}
+
 mod detail {
     #[allow(dead_code)]
     #[derive(Clone, Copy, Debug)]
@@ -297,54 +502,36 @@ mod detail {
 type Graph = detail::UnweightedGraph;
 
 fn main() {
-    let n: usize = read();
-    let a = read_mat::<usize>(n);
+    type Mod = Mod1000000007;
 
-    let m = n * (n - 1) / 2;
-    let g = Graph::from_edges_directed(
-        m,
-        a.iter().enumerate().flat_map(|(i, r)| {
-            r.citer()
-                .map(|aa| aa - 1)
-                .map(move |j| (min(i, j), max(i, j)))
-                .map(|(ii, jj)| (2 * n - 1 - ii) * ii / 2 + jj - ii - 1)
-                .tuple_windows::<(_, _)>()
-        }),
-    );
+    let (n, m) = read_tuple!(usize, usize);
+    let ab = read_vec(m, || read_tuple!(usize, usize));
 
-    let degs = (0..m).map(|i| g.in_edges[i].len()).collect::<Vec<_>>();
-    let v0 = (0..m).filter(|&i| degs[i] == 0).collect::<Vec<_>>();
+    let g = Graph::from_edges1_undirected(n, ab);
 
-    let vs = if let Some((_, _, vs)) =
-        (0..m).try_fold((degs, v0, vec![]), |(mut degs, mut v0, vs), _| {
-            let v = v0.pop()?;
+    let mut costs = vec![usize::MAX; n];
+    let mut nums = vec![Mod::zero(); n];
+    let mut q = VecDeque::new();
 
-            g.out_edges[v].citer().map(|e| e.to).for_each(|u| {
-                degs[u] -= 1;
-                if degs[u] == 0 {
-                    v0.push(u);
+    costs[0] = 0;
+    nums[0] = Mod::one();
+    q.push_back(0);
+
+    while let Some(v) = q.pop_front() {
+        g.out_edges[v].citer().map(|e| e.to).for_each(|u| {
+            match costs[u].cmp(&(costs[v] + 1)) {
+                Ordering::Less => { /* NOP */ }
+                Ordering::Equal => {
+                    nums[u] = nums[u] + nums[v];
                 }
-            });
+                Ordering::Greater => {
+                    q.push_back(u);
+                    costs[u] = costs[v] + 1;
+                    nums[u] = nums[u] + nums[v];
+                }
+            }
+        });
+    }
 
-            Some((degs, v0, pushed!(vs, v)))
-        }) {
-        vs
-    } else {
-        println!("-1");
-        return;
-    };
-
-    let dp = vs.citer().fold(vec![0; m], |mut dp, v| {
-        dp[v] = g.in_edges[v]
-            .citer()
-            .map(|e| e.from)
-            .map(|u| dp[u])
-            .max()
-            .map_or(1, |x| x + 1);
-
-        dp
-    });
-
-    let ans = dp.citer().max().unwrap();
-    println!("{}", ans);
+    println!("{}", nums[n - 1]);
 }

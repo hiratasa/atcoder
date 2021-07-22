@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,30 +149,54 @@ where
 }
 
 fn main() {
-    let (n, x) = read_tuple!(usize, usize);
+    let (n, k) = read_tuple!(usize, usize);
+    let p = read_row::<usize>();
 
-    if x != 1 && x != 2 * n - 1 {
-        println!("Yes");
-        if n == 2 {
-            println!("1");
-            println!("2");
-            println!("3");
-        } else if x >= 3 {
-            (1..=x - 3)
-                .chain(x + 2..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x - 1, x, x + 1, x - 2))
-                .chain((1..=x - 3).chain(x + 2..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        } else {
-            (1..=x - 2)
-                .chain(x + 3..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x + 1, x, x - 1, x + 2))
-                .chain((1..=x - 2).chain(x + 3..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        }
-    } else {
-        println!("No");
-    }
+    let sorted_from = p
+        .citer()
+        .enumerate()
+        .scan((0, 0), |(prev, i_prev), (i, pp)| {
+            if *prev > pp {
+                *i_prev = i;
+            }
+            *prev = pp;
+            Some(*i_prev)
+        })
+        .collect::<Vec<_>>();
+
+    let ans = 1 + izip!(p.citer(), p[k - 1..].citer(), p[k..].citer().chain(once(0)))
+        .scan(
+            p[..k].citer().collect::<BTreeSet<_>>(),
+            |s, (p0, p1, p2)| {
+                let mi = s.citer().next().unwrap();
+                let ma = s.citer().rev().next().unwrap();
+
+                s.remove(&p0);
+                s.insert(p2);
+
+                Some((mi == p0, ma == p1))
+            },
+        )
+        .zip(
+            sorted_from
+                .citer()
+                .enumerate()
+                .skip(k - 1)
+                .map(|(i, i0)| i + 1 - i0 >= k),
+        )
+        .tuple_windows()
+        .filter(|&(((f0, _f1), _), ((_g0, g1), _))| !(f0 && g1))
+        .scan(false, |q, ((_, s0), (_, s1))| {
+            *q = *q || s0;
+            if *q && s1 {
+                Some(None)
+            } else {
+                *q = *q || s1;
+                Some(Some(()))
+            }
+        })
+        .flatten()
+        .count();
+
+    println!("{}", ans);
 }

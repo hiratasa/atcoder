@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,30 +149,8 @@ where
 }
 
 fn main() {
-    let (n, x) = read_tuple!(usize, usize);
+    let (a, b) = read_tuple!(f64, f64);
 
-    if x != 1 && x != 2 * n - 1 {
-        println!("Yes");
-        if n == 2 {
-            println!("1");
-            println!("2");
-            println!("3");
-        } else if x >= 3 {
-            (1..=x - 3)
-                .chain(x + 2..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x - 1, x, x + 1, x - 2))
-                .chain((1..=x - 3).chain(x + 2..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        } else {
-            (1..=x - 2)
-                .chain(x + 3..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x + 1, x, x - 1, x + 2))
-                .chain((1..=x - 2).chain(x + 3..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        }
-    } else {
-        println!("No");
-    }
+    let c = (a - b) / 3.0 + b;
+    println!("{}", c);
 }

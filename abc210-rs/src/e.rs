@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,31 +148,30 @@ where
 {
 }
 
-fn main() {
-    let (n, x) = read_tuple!(usize, usize);
-
-    if x != 1 && x != 2 * n - 1 {
-        println!("Yes");
-        if n == 2 {
-            println!("1");
-            println!("2");
-            println!("3");
-        } else if x >= 3 {
-            (1..=x - 3)
-                .chain(x + 2..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x - 1, x, x + 1, x - 2))
-                .chain((1..=x - 3).chain(x + 2..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        } else {
-            (1..=x - 2)
-                .chain(x + 3..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x + 1, x, x - 1, x + 2))
-                .chain((1..=x - 2).chain(x + 3..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        }
+fn gcd(a: usize, b: usize) -> usize {
+    if a == 0 {
+        b
     } else {
-        println!("No");
+        gcd(b % a, a)
+    }
+}
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let ac = read_vec(m, || read_tuple!(usize, usize));
+
+    let ans = ac
+        .citer()
+        .sorted_by_key(|&t| t.1)
+        .fold((n, 0), |(m, cc), (a, c)| {
+            let g = gcd(m, a);
+
+            (g, cc + (m - g) * c)
+        });
+
+    if ans.0 > 1 {
+        println!("-1");
+    } else {
+        println!("{}", ans.1);
     }
 }

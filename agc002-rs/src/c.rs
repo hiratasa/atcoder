@@ -148,4 +148,22 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, l) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    if let Some(i) = a
+        .citer()
+        .tuple_windows()
+        .map(|(x, y)| x + y)
+        .position(|x| x >= l)
+    {
+        println!("Possible");
+        (1..=i)
+            .chain((i + 2..=n - 1).rev())
+            .chain(once(i + 1))
+            .for_each(|idx| println!("{}", idx));
+    } else {
+        println!("Impossible");
+    }
+}

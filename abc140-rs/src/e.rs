@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,30 +149,24 @@ where
 }
 
 fn main() {
-    let (n, x) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let p = read_row::<usize>();
 
-    if x != 1 && x != 2 * n - 1 {
-        println!("Yes");
-        if n == 2 {
-            println!("1");
-            println!("2");
-            println!("3");
-        } else if x >= 3 {
-            (1..=x - 3)
-                .chain(x + 2..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x - 1, x, x + 1, x - 2))
-                .chain((1..=x - 3).chain(x + 2..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        } else {
-            (1..=x - 2)
-                .chain(x + 3..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x + 1, x, x - 1, x + 2))
-                .chain((1..=x - 2).chain(x + 3..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        }
-    } else {
-        println!("No");
-    }
+    let ans = (0..n)
+        .sorted_by_key(|&i| Reverse(p[i]))
+        .scan(BTreeSet::new(), |s, idx| {
+            let idx1 = idx + 1;
+            let prev = s.range(..idx1).rev().next().copied().unwrap_or(0);
+            let prev2 = s.range(..prev).rev().next().copied().unwrap_or(0);
+
+            let next = s.range(idx1..).next().copied().unwrap_or(n + 1);
+            let next2 = s.range(next + 1..).next().copied().unwrap_or(n + 1);
+
+            s.insert(idx1);
+
+            Some(p[idx] * ((prev - prev2) * (next - idx1) + (idx1 - prev) * (next2 - next)))
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
 }

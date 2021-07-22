@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,30 +149,49 @@ where
 }
 
 fn main() {
-    let (n, x) = read_tuple!(usize, usize);
+    let (a0, a1, a2) = read_tuple!(i64, i64, i64);
 
-    if x != 1 && x != 2 * n - 1 {
-        println!("Yes");
-        if n == 2 {
-            println!("1");
-            println!("2");
-            println!("3");
-        } else if x >= 3 {
-            (1..=x - 3)
-                .chain(x + 2..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x - 1, x, x + 1, x - 2))
-                .chain((1..=x - 3).chain(x + 2..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
+    let ans0 = {
+        let b0 = a1 - (a2 - a1);
+
+        if b0 >= a0 {
+            Some(b0 - a0)
         } else {
-            (1..=x - 2)
-                .chain(x + 3..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x + 1, x, x - 1, x + 2))
-                .chain((1..=x - 2).chain(x + 3..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
+            None
         }
-    } else {
-        println!("No");
-    }
+    };
+
+    let ans1 = {
+        if (a0 + a2) % 2 > 0 {
+            let b1 = (a0 + a2 + 1) / 2;
+
+            if b1 >= a1 {
+                Some(b1 - a1 + 1)
+            } else {
+                None
+            }
+        } else {
+            let b1 = (a0 + a2) / 2;
+
+            if b1 >= a1 {
+                Some(b1 - a1)
+            } else {
+                None
+            }
+        }
+    };
+
+    let ans2 = {
+        let b2 = a1 + (a1 - a0);
+
+        if b2 >= a2 {
+            Some(b2 - a2)
+        } else {
+            None
+        }
+    };
+
+    eprintln!("{:?} {:?} {:?}", ans0, ans1, ans2);
+    let ans = [ans0, ans1, ans2].citer().flatten().min().unwrap();
+    println!("{}", ans);
 }

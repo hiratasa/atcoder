@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,31 +148,118 @@ where
 {
 }
 
-fn main() {
-    let (n, x) = read_tuple!(usize, usize);
+fn print0(mat: &Vec<Vec<Option<u32>>>) {
+    for row in mat {
+        println!(
+            "{}",
+            row.citer()
+                .map(|x| x.map_or('.', |x| (b'a' + x as u8) as char))
+                .join("")
+        );
+    }
+}
 
-    if x != 1 && x != 2 * n - 1 {
-        println!("Yes");
-        if n == 2 {
-            println!("1");
-            println!("2");
-            println!("3");
-        } else if x >= 3 {
-            (1..=x - 3)
-                .chain(x + 2..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x - 1, x, x + 1, x - 2))
-                .chain((1..=x - 3).chain(x + 2..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        } else {
-            (1..=x - 2)
-                .chain(x + 3..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x + 1, x, x - 1, x + 2))
-                .chain((1..=x - 2).chain(x + 3..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
+#[allow(dead_code)]
+fn solve0(
+    n: usize,
+    m: usize,
+    m_current: usize,
+    i: usize,
+    j: usize,
+    c: u32,
+    mat: &mut Vec<Vec<Option<u32>>>,
+) -> bool {
+    if j == n {
+        if m_current != m {
+            return false;
         }
-    } else {
-        println!("No");
+        return solve0(n, m, 0, i + 1, 0, c, mat);
+    }
+
+    if i == n {
+        if (0..n).all(|i| (0..n).filter_map(|j| mat[j][i]).dedup().count() == m) {
+            print0(mat);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    if m_current + (n - j) < m {
+        return false;
+    }
+
+    if solve0(
+        n,
+        m,
+        m_current + mat[i][j].is_some() as usize,
+        i,
+        j + 1,
+        c,
+        mat,
+    ) {
+        return true;
+    }
+
+    if mat[i][j].is_none() {
+        mat[i][j] = Some(c);
+
+        if j + 1 < n && mat[i][j + 1].is_none() {
+            mat[i][j + 1] = Some(c);
+            if solve0(n, m, m_current + 1, i, j + 2, c + 1, mat) {
+                return true;
+            }
+            mat[i][j + 1] = None;
+        }
+
+        if i + 1 < n {
+            assert!(mat[i + 1][j].is_none());
+            mat[i + 1][j] = Some(c);
+            if solve0(n, m, m_current + 1, i, j + 1, c + 1, mat) {
+                return true;
+            }
+            mat[i + 1][j] = None;
+        }
+
+        mat[i][j] = None;
+    }
+
+    false
+}
+
+fn main() {
+    let n: usize = read();
+
+    if n == 2 {
+        println!("-1");
+        return;
+    }
+
+    if n == 3 {
+        println!("aa.");
+        println!("..b");
+        println!("..b");
+        return;
+    }
+
+    let r = vec![
+        vec!["aabc", "ddbc", "efgg", "efhh"],
+        vec!["..abc", "..abc", "ddeef", "ggh.f", "iihjj"],
+        vec!["...abc", "...abc", "ddee.f", "..gghf", "iij.h.", "kkj.ll"],
+        vec![
+            "....abc", "....abc", "....def", "....def", "gghh..i", "jjkk..i", "llmmnn.",
+        ],
+    ];
+
+    for i in 0..n / 4 - 1 {
+        for j in 0..4 {
+            print!("{}", repeat(".").take(i * 4).join(""));
+            print!("{}", r[0][j]);
+            println!("{}", repeat(".").take(n - (i + 1) * 4).join(""));
+        }
+    }
+    for row in &r[n % 4] {
+        print!("{}", repeat(".").take(4 * (n / 4 - 1)).join(""));
+        println!("{}", row);
     }
 }

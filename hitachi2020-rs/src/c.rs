@@ -296,55 +296,54 @@ mod detail {
 
 type Graph = detail::UnweightedGraph;
 
+fn dfs(g: &Graph, v: usize, p: usize, depth: usize, e: &mut Vec<usize>, o: &mut Vec<usize>) {
+    if depth % 2 == 0 {
+        e.push(v);
+    } else {
+        o.push(v);
+    }
+
+    g.out_edges[v]
+        .iter()
+        .map(|e| e.to)
+        .filter(|&u| u != p)
+        .for_each(|u| dfs(g, u, v, depth + 1, e, o));
+}
+
 fn main() {
     let n: usize = read();
-    let a = read_mat::<usize>(n);
+    let ab = read_vec(n - 1, || read_tuple!(usize, usize));
 
-    let m = n * (n - 1) / 2;
-    let g = Graph::from_edges_directed(
-        m,
-        a.iter().enumerate().flat_map(|(i, r)| {
-            r.citer()
-                .map(|aa| aa - 1)
-                .map(move |j| (min(i, j), max(i, j)))
-                .map(|(ii, jj)| (2 * n - 1 - ii) * ii / 2 + jj - ii - 1)
-                .tuple_windows::<(_, _)>()
-        }),
-    );
+    let g = Graph::from_edges1_undirected(n, ab);
 
-    let degs = (0..m).map(|i| g.in_edges[i].len()).collect::<Vec<_>>();
-    let v0 = (0..m).filter(|&i| degs[i] == 0).collect::<Vec<_>>();
+    let mut vs0 = vec![];
+    let mut vs1 = vec![];
+    dfs(&g, 0, n, 0, &mut vs0, &mut vs1);
 
-    let vs = if let Some((_, _, vs)) =
-        (0..m).try_fold((degs, v0, vec![]), |(mut degs, mut v0, vs), _| {
-            let v = v0.pop()?;
+    if vs0.len() > vs1.len() {
+        std::mem::swap(&mut vs0, &mut vs1);
+    }
 
-            g.out_edges[v].citer().map(|e| e.to).for_each(|u| {
-                degs[u] -= 1;
-                if degs[u] == 0 {
-                    v0.push(u);
-                }
-            });
-
-            Some((degs, v0, pushed!(vs, v)))
-        }) {
-        vs
+    let ans = if vs0.len() <= n / 3 {
+        chain(vs0, vs1)
+            .zip(
+                (1..=3)
+                    .rev()
+                    .flat_map(|i| (0..).map(move |j| 3 * j + i).take_while(|&j| j <= n)),
+            )
+            .sorted()
+            .map(|t| t.1)
+            .collect::<Vec<_>>()
     } else {
-        println!("-1");
-        return;
+        chain(vs0, vs1)
+            .zip(
+                [2, 3, 1]
+                    .citer()
+                    .flat_map(|i| (0..).map(move |j| 3 * j + i).take_while(|&j| j <= n)),
+            )
+            .sorted()
+            .map(|t| t.1)
+            .collect::<Vec<_>>()
     };
-
-    let dp = vs.citer().fold(vec![0; m], |mut dp, v| {
-        dp[v] = g.in_edges[v]
-            .citer()
-            .map(|e| e.from)
-            .map(|u| dp[u])
-            .max()
-            .map_or(1, |x| x + 1);
-
-        dp
-    });
-
-    let ans = dp.citer().max().unwrap();
-    println!("{}", ans);
+    println!("{}", ans.citer().join(" "));
 }

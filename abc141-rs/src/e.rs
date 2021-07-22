@@ -148,4 +148,25 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let s = read_str();
+
+    let dp = (0..n)
+        .rev()
+        .flat_map(|i| (0..n).rev().map(move |j| (i, j)))
+        .fold(vec![vec![0; n + 1]; n + 1], |mut dp, (i, j)| {
+            if s[i] == s[j] {
+                dp[i][j] = min(dp[i + 1][j + 1] + 1, max(i, j) - min(i, j));
+            }
+
+            dp
+        });
+
+    let ans = dp
+        .iter()
+        .map(|row| row.citer().max().unwrap())
+        .max()
+        .unwrap();
+    println!("{}", ans);
+}

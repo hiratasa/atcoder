@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,31 +148,49 @@ where
 {
 }
 
-fn main() {
-    let (n, x) = read_tuple!(usize, usize);
+use std::ops::RangeFrom;
 
-    if x != 1 && x != 2 * n - 1 {
-        println!("Yes");
-        if n == 2 {
-            println!("1");
-            println!("2");
-            println!("3");
-        } else if x >= 3 {
-            (1..=x - 3)
-                .chain(x + 2..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x - 1, x, x + 1, x - 2))
-                .chain((1..=x - 3).chain(x + 2..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        } else {
-            (1..=x - 2)
-                .chain(x + 3..=2 * n - 1)
-                .take(n - 2)
-                .chain(it!(x + 1, x, x - 1, x + 2))
-                .chain((1..=x - 2).chain(x + 3..=2 * n - 1).skip(n - 2))
-                .for_each(|y| println!("{}", y));
-        }
-    } else {
-        println!("No");
-    }
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
+    let c = read_row::<usize>();
+
+    let a2 = a.citer().sorted().collect::<Vec<_>>();
+
+    let b2 = a2
+        .citer()
+        .scan(
+            b.citer()
+                .enumerate()
+                .map(|t| (t.1, t.0))
+                .collect::<BTreeSet<_>>(),
+            |s, x| {
+                let &y = s.range(RangeFrom { start: (x + 1, 0) }).next()?;
+
+                s.remove(&y);
+
+                Some(y.0)
+            },
+        )
+        .collect::<Vec<_>>();
+
+    let c2 = b2
+        .citer()
+        .scan(
+            c.citer()
+                .enumerate()
+                .map(|t| (t.1, t.0))
+                .collect::<BTreeSet<_>>(),
+            |s, x| {
+                let &y = s.range(RangeFrom { start: (x + 1, 0) }).next()?;
+
+                s.remove(&y);
+
+                Some(y.0)
+            },
+        )
+        .collect::<Vec<_>>();
+
+    println!("{}", c2.len());
 }

@@ -294,57 +294,186 @@ mod detail {
     }
 }
 
-type Graph = detail::UnweightedGraph;
+// 強連結成分分解
+mod scc {
+    use super::detail::*;
+
+    #[allow(dead_code)]
+    fn dfs(g: &Graph, v: usize, visited: &mut Vec<bool>, vs: &mut Vec<usize>) {
+        visited[v] = true;
+
+        for edge in &g.out_edges[v] {
+            if !visited[edge.to] {
+                dfs(g, edge.to, visited, vs);
+            }
+        }
+
+        vs.push(v);
+    }
+
+    #[allow(dead_code)]
+    fn rev_dfs(g: &Graph, v: usize, visited: &mut Vec<bool>, vs: &mut Vec<usize>) {
+        visited[v] = true;
+        vs.push(v);
+
+        for edge in &g.in_edges[v] {
+            if !visited[edge.from] {
+                rev_dfs(g, edge.from, visited, vs);
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    fn scc(g: &Graph) -> Vec<Vec<usize>> {
+        let mut vs = vec![];
+        {
+            let mut visited = vec![false; g.size()];
+            for v in 0..g.size() {
+                if !visited[v] {
+                    dfs(g, v, &mut visited, &mut vs);
+                }
+            }
+        }
+
+        let mut ret = vec![];
+        {
+            let mut visited = vec![false; g.size()];
+            for &v in vs.iter().rev() {
+                if !visited[v] {
+                    let mut component = vec![];
+                    rev_dfs(g, v, &mut visited, &mut component);
+                    ret.push(component);
+                }
+            }
+        }
+
+        ret
+    }
+
+    // 2-sat
+    #[allow(dead_code)]
+    pub struct TwoSat {
+        g: Graph,
+    }
+
+    impl TwoSat {
+        #[allow(dead_code)]
+        pub fn new(n: usize) -> TwoSat {
+            TwoSat {
+                g: Graph::new(2 * n),
+            }
+        }
+
+        // size()より小さいとfalse, size()以上だとtrue
+        #[allow(dead_code)]
+        pub fn to_v(&self, a: usize, f: bool) -> usize {
+            if f {
+                a + self.size()
+            } else {
+                a
+            }
+        }
+
+        #[allow(dead_code)]
+        pub fn add(&mut self, a: usize, fa: bool, b: usize, fb: bool) {
+            self.g.add_edge((self.to_v(a, !fa), self.to_v(b, fb)));
+            self.g.add_edge((self.to_v(b, !fb), self.to_v(a, fa)));
+        }
+
+        #[allow(dead_code)]
+        pub fn size(&self) -> usize {
+            self.g.size() / 2
+        }
+
+        #[allow(dead_code)]
+        pub fn solve(&self) -> Option<Vec<bool>> {
+            let components = scc(&self.g);
+
+            let mut ret = vec![false; self.size()];
+            let mut idx = vec![components.len(); self.size()];
+            for i in 0..components.len() {
+                for &v in &components[i] {
+                    let t = v % self.size();
+
+                    if idx[t] == i {
+                        // negation is already appeared in same component.
+                        return None;
+                    }
+
+                    if idx[t] == components.len() {
+                        idx[t] = i;
+                        // vの否定を立てる
+                        ret[t] = v < self.size();
+                    }
+                }
+            }
+
+            Some(ret)
+        }
+    }
+}
+
+use scc::*;
 
 fn main() {
     let n: usize = read();
-    let a = read_mat::<usize>(n);
+    let ab = read_vec(n, || read_tuple!(usize, usize));
 
-    let m = n * (n - 1) / 2;
-    let g = Graph::from_edges_directed(
-        m,
-        a.iter().enumerate().flat_map(|(i, r)| {
-            r.citer()
-                .map(|aa| aa - 1)
-                .map(move |j| (min(i, j), max(i, j)))
-                .map(|(ii, jj)| (2 * n - 1 - ii) * ii / 2 + jj - ii - 1)
-                .tuple_windows::<(_, _)>()
-        }),
-    );
+    const M: usize = 2000000;
+    let mut is_prime = vec![true; M + 1];
+    let nums = ab
+        .citer()
+        .enumerate()
+        .flat_map(|(i, (a, b))| it!((a, i, true), (b, i, false)))
+        .sorted()
+        .group_by(|t| t.0)
+        .into_iter()
+        .map(|(x, it)| (x, it.map(|t| (t.1, t.2)).collect::<Vec<_>>()))
+        .collect::<FxHashMap<_, _>>();
+    let mut num_v = n;
+    let mut edges = vec![];
+    for i in 2..=M {
+        if !is_prime[i] {
+            continue;
+        }
 
-    let degs = (0..m).map(|i| g.in_edges[i].len()).collect::<Vec<_>>();
-    let v0 = (0..m).filter(|&i| degs[i] == 0).collect::<Vec<_>>();
+        let mut idxs = vec![];
 
-    let vs = if let Some((_, _, vs)) =
-        (0..m).try_fold((degs, v0, vec![]), |(mut degs, mut v0, vs), _| {
-            let v = v0.pop()?;
+        if let Some(v) = nums.get(&i) {
+            idxs.extend(v.citer());
+        }
+        for j in (2..).map(|k| i * k).take_while(|&j| j <= M) {
+            is_prime[j] = false;
 
-            g.out_edges[v].citer().map(|e| e.to).for_each(|u| {
-                degs[u] -= 1;
-                if degs[u] == 0 {
-                    v0.push(u);
-                }
-            });
+            if let Some(v) = nums.get(&j) {
+                idxs.extend(v.citer());
+            }
+        }
 
-            Some((degs, v0, pushed!(vs, v)))
-        }) {
-        vs
+        if idxs.len() <= 1 {
+            continue;
+        }
+
+        idxs.citer().skip(1).fold(idxs[0], |(ii, f), (jj, g)| {
+            edges.push((ii, !f, jj, !g));
+            let kk = num_v;
+            num_v += 1;
+            edges.push((ii, !f, kk, true));
+            edges.push((jj, !g, kk, true));
+
+            (kk, true)
+        });
+    }
+
+    let mut s = TwoSat::new(num_v);
+
+    for (ii, f, jj, g) in edges {
+        s.add(ii, f, jj, g);
+    }
+
+    if let Some(_ans) = s.solve() {
+        println!("Yes");
     } else {
-        println!("-1");
-        return;
-    };
-
-    let dp = vs.citer().fold(vec![0; m], |mut dp, v| {
-        dp[v] = g.in_edges[v]
-            .citer()
-            .map(|e| e.from)
-            .map(|u| dp[u])
-            .max()
-            .map_or(1, |x| x + 1);
-
-        dp
-    });
-
-    let ans = dp.citer().max().unwrap();
-    println!("{}", ans);
+        println!("No");
+    }
 }
