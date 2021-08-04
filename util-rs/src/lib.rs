@@ -12,6 +12,7 @@ mod max_flow;
 mod modulo;
 mod multiset;
 mod point;
+mod prime;
 mod segment_tree;
 mod stringutil;
 mod suffix_array;
