@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,28 +149,14 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-
-    if n == 3 {
-        println!("2 5 63");
-        return;
-    }
-
-    const M: usize = 30000;
-    let ans = (13..=M)
-        .filter(|&i| i % 6 == 0 || i % 6 == 2 || i % 6 == 3 || i % 6 == 4)
-        .take((n - 1) / 8 * 8)
-        .chain(match n % 8 {
-            0 => vec![2, 3, 4, 6, 8, 9, 10, 12],
-            1 => vec![12],
-            2 => vec![6, 12],
-            3 => vec![2, 4, 6],
-            4 => vec![2, 3, 4, 9],
-            5 => vec![2, 3, 4, 9, 12],
-            6 => vec![2, 3, 4, 6, 9, 12],
-            7 => vec![2, 3, 4, 6, 8, 9, 10],
-            _ => unreachable!(),
-        })
+    let s = read_str()
+        .into_iter()
+        .map(|c| c.to_digit(10).unwrap())
         .collect::<Vec<_>>();
-    println!("{}", ans.citer().join(" "));
+
+    if s.citer().all_equal() || s.citer().tuple_windows().all(|(x, y)| (x + 1) % 10 == y) {
+        println!("Weak");
+    } else {
+        println!("Strong");
+    }
 }

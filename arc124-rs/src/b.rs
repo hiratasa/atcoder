@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -139,27 +150,22 @@ where
 
 fn main() {
     let n: usize = read();
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
 
-    if n == 3 {
-        println!("2 5 63");
-        return;
-    }
+    let ans = (0..n)
+        .filter(|&i| {
+            let a2 = a.citer().map(|aa| aa ^ a[0]).sorted().collect::<Vec<_>>();
+            let b2 = b.citer().map(|aa| aa ^ b[i]).sorted().collect::<Vec<_>>();
 
-    const M: usize = 30000;
-    let ans = (13..=M)
-        .filter(|&i| i % 6 == 0 || i % 6 == 2 || i % 6 == 3 || i % 6 == 4)
-        .take((n - 1) / 8 * 8)
-        .chain(match n % 8 {
-            0 => vec![2, 3, 4, 6, 8, 9, 10, 12],
-            1 => vec![12],
-            2 => vec![6, 12],
-            3 => vec![2, 4, 6],
-            4 => vec![2, 3, 4, 9],
-            5 => vec![2, 3, 4, 9, 12],
-            6 => vec![2, 3, 4, 6, 9, 12],
-            7 => vec![2, 3, 4, 6, 8, 9, 10],
-            _ => unreachable!(),
+            a2 == b2
         })
+        .map(|i| a[0] ^ b[i])
+        .sorted()
+        .dedup()
         .collect::<Vec<_>>();
-    println!("{}", ans.citer().join(" "));
+    println!("{}", ans.len());
+    for x in ans {
+        println!("{}", x);
+    }
 }

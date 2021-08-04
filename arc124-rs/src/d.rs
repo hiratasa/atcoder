@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,28 +149,40 @@ where
 }
 
 fn main() {
-    let n: usize = read();
+    let (n, m) = read_tuple!(usize, usize);
+    let p = read_row::<usize>();
 
-    if n == 3 {
-        println!("2 5 63");
-        return;
-    }
+    let (c, _) = (1..=n + m).fold((vec![], p), |(mut c, mut p), idx| {
+        if p[idx - 1] > 0 {
+            let mut idx2 = idx;
+            let mut has_first = false;
+            let mut has_latter = false;
+            let mut len = 0;
+            while p[idx2 - 1] > 0 {
+                if idx2 <= n {
+                    has_first = true;
+                } else {
+                    has_latter = true;
+                }
+                len += 1;
+                idx2 = replace(&mut p[idx2 - 1], 0);
+            }
 
-    const M: usize = 30000;
-    let ans = (13..=M)
-        .filter(|&i| i % 6 == 0 || i % 6 == 2 || i % 6 == 3 || i % 6 == 4)
-        .take((n - 1) / 8 * 8)
-        .chain(match n % 8 {
-            0 => vec![2, 3, 4, 6, 8, 9, 10, 12],
-            1 => vec![12],
-            2 => vec![6, 12],
-            3 => vec![2, 4, 6],
-            4 => vec![2, 3, 4, 9],
-            5 => vec![2, 3, 4, 9, 12],
-            6 => vec![2, 3, 4, 6, 9, 12],
-            7 => vec![2, 3, 4, 6, 8, 9, 10],
-            _ => unreachable!(),
-        })
-        .collect::<Vec<_>>();
-    println!("{}", ans.citer().join(" "));
+            c.push((len, has_first, has_latter));
+        }
+
+        (c, p)
+    });
+
+    let k = max(
+        c.citer()
+            .filter(|&(len, has_first, has_latter)| len > 1 && has_first && !has_latter)
+            .count(),
+        c.citer()
+            .filter(|&(len, has_first, has_latter)| len > 1 && !has_first && has_latter)
+            .count(),
+    );
+
+    let ans = n + m - c.len() + 2 * k;
+    println!("{}", ans);
 }

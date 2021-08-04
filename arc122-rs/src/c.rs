@@ -148,4 +148,60 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let fib = iterate((1, 1), |&(a, b)| (b, a + b))
+        .map(|t| t.0)
+        .take_while(|&x| x <= n)
+        .collect::<Vec<_>>();
+
+    let nums = fib
+        .citer()
+        .rev()
+        .scan(n, |nn, x| {
+            assert!(*nn < 2 * x);
+            if x <= *nn {
+                *nn -= x;
+                Some(1)
+            } else {
+                Some(0)
+            }
+        })
+        .collect::<Vec<_>>();
+
+    #[derive(Clone, Copy, Debug)]
+    enum Op {
+        IncrementX = 1,
+        IncrementY,
+        AddYToX,
+        AddXToY,
+    }
+
+    use Op::*;
+
+    let ans = (1..fib.len())
+        .rev()
+        .zip(nums)
+        .flat_map(|(idx, m)| {
+            if idx % 2 == 0 {
+                if m == 0 {
+                    vec![AddXToY]
+                } else {
+                    vec![IncrementX, AddXToY]
+                }
+            } else {
+                if m == 0 {
+                    vec![AddYToX]
+                } else {
+                    vec![IncrementY, AddYToX]
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+    println!("{}", ans.len());
+
+    for op in ans {
+        println!("{}", op as usize);
+    }
+}

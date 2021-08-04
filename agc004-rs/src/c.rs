@@ -137,4 +137,24 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (h, w) = read_tuple!(usize, usize);
+
+    let a = read_vec(h, || read_str());
+
+    a.iter().enumerate().for_each(|(i, row)| {
+        if i % 2 == 0 {
+            println!("{}{}", repeat('#').take(w - 1).join(""), ".");
+        } else {
+            println!("{}{}", "#", row.citer().skip(1).join(""));
+        }
+    });
+    println!("");
+    a.iter().enumerate().for_each(|(i, row)| {
+        if i % 2 == 0 {
+            println!("{}{}", row.citer().take(w - 1).join(""), "#");
+        } else {
+            println!("{}{}", ".", repeat('#').take(w - 1).join(""));
+        }
+    });
+}

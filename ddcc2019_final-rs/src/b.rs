@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,28 +149,33 @@ where
 }
 
 fn main() {
-    let n: usize = read();
+    let (n, k, r) = read_tuple!(usize, usize, usize);
 
-    if n == 3 {
-        println!("2 5 63");
+    if (n - k + 1) * (n - k) / 2 < r {
+        println!("No Luck");
         return;
     }
 
-    const M: usize = 30000;
-    let ans = (13..=M)
-        .filter(|&i| i % 6 == 0 || i % 6 == 2 || i % 6 == 3 || i % 6 == 4)
-        .take((n - 1) / 8 * 8)
-        .chain(match n % 8 {
-            0 => vec![2, 3, 4, 6, 8, 9, 10, 12],
-            1 => vec![12],
-            2 => vec![6, 12],
-            3 => vec![2, 4, 6],
-            4 => vec![2, 3, 4, 9],
-            5 => vec![2, 3, 4, 9, 12],
-            6 => vec![2, 3, 4, 6, 9, 12],
-            7 => vec![2, 3, 4, 6, 8, 9, 10],
-            _ => unreachable!(),
-        })
-        .collect::<Vec<_>>();
+    let (_, _, _, ans) =
+        (1..=n)
+            .rev()
+            .fold((r, n - k, n, vec![0; n]), |(rr, m, last, mut ans), i| {
+                if rr == 0 {
+                    if ans[last - 1] > 0 {
+                        ans[last - 2] = i;
+                        (0, 0, last - 2, ans)
+                    } else {
+                        ans[last - 1] = i;
+                        (0, 0, last - 1, ans)
+                    }
+                } else if rr < m {
+                    ans[n - i + (m - rr)] = i;
+                    (0, 0, last, ans)
+                } else {
+                    ans[n - i] = i;
+                    (rr - m, m - 1, last, ans)
+                }
+            });
+
     println!("{}", ans.citer().join(" "));
 }

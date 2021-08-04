@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,29 +148,37 @@ where
 {
 }
 
+fn gcd(a: usize, b: usize) -> usize {
+    if a == 0 {
+        b
+    } else {
+        gcd(b % a, a)
+    }
+}
+
 fn main() {
     let n: usize = read();
+    let ab = read_vec(n, || read_tuple!(usize, usize));
 
-    if n == 3 {
-        println!("2 5 63");
-        return;
-    }
+    let calc_factors = |x: usize| {
+        (1..)
+            .take_while(|&y| y * y <= x)
+            .filter(|&y| x % y == 0)
+            .flat_map(|y| it!(y, x / y))
+            .dedup()
+            .collect::<Vec<_>>()
+    };
 
-    const M: usize = 30000;
-    let ans = (13..=M)
-        .filter(|&i| i % 6 == 0 || i % 6 == 2 || i % 6 == 3 || i % 6 == 4)
-        .take((n - 1) / 8 * 8)
-        .chain(match n % 8 {
-            0 => vec![2, 3, 4, 6, 8, 9, 10, 12],
-            1 => vec![12],
-            2 => vec![6, 12],
-            3 => vec![2, 4, 6],
-            4 => vec![2, 3, 4, 9],
-            5 => vec![2, 3, 4, 9, 12],
-            6 => vec![2, 3, 4, 6, 9, 12],
-            7 => vec![2, 3, 4, 6, 8, 9, 10],
-            _ => unreachable!(),
+    let a_factors = calc_factors(ab[0].0);
+    let b_factors = calc_factors(ab[0].1);
+
+    let ans = iproduct!(a_factors, b_factors)
+        .filter(|&(x, y)| {
+            ab.citer()
+                .all(|(a, b)| (a % x == 0 && b % y == 0) || (a % y == 0 && b % x == 0))
         })
-        .collect::<Vec<_>>();
-    println!("{}", ans.citer().join(" "));
+        .map(|(x, y)| x * y / gcd(x, y))
+        .max()
+        .unwrap();
+    println!("{}", ans);
 }

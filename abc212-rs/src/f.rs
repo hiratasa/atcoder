@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,28 +149,88 @@ where
 }
 
 fn main() {
-    let n: usize = read();
+    let (n, m, q) = read_tuple!(usize, usize, usize);
 
-    if n == 3 {
-        println!("2 5 63");
-        return;
-    }
+    let abst = read_vec(m, || read_tuple!(usize, usize, usize, usize));
 
-    const M: usize = 30000;
-    let ans = (13..=M)
-        .filter(|&i| i % 6 == 0 || i % 6 == 2 || i % 6 == 3 || i % 6 == 4)
-        .take((n - 1) / 8 * 8)
-        .chain(match n % 8 {
-            0 => vec![2, 3, 4, 6, 8, 9, 10, 12],
-            1 => vec![12],
-            2 => vec![6, 12],
-            3 => vec![2, 4, 6],
-            4 => vec![2, 3, 4, 9],
-            5 => vec![2, 3, 4, 9, 12],
-            6 => vec![2, 3, 4, 6, 9, 12],
-            7 => vec![2, 3, 4, 6, 8, 9, 10],
-            _ => unreachable!(),
+    let dep_times = abst.citer().enumerate().fold(
+        vec![BTreeSet::new(); n],
+        |mut dep_times, (i, (a, _b, s, _t))| {
+            dep_times[a - 1].insert((s, i));
+            dep_times
+        },
+    );
+
+    let mut adjs = vec![vec![0; 2 * m]; 20];
+    adjs[0] = abst
+        .citer()
+        .enumerate()
+        .flat_map(|(i, (_a, b, _s, t))| {
+            let next_v = dep_times[b - 1]
+                .range((t, 0)..)
+                .next()
+                .map_or(2 * i + 1, |(_, j)| 2 * j);
+            it![2 * i + 1, next_v]
         })
         .collect::<Vec<_>>();
-    println!("{}", ans.citer().join(" "));
+
+    for i in 1..20 {
+        for v in 0..2 * m {
+            adjs[i][v] = adjs[i - 1][adjs[i - 1][v]];
+        }
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum Ans {
+        City(usize),
+        Bus(usize),
+    }
+
+    let time = |idx: usize| {
+        if idx % 2 == 0 {
+            abst[idx / 2].2
+        } else {
+            abst[idx / 2].3
+        }
+    };
+
+    use Ans::*;
+
+    (0..q)
+        .map(|_| read_tuple!(usize, usize, usize))
+        .map(|(x, y, z)| {
+            let y = y - 1;
+
+            let v0 = if let Some((_, idx)) = dep_times[y].range((x, 0)..).next() {
+                2 * *idx
+            } else {
+                return City(y);
+            };
+
+            // eprintln!("{} {} {} {}", x, y, z, v0);
+
+            if time(v0) >= z {
+                return City(y);
+            }
+
+            let v = (0..20)
+                .rev()
+                .fold(v0, |v, i| if time(adjs[i][v]) < z { adjs[i][v] } else { v });
+
+            assert!(time(v) < z);
+
+            if v % 2 == 0 {
+                Bus(v / 2)
+            } else {
+                City(abst[v / 2].1 - 1)
+            }
+        })
+        .for_each(|ans| match ans {
+            City(i) => {
+                println!("{}", i + 1);
+            }
+            Bus(i) => {
+                println!("{} {}", abst[i].0, abst[i].1);
+            }
+        });
 }
