@@ -4,75 +4,85 @@ use itertools_num::ItertoolsNum;
 // 0..n のindexを、s[i..]が辞書順になるように並べる
 // O(NlogN)
 // 定数倍が遅そう（各stepのsa構築時のランダムアクセスがきついっぽい）
-// group_byも少し重そうなのでぎりぎりのときはgroup_byをべた書きしてみる
+// * 領域を使い回すようにする
+// * group_byをやめる
+// でいくらかマシになる
 // O(N)のアルゴリズムもある(SA-IS)
 #[allow(dead_code)]
 fn suffix_array<T: Ord>(s: &[T]) -> Vec<usize> {
     let n = s.len();
-    let sa0 = (0..n).sorted_by_key(|&i| &s[i]).collect_vec();
-    let rank0 = sa0
+    // 同じ文字間では添え字の逆順に並べる
+    let sa0 = (0..n)
+        .sorted_by_key(|&i| (&s[i], std::cmp::Reverse(i)))
+        .collect_vec();
+    let (rank0, max_rank) = sa0
         .iter()
         .group_by(|&&i| &s[i])
         .into_iter()
         .enumerate()
-        .fold(vec![0; n], |mut r, (rank, (_, it))| {
+        .fold((vec![0; n], 0), |(mut rank, _), (r, (_, it))| {
             for &idx in it {
-                r[idx] = rank;
+                rank[idx] = r;
             }
-            r
+            (rank, r)
         });
 
     iterate(2, |len| len * 2)
         .take_while(|&len| len / 2 < n)
-        .fold((sa0, rank0), |(prev_sa, prev_rank), len| {
-            let num_rank = prev_rank.iter().max().unwrap() + 1;
-
-            if num_rank == n {
-                // これ以上の比較は不要
-                return (prev_sa, prev_rank);
-            }
-
-            let counts = prev_rank
-                .iter()
-                .fold(vec![0; num_rank], |mut counts, &idx| {
-                    counts[idx] += 1;
-                    counts
-                });
-            let cum_counts = counts.iter().cumsum::<usize>().collect::<Vec<_>>();
-
-            // (prev_rank.get(i), prev_rank.get(i + len/2)) でソートした配列を計算する
-            // (n-len/2..n).chain(prev_sa.iter().copied().filter_map(|i| i.checked_sub(len/2))) は2つ目の要素でソートされた状態
-            // それをカウントソートしていく
-            let sa = (n - len / 2..n)
-                .chain(
-                    prev_sa
+        .try_fold(
+            (sa0, rank0, max_rank),
+            |(prev_sa, prev_rank, prev_max_rank), len| {
+                let counts =
+                    prev_rank
                         .iter()
-                        .copied()
-                        .filter_map(|i| i.checked_sub(len / 2)),
-                )
-                .rev()
-                .fold((vec![0; n], cum_counts), |(mut sa, mut cum_counts), i| {
-                    cum_counts[prev_rank[i]] -= 1;
-                    sa[cum_counts[prev_rank[i]]] = i;
-                    (sa, cum_counts)
-                })
-                .0;
+                        .fold(vec![0; prev_max_rank + 1], |mut counts, &idx| {
+                            counts[idx] += 1;
+                            counts
+                        });
+                let cum_counts = counts.iter().cumsum::<usize>().collect::<Vec<_>>();
 
-            let to_key = |i: usize| (prev_rank.get(i), prev_rank.get(i + len / 2));
-            let rank = sa
-                .iter()
-                .group_by(|&&i| to_key(i))
-                .into_iter()
-                .enumerate()
-                .fold(vec![0; n], |mut rank, (r, (_, it))| {
-                    for &idx in it {
-                        rank[idx] = r;
-                    }
-                    rank
-                });
-            (sa, rank)
-        })
-        .0
+                // prev_saは各suffixのlen/2文字の部分の昇順になっており、
+                // かつlen/2文字の部分が同じときは添え字の降順に並んでいる
+                // => n-len/2より大きいものはprev_saから変化なし
+                //    それ以外の部分は前半len/2文字分で安定ソートする
+                let sa = prev_sa
+                    .iter()
+                    .copied()
+                    .filter_map(|i| i.checked_sub(len / 2))
+                    .rev()
+                    .fold(
+                        (prev_sa.clone(), cum_counts),
+                        |(mut sa, mut cum_counts), i| {
+                            cum_counts[prev_rank[i]] -= 1;
+                            sa[cum_counts[prev_rank[i]]] = i;
+                            (sa, cum_counts)
+                        },
+                    )
+                    .0;
+
+                let to_key = |i: usize| (prev_rank.get(i), prev_rank.get(i + len / 2));
+                let (rank, max_rank) = sa
+                    .iter()
+                    .group_by(|&&i| to_key(i))
+                    .into_iter()
+                    .enumerate()
+                    .fold((vec![0; n], 0), |(mut rank, _), (r, (_, it))| {
+                        for &idx in it {
+                            rank[idx] = r;
+                        }
+                        (rank, r)
+                    });
+
+                if max_rank == n - 1 {
+                    // これ以上の比較は不要
+                    Err((sa, rank))
+                } else {
+                    Ok((sa, rank, max_rank))
+                }
+            },
+        )
+        // n=1のときはerrにならないので注意
+        .map_or_else(|(sa, _rank)| sa, |(sa, _rank, _)| sa)
 }
 
 #[allow(dead_code)]
