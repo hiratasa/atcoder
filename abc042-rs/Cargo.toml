@@ -32,11 +32,3 @@ path = "src/c.rs"
 [[bin]]
 name = "abc042-d"
 path = "src/d.rs"
-
-[[bin]]
-name = "abc042-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "abc042-f"
-path = "src/f.rs"

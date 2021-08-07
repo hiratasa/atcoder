@@ -150,7 +150,8 @@ where
 
 fn main() {
     let (n, l) = read_tuple!(usize, usize);
-    let s = read_vec(n, || read::<String>());
+    let s = read_col::<String>(n);
 
-    println!("{}", s.iter().sorted().join(""));
+    let ans = s.iter().sorted().join("");
+    println!("{}", ans);
 }

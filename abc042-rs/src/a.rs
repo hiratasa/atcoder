@@ -148,4 +148,12 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let a = read_row::<usize>();
+
+    if a.citer().sorted().eq(it!(5, 5, 7)) {
+        println!("YES");
+    } else {
+        println!("NO");
+    }
+}

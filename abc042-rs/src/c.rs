@@ -148,4 +148,17 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let d = read_row::<usize>();
+
+    let ans = (n..)
+        .find(|&m| {
+            iterate(m, |&mm| mm / 10)
+                .take_while(|&mm| mm > 0)
+                .map(|mm| mm % 10)
+                .all(|c| !d.contains(&c))
+        })
+        .unwrap();
+    println!("{}", ans);
+}

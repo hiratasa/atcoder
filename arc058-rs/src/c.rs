@@ -177,6 +177,7 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -228,10 +229,11 @@ impl<M> std::fmt::Debug for Mod<M> {
 }
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::From<T>,
+    usize: std::convert::TryFrom<T>,
 {
     fn from(v: T) -> Self {
-        Mod::new(usize::from(v))
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
 impl<M: Modulus> std::str::FromStr for Mod<M> {
@@ -351,57 +353,59 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-fn check<I: Iterator<Item = usize>>(s: &[usize; 3], a: I) -> Option<usize> {
-    a.cumsum::<usize>().try_fold(0usize, |t, c| {
-        if c > s[t] {
-            None
-        } else if c == s[t] {
-            Some(t + 1)
-        } else {
-            Some(t)
-        }
-    })
-}
-
 fn main() {
     type Mod = Mod1000000007;
 
     let (n, x, y, z) = read_tuple!(usize, usize, usize, usize);
 
-    let x = [x, y, z];
-    let s = [x[0], x[0] + x[1], x[0] + x[1] + x[2]];
+    let x = [x, x + y, x + y + z];
 
-    let ans = (0..n)
-        .fold(
-            (
-                Mod::zero(),
-                once((vec![], Mod::one())).collect::<FxHashMap<_, _>>(),
-            ),
-            |(ans, dp), i| {
-                let mut z = Mod::zero();
-                let mut next = FxHashMap::default();
-                for (a, b) in &dp {
-                    for d in 1..=10 {
-                        let (offset, t) = (0..)
-                            .find_map(|offset| {
-                                check(&s, a.citer().chain(once(d)).skip(offset))
-                                    .map(|t| (offset, t))
-                            })
-                            .unwrap();
-                        if t == 3 {
-                            z += *b * Mod::new(10).pow(n - i - 1);
+    let check = |v: &[usize]| {
+        v.citer().cumsum::<usize>().try_fold(0, |idx, s| {
+            assert!(idx < 3);
+            if s > x[idx] {
+                None
+            } else if s == x[idx] {
+                Some(idx + 1)
+            } else {
+                Some(idx)
+            }
+        })
+    };
+
+    let (_dp, ans) = (0..n).fold(
+        (
+            once((vec![], Mod::one())).collect::<FxHashMap<_, _>>(),
+            Mod::zero(),
+        ),
+        |(prev, mut ans), _| {
+            let mut dp = FxHashMap::default();
+
+            ans *= 10;
+
+            for (v, &w) in &prev {
+                for j in 1..=10 {
+                    let mut v2 = pushed!(v.clone(), j);
+                    let idx = loop {
+                        if let Some(idx) = check(&v2) {
+                            break idx;
                         } else {
-                            *next
-                                .entry(a.citer().chain(once(d)).skip(offset).collect_vec())
-                                .or_insert(Mod::zero()) += *b;
+                            v2.remove(0);
                         }
+                    };
+
+                    if idx == 3 {
+                        ans += w;
+                    } else {
+                        *dp.entry(v2).or_insert(Mod::zero()) += w;
                     }
                 }
+            }
 
-                // eprintln!("{:?}", next);
-                (ans + z, next)
-            },
-        )
-        .0;
+            // eprintln!("{:?}", dp);
+            (dp, ans)
+        },
+    );
+
     println!("{}", ans);
 }
