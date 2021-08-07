@@ -1,13 +1,16 @@
 use itertools::{iterate, Itertools};
+use itertools_num::ItertoolsNum;
 
 // 0..n のindexを、s[i..]が辞書順になるように並べる
 // O(NlogN)
+// 定数倍が遅そう（各stepのsa構築時のランダムアクセスがきついっぽい）
+// group_byも少し重そうなのでぎりぎりのときはgroup_byをべた書きしてみる
 // O(N)のアルゴリズムもある(SA-IS)
 #[allow(dead_code)]
 fn suffix_array<T: Ord>(s: &[T]) -> Vec<usize> {
     let n = s.len();
     let sa0 = (0..n).sorted_by_key(|&i| &s[i]).collect_vec();
-    let r0 = sa0
+    let rank0 = sa0
         .iter()
         .group_by(|&&i| &s[i])
         .into_iter()
@@ -21,21 +24,53 @@ fn suffix_array<T: Ord>(s: &[T]) -> Vec<usize> {
 
     iterate(2, |len| len * 2)
         .take_while(|&len| len / 2 < n)
-        .fold((sa0, r0), |(_prev_sa, prev_r), len| {
-            let to_key = |i: usize| (prev_r.get(i), prev_r.get(i + len / 2));
-            let sa = (0..n).sorted_by_key(|&i| to_key(i)).collect_vec();
-            let r = sa
+        .fold((sa0, rank0), |(prev_sa, prev_rank), len| {
+            let num_rank = prev_rank.iter().max().unwrap() + 1;
+
+            if num_rank == n {
+                // これ以上の比較は不要
+                return (prev_sa, prev_rank);
+            }
+
+            let counts = prev_rank
+                .iter()
+                .fold(vec![0; num_rank], |mut counts, &idx| {
+                    counts[idx] += 1;
+                    counts
+                });
+            let cum_counts = counts.iter().cumsum::<usize>().collect::<Vec<_>>();
+
+            // (prev_rank.get(i), prev_rank.get(i + len/2)) でソートした配列を計算する
+            // (n-len/2..n).chain(prev_sa.iter().copied().filter_map(|i| i.checked_sub(len/2))) は2つ目の要素でソートされた状態
+            // それをカウントソートしていく
+            let sa = (n - len / 2..n)
+                .chain(
+                    prev_sa
+                        .iter()
+                        .copied()
+                        .filter_map(|i| i.checked_sub(len / 2)),
+                )
+                .rev()
+                .fold((vec![0; n], cum_counts), |(mut sa, mut cum_counts), i| {
+                    cum_counts[prev_rank[i]] -= 1;
+                    sa[cum_counts[prev_rank[i]]] = i;
+                    (sa, cum_counts)
+                })
+                .0;
+
+            let to_key = |i: usize| (prev_rank.get(i), prev_rank.get(i + len / 2));
+            let rank = sa
                 .iter()
                 .group_by(|&&i| to_key(i))
                 .into_iter()
                 .enumerate()
-                .fold(vec![0; n], |mut r, (rank, (_, it))| {
+                .fold(vec![0; n], |mut rank, (r, (_, it))| {
                     for &idx in it {
-                        r[idx] = rank;
+                        rank[idx] = r;
                     }
-                    r
+                    rank
                 });
-            (sa, r)
+            (sa, rank)
         })
         .0
 }
