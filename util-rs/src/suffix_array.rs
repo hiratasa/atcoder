@@ -75,6 +75,31 @@ fn suffix_array<T: Ord>(s: &[T]) -> Vec<usize> {
         .0
 }
 
+#[allow(dead_code)]
+fn lcp_array(s: &[char], sa: &[usize], sa_rank: &[usize]) -> Vec<usize> {
+    let n = sa_rank.len();
+
+    let mut lcp = vec![0; n - 1];
+
+    let mut l = 0;
+    for i in 0..n {
+        if sa_rank[i] == 0 {
+            continue;
+        }
+
+        let i1 = i;
+        let i2 = sa[sa_rank[i] - 1];
+        while i1 + l < n && i2 + l < n && s[i1 + l] == s[i2 + l] {
+            l += 1;
+        }
+
+        lcp[sa_rank[i] - 1] = l;
+        l = l.checked_sub(1).unwrap_or(0);
+    }
+
+    lcp
+}
+
 #[test]
 fn test_suffix_array() {
     let s = b"abcdabcaca";
