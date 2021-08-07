@@ -148,4 +148,34 @@ where
 {
 }
 
-fn main() {}
+fn solve(l: usize, base: usize) -> (usize, Vec<(usize, usize, usize)>) {
+    if l == 1 {
+        return (1, vec![]);
+    }
+
+    let (n, edges) = solve(l / 2, 2 * base);
+
+    (
+        n + 1,
+        edges
+            .into_iter()
+            .chain(it!((n, n + 1, 0), (n, n + 1, base)))
+            .chain(if l % 2 == 0 {
+                None
+            } else {
+                Some((1, n + 1, (l - 1) * base))
+            })
+            .collect(),
+    )
+}
+
+fn main() {
+    let l: usize = read();
+
+    let (n, edges) = solve(l, 1);
+
+    println!("{} {}", n, edges.len());
+    for (u, v, w) in edges {
+        println!("{} {} {}", u, v, w);
+    }
+}

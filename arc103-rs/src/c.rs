@@ -148,4 +148,26 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_str();
+    let n = s.len();
+
+    if s[1 - 1] == '0' || s[n - 1] == '1' || !s.citer().take(n - 1).eq(s.citer().rev().skip(1)) {
+        println!("-1");
+        return;
+    }
+
+    s.citer()
+        .take(n / 2)
+        .positions(|c| c == '1')
+        .map(|i| i + 1)
+        .skip(1)
+        .chain(once(n))
+        .scan(1, |m, k| {
+            assert!(*m < k);
+
+            Some((replace(m, k)..k).map(move |u| (u, k)))
+        })
+        .flatten()
+        .for_each(|(u, v)| println!("{} {}", u, v));
+}
