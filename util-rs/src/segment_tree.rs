@@ -107,6 +107,7 @@ where
     }
 
     // f(query(a, b)) == false となるbが存在すればその最小のものを返す
+    // (存在しないときにnを返してしまうとquery(a,n)がfalseのときと区別がつかないのでNoneを返す)
     fn right_partition_point<F>(&self, a: usize, mut f: F) -> Option<usize>
     where
         F: FnMut(&M::Item) -> bool,
@@ -118,14 +119,18 @@ where
             None
         } else {
             let mut b = a;
+            // [b, b+2^k) が保持されている最初の箇所に移動
             let mut idx = ((b + self.cap) >> (b + self.cap).trailing_zeros()) - 1;
             let mut len = 1 << (b + self.cap).trailing_zeros();
             let mut val = M::id();
             let mut val_next = M::op(&val, &self.values[idx]);
 
+            // チェックする範囲を拡大しながらf()がtrueになる限りbを右に伸ばしていく
             while f(&val_next) {
                 val = val_next;
                 b += len;
+
+                // [b, b+2^k) が保持されている最初の箇所に移動
                 len <<= (idx + 2).trailing_zeros();
                 idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
 
@@ -136,6 +141,7 @@ where
                 val_next = M::op(&val, &self.values[idx]);
             }
 
+            // 範囲を縮小しながらbを右に伸ばしていく
             idx = 2 * idx + 1;
             len >>= 1;
             while idx < self.values.len() {
@@ -151,6 +157,68 @@ where
 
             // [a, b)区間でfがtrue => 求めるbはその次
             Some(b + 1)
+        }
+    }
+
+    // f(query(a, b)) == false となるaが存在すればその最大のもの+1を返す
+    // 存在しない場合は0を返す
+    fn left_partition_point<F>(&self, b: usize, mut f: F) -> usize
+    where
+        F: FnMut(&M::Item) -> bool,
+    {
+        assert!(b <= self.cap);
+        if !f(&M::id()) {
+            b
+        } else if b == 0 {
+            0
+        } else {
+            let mut a = b;
+            // [a-2^k, a) が保持されている最初の箇所に移動
+            let mut idx = (a + self.cap - 1) >> (!(a + self.cap - 1)).trailing_zeros();
+            let mut len = 1 << (!(a + self.cap - 1)).trailing_zeros();
+            if idx == 0 {
+                // このケースになるのはb=self.capのときだけ
+                len = self.cap;
+            } else {
+                idx -= 1;
+            }
+
+            let mut val = M::id();
+            let mut val_next = M::op(&self.values[idx], &val);
+
+            // チェックする範囲を拡大しながらf()がtrueになる限りaを左に伸ばしていく
+            while f(&val_next) {
+                val = val_next;
+                a -= len;
+
+                // 最後に計算したidxが左端だった場合
+                if idx == 0 || (idx + 1).is_power_of_two() {
+                    return 0;
+                }
+
+                // [a-2^k, a) が保持されている最初の箇所に移動
+                len <<= (!idx).trailing_zeros();
+                idx >>= (!idx).trailing_zeros();
+                idx -= 1;
+
+                val_next = M::op(&self.values[idx], &val);
+            }
+
+            // 範囲を縮小しながらaを左に伸ばしていく
+            idx = 2 * idx + 2;
+            len >>= 1;
+            while idx < self.values.len() {
+                val_next = M::op(&self.values[idx], &val);
+                if f(&val_next) {
+                    val = val_next;
+                    a -= len;
+                    idx -= 1;
+                }
+                len >>= 1;
+                idx = 2 * idx + 2;
+            }
+
+            a
         }
     }
 }
