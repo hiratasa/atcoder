@@ -9,6 +9,7 @@ mod fps;
 mod graph;
 mod iterext;
 mod max_flow;
+mod min_cost_flow;
 mod modulo;
 mod multiset;
 mod point;
