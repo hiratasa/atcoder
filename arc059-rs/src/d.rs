@@ -177,9 +177,10 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
 #[allow(dead_code)]
 impl<M: Modulus> Mod<M> {
@@ -221,12 +222,18 @@ impl<M> std::fmt::Display for Mod<M> {
         write!(f, "{}", self.0)
     }
 }
+impl<M> std::fmt::Debug for Mod<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::From<T>,
+    usize: std::convert::TryFrom<T>,
 {
     fn from(v: T) -> Self {
-        Mod::new(usize::from(v))
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
 impl<M: Modulus> std::str::FromStr for Mod<M> {
@@ -352,116 +359,74 @@ fn main() {
     let n: usize = read();
     let s = read_str();
 
-    let m = s.len();
+    let m = n - s.len();
 
-    let r = n - m;
+    // 空文字を作る方法の総数
+    let e = (0..=m)
+        .scan(vec![Mod::one()], |p, i| {
+            let p0 = p[0];
 
-    let d0 = chain(
-        once(Mod::one()),
-        (1..=r).scan(vec![Mod::one()], |dp, _| {
-            *dp = izip!(
-                once(Mod::zero()).chain(dp.citer()),
-                dp.citer().skip(1).chain(repeat(Mod::zero())),
-            )
-            .map(|(m0, m1)| m0 * 2usize + m1)
-            .collect_vec();
-            Some(dp[0])
-        }),
-    )
-    .collect_vec();
-
-    // eprintln!("{:?}", d0);
-    let d = iterate(d0, |prev| {
-        (0..=r)
-            .map(|i| {
-                (0..=i)
-                    .map(|j| {
-                        let k = i - j;
-                        prev[j] * prev[k]
-                    })
-                    .sum::<Mod>()
-            })
-            .collect_vec()
-    })
-    .take((m + 1).next_power_of_two().trailing_zeros() as usize)
-    .collect_vec();
-
-    // eprintln!("{:?}", d);
-
-    let d_m = iterate(m, |kk| kk / 2)
-        .take_while(|&kk| kk > 0)
-        .positions(|kk| kk % 2 > 0)
-        .map(|idx| &d[idx])
-        .fold(vvec![Mod::one(); Mod::zero(); n], |prev, current| {
-            (0..=r)
-                .map(|i| {
-                    (0..=i)
-                        .map(|j| {
-                            let k = i - j;
-                            prev[j] * current[k]
-                        })
-                        .sum::<Mod>()
+            *p = (0..=i + 1)
+                .map(|j| {
+                    if j == 0 {
+                        p[0] + p.get(1).copied().unwrap_or(Mod::zero())
+                    } else {
+                        p.get(j + 1).copied().unwrap_or(Mod::zero()) + p[j - 1] * 2
+                    }
                 })
-                .collect_vec()
-        });
+                .collect();
 
-    let e = chain(
-        once(Mod::one()),
-        (1..=r).scan(vec![Mod::one()], |dp, _| {
-            *dp = izip!(
-                once(Mod::zero()).chain(dp.citer()),
-                dp.citer().skip(1).chain(repeat(Mod::zero())),
-                once(dp[0]).chain(repeat(Mod::zero())),
-            )
-            .map(|(m0, m1, m2)| m0 * 2usize + m1 + m2)
-            .collect_vec();
-            Some(dp[0])
-        }),
-    )
-    .collect_vec();
-
-    let ans = (0..=r)
-        .map(|i| {
-            let j = r - i;
-            e[i] * d_m[j]
+            Some(p0)
         })
-        .sum::<Mod>();
+        .collect::<Vec<_>>();
 
-    println!("{}", ans);
+    // BSしすぎずに空文字を作る方法の総数
+    let mut e2 = (0..=m)
+        .scan(vec![Mod::one()], |p, i| {
+            let p0 = p[0];
 
-    // println!("{}", calc(n, &s, &mut vec![], &mut vec![]));
-}
+            *p = (0..=i + 1)
+                .map(|j| {
+                    if j == 0 {
+                        p.get(1).copied().unwrap_or(Mod::zero())
+                    } else {
+                        p.get(j + 1).copied().unwrap_or(Mod::zero()) + p[j - 1] * 2
+                    }
+                })
+                .collect();
 
-// brute force
-fn calc(n: usize, s: &[char], t: &mut Vec<char>, y: &mut Vec<char>) -> Mod1000000007 {
-    if n == 0 {
-        if s == t.as_slice() {
-            // eprintln!("{:?}", y);
-            Mod::one()
-        } else {
-            Mod::zero()
+            Some(p0)
+        })
+        .collect::<Vec<_>>();
+
+    let conv = |x: &[Mod], y: &[Mod]| {
+        iproduct!(x.citer().enumerate(), y.citer().enumerate())
+            .filter(|&((i, _), (j, _))| i + j <= m)
+            .fold(vec![Mod::zero(); m + 1], |mut z, ((i, xx), (j, yy))| {
+                z[i + j] += xx * yy;
+                z
+            })
+    };
+
+    // eprintln!("{:?}", e);
+    // eprintln!("{:?}", e2);
+
+    // 先頭の空文字列以外の部分の総数
+    let mut e3 = vec![Mod::one()];
+    for i in 0.. {
+        if 1 << i > s.len() {
+            break;
         }
-    } else {
-        t.push('0');
-        y.push('0');
-        let r0 = calc(n - 1, s, t, y);
-        t.pop();
-        y.pop();
 
-        t.push('1');
-        y.push('1');
-        let r1 = calc(n - 1, s, t, y);
-        t.pop();
-        y.pop();
-
-        let x = t.pop();
-        y.push('B');
-        let r2 = calc(n - 1, s, t, y);
-        if let Some(x) = x {
-            t.push(x);
+        if (s.len() >> i) & 1 > 0 {
+            e3 = conv(&e2, &e3);
         }
-        y.pop();
 
-        r0 + r1 + r2
+        e2 = conv(&e2, &e2);
     }
+
+    // eprintln!("{:?}", e3);
+
+    let ans = conv(&e, &e3);
+    println!("{}", ans[m]);
 }

@@ -148,4 +148,8 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    println!("{}", n * (n + 1) / 2);
+}

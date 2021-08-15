@@ -34,13 +34,5 @@ name = "arc059-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "arc059-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "arc059-f"
-path = "src/f.rs"
-
-[[bin]]
 name = "arc059-d2"
 path = "src/d2.rs"

@@ -148,4 +148,44 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_str();
+
+    const K: usize = 'z' as usize - 'a' as usize + 1;
+    let counts =
+        s.citer()
+            .map(|c| c as usize - 'a' as usize)
+            .fold(vec![vec![0]; K], |mut counts, c| {
+                counts.iter_mut().for_each(|count| {
+                    count.push(*count.last().unwrap());
+                });
+                *counts[c].last_mut().unwrap() += 1;
+                counts
+            });
+
+    let ans = (0..K).find_map(|i| {
+        counts[i]
+            .citer()
+            .enumerate()
+            .map(|(j, m)| (j, 2 * m as i64 - j as i64 - 1))
+            .try_fold(
+                (std::i64::MAX, 0, std::i64::MAX),
+                |(mi, mipos, prev), (j, x)| {
+                    if mi < x {
+                        Err((mipos, j))
+                    } else if prev < mi {
+                        Ok((prev, j, x))
+                    } else {
+                        Ok((mi, mipos, x))
+                    }
+                },
+            )
+            .err()
+    });
+
+    if let Some((b, e)) = ans {
+        println!("{} {}", b, e);
+    } else {
+        println!("-1 -1")
+    }
+}

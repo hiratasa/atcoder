@@ -71,15 +71,6 @@ macro_rules! pushed {
 }
 
 #[allow(unused_macros)]
-macro_rules! popped {
-    ($c:expr) => {{
-        let mut c = $c;
-        c.pop();
-        c
-    }};
-}
-
-#[allow(unused_macros)]
 macro_rules! inserted {
     ($c:expr, $($x:expr),*) => {{
         let mut c = $c;
@@ -158,11 +149,18 @@ where
 }
 
 fn main() {
-    let s: String = read();
+    let s = read_str();
 
-    let ans = s.chars().fold(String::new(), |t, c| match c {
-        '0' | '1' => pushed!(t, c),
-        _ => popped!(t),
+    let ans = s.citer().fold(vec![], |mut a, c| {
+        match c {
+            'B' => {
+                a.pop();
+            }
+            _ => {
+                a.push(c);
+            }
+        };
+        a
     });
-    println!("{}", ans);
+    println!("{}", ans.citer().join(""));
 }
