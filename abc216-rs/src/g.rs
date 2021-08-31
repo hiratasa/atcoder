@@ -149,41 +149,63 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-    let s: usize = read();
+    let (n, m) = read_tuple!(usize, usize);
+    let lrx = read_vec(m, || read_tuple!(usize, usize, usize));
 
-    if s > n {
-        println!("-1");
-        return;
-    }
+    let rx = lrx
+        .citer()
+        .enumerate()
+        .fold(vec![vec![]; n + 1], |mut rx, (i, (l, r, x))| {
+            rx[l - 1].push((i, r, x));
+            rx
+        });
 
-    if s == n {
-        println!("{}", n + 1);
-        return;
-    }
+    let b = (0..=n)
+        .scan(
+            (
+                0usize,
+                BinaryHeap::new(),
+                vec![vec![]; n + 2],
+                vec![false; m],
+            ),
+            |(c, q, v, s): &mut (
+                usize,
+                BinaryHeap<(i64, usize)>,
+                Vec<Vec<(bool, usize, i64)>>,
+                Vec<bool>,
+            ),
+             i| {
+                for &(z, idx, t) in &v[i] {
+                    if z {
+                        q.push((t, idx));
+                        s[idx] = true;
+                    } else {
+                        s[idx] = false;
+                    }
+                }
 
-    let d = n - s;
-    let factors = (1..)
-        .take_while(|&x| x * x <= d)
-        .filter(|&x| d % x == 0)
-        .flat_map(|x| it!(x, d / x))
-        .dedup()
+                while matches!(q.peek(), Some(&(t, idx)) if !s[idx]) {
+                    q.pop();
+                }
+
+                if let Some(&(t, _idx)) = q.peek() {
+                    *c = max(*c, (t + i as i64) as usize);
+                }
+
+                for &(idx, r, x) in &rx[i] {
+                    v[r - x + 1].push((true, idx, (*c + 1) as i64 - (r - x + 1) as i64));
+                    v[r + 1].push((false, idx, 0));
+                }
+
+                Some(*c)
+            },
+        )
         .collect::<Vec<_>>();
 
-    if let Some(ans) = (2..)
-        .take_while(|&b| b * b <= n)
-        .chain(factors.into_iter().map(|b| b + 1))
-        .filter(|&b| {
-            iterate(n, |&m| m / b)
-                .take_while(|&x| x > 0)
-                .map(|x| x % b)
-                .sum::<usize>()
-                == s
-        })
-        .min()
-    {
-        println!("{}", ans);
-    } else {
-        println!("-1");
-    }
+    let a = b
+        .citer()
+        .tuple_windows()
+        .map(|(x, y)| y - x)
+        .collect::<Vec<_>>();
+    println!("{}", a.citer().join(" "));
 }

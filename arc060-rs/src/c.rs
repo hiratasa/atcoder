@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,49 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let x = read_row::<usize>();
+    let l: usize = read();
+
+    let p = (0..n)
+        .scan(0, |j, i| {
+            while *j < n && x[*j] <= x[i] + l {
+                *j += 1;
+            }
+
+            Some(*j - 1)
+        })
+        .collect::<Vec<_>>();
+    let mut r = vvec![p; vec![0; n]; 20];
+    for i in 1..20 {
+        for j in 0..n {
+            r[i][j] = r[i - 1][r[i - 1][j]];
+        }
+    }
+
+    // eprintln!("{:?}", r);
+
+    let q: usize = read();
+    for _ in 0..q {
+        let (a, b) = read_tuple!(usize, usize);
+        let a = a - 1;
+        let b = b - 1;
+
+        let (a, b) = (min(a, b), max(a, b));
+
+        let ans = 1
+            + (0..20)
+                .rev()
+                .scan(a, |aa, i| {
+                    if r[i][*aa] < b {
+                        *aa = r[i][*aa];
+                        Some(1 << i)
+                    } else {
+                        Some(0)
+                    }
+                })
+                .sum::<usize>();
+        println!("{}", ans);
+    }
+}

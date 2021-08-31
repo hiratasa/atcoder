@@ -149,41 +149,54 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-    let s: usize = read();
+    let (n, m) = read_tuple!(usize, usize);
+    let s = read_row::<usize>();
+    let t = read_row::<usize>();
 
-    if s > n {
+    let s_has_0 = s.citer().any(|c| c == 0);
+    let s_has_1 = s.citer().any(|c| c == 1);
+    let t_has_0 = t.citer().any(|c| c == 0);
+    let t_has_1 = t.citer().any(|c| c == 1);
+
+    if t_has_0 && !s_has_0 {
         println!("-1");
         return;
     }
 
-    if s == n {
-        println!("{}", n + 1);
+    if t_has_1 && !s_has_1 {
+        println!("-1");
         return;
     }
 
-    let d = n - s;
-    let factors = (1..)
-        .take_while(|&x| x * x <= d)
-        .filter(|&x| d % x == 0)
-        .flat_map(|x| it!(x, d / x))
-        .dedup()
-        .collect::<Vec<_>>();
+    if !s_has_0 || !s_has_1 {
+        println!("{}", t.len());
+        return;
+    }
 
-    if let Some(ans) = (2..)
-        .take_while(|&b| b * b <= n)
-        .chain(factors.into_iter().map(|b| b + 1))
-        .filter(|&b| {
-            iterate(n, |&m| m / b)
-                .take_while(|&x| x > 0)
-                .map(|x| x % b)
-                .sum::<usize>()
-                == s
-        })
-        .min()
-    {
-        println!("{}", ans);
+    let nearest_diff = (1..).find(|&i| s[i] != s[0] || s[n - i] != s[0]).unwrap();
+
+    if !t_has_0 {
+        // T is all 1
+        if s[0] == 1 {
+            println!("{}", t.len());
+            return;
+        }
+
+        println!("{}", t.len() + nearest_diff);
+    } else if !t_has_1 {
+        // T is all 0
+        if s[0] == 0 {
+            println!("{}", t.len());
+            return;
+        }
+
+        println!("{}", t.len() + nearest_diff);
     } else {
-        println!("-1");
+        let k = t.citer().tuple_windows().filter(|&(x, y)| x != y).count();
+        if t[0] == s[0] {
+            println!("{}", t.len() + nearest_diff + (k - 1));
+        } else {
+            println!("{}", t.len() + nearest_diff + k);
+        }
     }
 }

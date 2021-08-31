@@ -149,41 +149,33 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-    let s: usize = read();
+    let q: usize = read();
 
-    if s > n {
-        println!("-1");
-        return;
-    }
+    let mut h = BinaryHeap::new();
+    let mut r = VecDeque::new();
+    for _ in 0..q {
+        let query = read::<String>();
 
-    if s == n {
-        println!("{}", n + 1);
-        return;
-    }
-
-    let d = n - s;
-    let factors = (1..)
-        .take_while(|&x| x * x <= d)
-        .filter(|&x| d % x == 0)
-        .flat_map(|x| it!(x, d / x))
-        .dedup()
-        .collect::<Vec<_>>();
-
-    if let Some(ans) = (2..)
-        .take_while(|&b| b * b <= n)
-        .chain(factors.into_iter().map(|b| b + 1))
-        .filter(|&b| {
-            iterate(n, |&m| m / b)
-                .take_while(|&x| x > 0)
-                .map(|x| x % b)
-                .sum::<usize>()
-                == s
-        })
-        .min()
-    {
-        println!("{}", ans);
-    } else {
-        println!("-1");
+        match query.chars().next().unwrap() {
+            '1' => {
+                let x: usize = query.split_whitespace().nth(1).unwrap().parse().unwrap();
+                r.push_back(x);
+            }
+            '2' => {
+                if let Some(Reverse(x)) = h.pop() {
+                    println!("{}", x);
+                } else if let Some(x) = r.pop_front() {
+                    println!("{}", x);
+                } else {
+                    unreachable!();
+                }
+            }
+            '3' => {
+                for x in r.drain(0..) {
+                    h.push(Reverse(x));
+                }
+            }
+            _ => unreachable!(),
+        }
     }
 }

@@ -150,40 +150,63 @@ where
 
 fn main() {
     let n: usize = read();
-    let s: usize = read();
+    let tdx = read_vec(n, || read_tuple!(i64, usize, i64));
 
-    if s > n {
-        println!("-1");
-        return;
+    let mut lq = once(0).collect::<BinaryHeap<_>>();
+    let mut loffset = 0i64;
+    let mut rq = once(Reverse(0)).collect::<BinaryHeap<_>>();
+    let mut roffset = 0i64;
+    let mut m = 0;
+
+    let mut time = 0;
+    for (t, d, x) in tdx {
+        loffset -= t - time;
+        roffset += t - time;
+
+        if d == 0 {
+            if x >= loffset {
+                let x = if x <= roffset {
+                    x
+                } else {
+                    m += x - roffset;
+                    roffset
+                };
+                let r0 = rq.peek().unwrap().0 + roffset;
+                if r0 < x {
+                    m += x - r0;
+                }
+                rq.push(Reverse(x - roffset));
+                let y = rq.pop().unwrap().0 + roffset;
+                lq.push(y - loffset);
+            }
+        } else {
+            if x <= roffset {
+                let x = if x > loffset {
+                    x
+                } else {
+                    m += loffset - x;
+                    loffset
+                };
+                let l0 = lq.peek().unwrap() + loffset;
+                if l0 > x {
+                    m += l0 - x;
+                }
+                lq.push(x - loffset);
+                let y = lq.pop().unwrap() + loffset;
+                rq.push(Reverse(y - roffset));
+            }
+        }
+
+        // eprintln!(
+        //     "{} {} {} {} {}",
+        //     loffset,
+        //     loffset + lq.peek().unwrap(),
+        //     m,
+        //     roffset + rq.peek().unwrap().0,
+        //     roffset
+        // );
+
+        time = t;
     }
-
-    if s == n {
-        println!("{}", n + 1);
-        return;
-    }
-
-    let d = n - s;
-    let factors = (1..)
-        .take_while(|&x| x * x <= d)
-        .filter(|&x| d % x == 0)
-        .flat_map(|x| it!(x, d / x))
-        .dedup()
-        .collect::<Vec<_>>();
-
-    if let Some(ans) = (2..)
-        .take_while(|&b| b * b <= n)
-        .chain(factors.into_iter().map(|b| b + 1))
-        .filter(|&b| {
-            iterate(n, |&m| m / b)
-                .take_while(|&x| x > 0)
-                .map(|x| x % b)
-                .sum::<usize>()
-                == s
-        })
-        .min()
-    {
-        println!("{}", ans);
-    } else {
-        println!("-1");
-    }
+    println!("{}", m);
 }

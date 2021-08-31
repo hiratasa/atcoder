@@ -150,40 +150,11 @@ where
 
 fn main() {
     let n: usize = read();
-    let s: usize = read();
+    let st = read_col::<String>(n);
 
-    if s > n {
-        println!("-1");
-        return;
-    }
-
-    if s == n {
-        println!("{}", n + 1);
-        return;
-    }
-
-    let d = n - s;
-    let factors = (1..)
-        .take_while(|&x| x * x <= d)
-        .filter(|&x| d % x == 0)
-        .flat_map(|x| it!(x, d / x))
-        .dedup()
-        .collect::<Vec<_>>();
-
-    if let Some(ans) = (2..)
-        .take_while(|&b| b * b <= n)
-        .chain(factors.into_iter().map(|b| b + 1))
-        .filter(|&b| {
-            iterate(n, |&m| m / b)
-                .take_while(|&x| x > 0)
-                .map(|x| x % b)
-                .sum::<usize>()
-                == s
-        })
-        .min()
-    {
-        println!("{}", ans);
+    if st.iter().sorted().dedup().count() != n {
+        println!("Yes");
     } else {
-        println!("-1");
+        println!("No");
     }
 }

@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,26 +149,23 @@ where
 }
 
 fn main() {
-    let (n, a) = read_tuple!(usize, usize);
+    let (n, a) = read_tuple!(usize, i64);
+    let x = read_row::<i64>();
 
-    let x = read_row::<usize>();
+    let mut init = vec![0usize; 5010];
+    init[2500] = 1;
+    let dp = x.citer().map(|xx| xx - a).fold(init, |prev, b| {
+        let mut dp = vec![0; 5010];
 
-    let dp = x.citer().fold(
-        vvec![vvec![1; 0; 2501]; vec![0; 2501]; n + 1],
-        |mut dp, xx| {
-            for m in (0..n).rev() {
-                for s in 0..=2500 - xx {
-                    dp[m + 1][s + xx] += dp[m][s];
-                }
+        for i in 0..5010 {
+            dp[i] += prev[i];
+            if (i as i64 + b) >= 0 && (i as i64 + b) < 5010 {
+                dp[(i as i64 + b) as usize] += prev[i];
             }
-            dp
-        },
-    );
-    let ans = dp
-        .iter()
-        .enumerate()
-        .skip(1)
-        .map(|(m, row)| row[m * a])
-        .sum::<usize>();
+        }
+
+        dp
+    });
+    let ans = dp[2500] - 1;
     println!("{}", ans);
 }

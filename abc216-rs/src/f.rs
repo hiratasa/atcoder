@@ -148,53 +148,6 @@ where
 {
 }
 
-#[allow(dead_code)]
-fn is_good(s: &[char]) -> bool {
-    let factors = (1..)
-        .take_while(|&x| x * x <= s.len())
-        .filter(|&x| s.len() % x == 0)
-        .flat_map(|x| it!(x, s.len() / x))
-        .dedup()
-        .collect::<Vec<_>>();
-    let z = z_algorithm(&s);
-
-    factors.citer().filter(|&l| s.len() / l >= 2).all(|l| {
-        (0..)
-            .map(|i| i * l)
-            .take_while(|&i| i < s.len())
-            .any(|i| z[i] < l)
-    })
-}
-
-fn z_algorithm<T: std::cmp::Eq>(s: &[T]) -> Vec<usize> {
-    let n = s.len();
-
-    // z[i] = max_{j<n} s[0:j] = s[i:i+j]
-    let mut z = vec![0; n];
-    z[0] = n;
-
-    let mut l = 0;
-    let mut r = 0;
-    for i in 1..n {
-        // assert!(s[l..r] == s[0..r - l]);
-        if i < r && z[i - l] < r - i {
-            z[i] = z[i - l];
-        } else {
-            // i < rなら、 z[i - l] >= r - i なので、
-            // s[i..r] (=s[i-l..r-l]) = s[0..r-i] が保証されている
-            // i >= r なら再計算
-            l = i;
-            r = std::cmp::max(i, r);
-            while r < n && s[r] == s[r - l] {
-                r += 1;
-            }
-            z[i] = r - l;
-        }
-    }
-
-    z
-}
-
 use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
@@ -400,138 +353,42 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-fn solve(w: &[char]) -> (usize, Mod1000000007) {
-    if w.citer().all_equal() {
-        return (w.len(), Mod::one());
-    }
-
-    let factors = (1..)
-        .take_while(|&x| x * x <= w.len())
-        .filter(|&x| w.len() % x == 0)
-        .flat_map(|x| it!(x, w.len() / x))
-        .dedup()
-        .sorted()
-        .collect::<Vec<_>>();
-    let z = z_algorithm(&w);
-
-    if factors.citer().filter(|&x| w.len() / x >= 2).all(|f| {
-        (0..)
-            .map(|i| i * f)
-            .take_while(|&i| i < w.len())
-            .any(|i| z[i] < f)
-    }) {
-        return (1, Mod::one());
-    }
-
-    let wr = w.citer().rev().collect::<Vec<_>>();
-
-    let z = z_algorithm(&w);
-    let zr = z_algorithm(&wr);
-
-    let good = (1..)
-        .take_while(|&j| 2 * j <= w.len())
-        .fold(vec![true; w.len()], |mut good, j| {
-            (1..)
-                .take_while(|&k| j * k < w.len())
-                .take_while(|&k| z[j * k] >= j)
-                .for_each(|k| {
-                    good[j * (k + 1) - 1] = false;
-                });
-            good
-        });
-
-    let goodr = (1..)
-        .take_while(|&j| 2 * j <= w.len())
-        .fold(vec![true; w.len()], |mut good, j| {
-            (1..)
-                .take_while(|&k| j * k < w.len())
-                .take_while(|&k| zr[j * k] >= j)
-                .for_each(|k| {
-                    good[j * (k + 1) - 1] = false;
-                });
-            good
-        });
-
-    let x = (0..w.len() - 1)
-        .filter(|&i| good[i] && goodr[w.len() - 2 - i])
-        .count();
-
-    (2, Mod::new(x))
-}
-
-fn solve2(w: &[char]) -> (usize, Mod1000000007) {
-    let dp = (0..w.len()).fold(
-        vvec![(0, Mod::one()); (usize::MAX, Mod::zero()); w.len() + 1],
-        |mut dp, i| {
-            let z = z_algorithm(&w[i..]);
-
-            let good = (1..).take_while(|&j| i + 2 * j <= w.len()).fold(
-                vec![true; w.len() - i],
-                |mut good, j| {
-                    (1..)
-                        .take_while(|&k| i + j * k < w.len())
-                        .take_while(|&k| z[j * k] >= j)
-                        .for_each(|k| {
-                            good[j * (k + 1) - 1] = false;
-                        });
-                    good
-                },
-            );
-
-            (i..w.len()).filter(|&j| good[j - i]).for_each(|j| {
-                match dp[j + 1].0.cmp(&(dp[i].0 + 1)) {
-                    Ordering::Less => {
-                        // NOP
-                    }
-                    Ordering::Equal => {
-                        dp[j + 1].1 = dp[j + 1].1 + dp[i].1;
-                    }
-                    Ordering::Greater => {
-                        dp[j + 1].0 = dp[i].0 + 1;
-                        dp[j + 1].1 = dp[i].1;
-                    }
-                }
-            });
-
-            dp
-        },
-    );
-
-    dp[w.len()]
-}
-
-#[allow(dead_code)]
-fn check() {
-    use rand::{Rng, SeedableRng};
-    let mut rng = rand::rngs::SmallRng::from_entropy();
-    for _ in 0..10000000 {
-        let n = rng.gen_range(1, 5);
-        let t = repeat_with(|| rng.gen_range(b'a', b'z' + 1) as char)
-            .take(n)
-            .collect::<Vec<_>>();
-        let m = rng.gen_range(2, 5);
-        let w = repeat(t.citer())
-            .take(m)
-            .flatten()
-            .take(10000)
-            .collect::<Vec<_>>();
-
-        let ans = solve(&w);
-        let ans2 = solve2(&w);
-
-        if ans != ans2 {
-            println!("{} x {}", t.citer().join(""), m);
-            println!("{:?}", ans);
-            println!("{:?}", ans2);
-            return;
-        }
-    }
-}
-
 fn main() {
-    let w = read_str();
+    type Mod = Mod998244353;
 
-    let ans = solve(&w);
-    println!("{}", ans.0);
-    println!("{}", ans.1);
+    let n: usize = read();
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
+
+    let ab = izip!(a, b).sorted_by_key(|&t| t.0).collect::<Vec<_>>();
+
+    const M: usize = 5000;
+    let dp = ab
+        .citer()
+        .map(|t| t.1)
+        .fold(vec![vec![Mod::one(); M + 1]], |mut dp, bb| {
+            let r = izip!(
+                dp.last().unwrap().citer(),
+                repeat(Mod::zero())
+                    .take(bb)
+                    .chain(dp.last().unwrap().citer()),
+            )
+            .map(|(x, y)| x + y)
+            .collect::<Vec<_>>();
+            dp.push(r);
+            dp
+        });
+
+    let ans = (0..n)
+        .map(|i| {
+            let (aa, bb) = ab[i];
+
+            if aa >= bb {
+                dp[i][aa - bb]
+            } else {
+                Mod::zero()
+            }
+        })
+        .sum::<Mod>();
+    println!("{}", ans);
 }

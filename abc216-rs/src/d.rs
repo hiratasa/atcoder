@@ -149,41 +149,48 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-    let s: usize = read();
+    let (n, m) = read_tuple!(usize, usize);
 
-    if s > n {
-        println!("-1");
-        return;
+    let mut a = read_vec(m, || {
+        let _k = read::<usize>();
+        let mut a = read_row::<usize>();
+        a.reverse();
+        a
+    });
+
+    let (mut s, mut q) =
+        a.iter()
+            .enumerate()
+            .fold((vec![None; n + 1], vec![]), |(mut s, mut q), (i, r)| {
+                let c = *r.last().unwrap();
+                if let Some(j) = s[c] {
+                    s[c] = None;
+                    q.push((i, j));
+                } else {
+                    s[c] = Some(i);
+                }
+
+                (s, q)
+            });
+    while let Some((i, j)) = q.pop() {
+        a[i].pop();
+        a[j].pop();
+
+        for &ii in &[i, j] {
+            if let Some(&c) = a[ii].last() {
+                if let Some(jj) = s[c] {
+                    s[c] = None;
+                    q.push((ii, jj));
+                } else {
+                    s[c] = Some(ii);
+                }
+            }
+        }
     }
 
-    if s == n {
-        println!("{}", n + 1);
-        return;
-    }
-
-    let d = n - s;
-    let factors = (1..)
-        .take_while(|&x| x * x <= d)
-        .filter(|&x| d % x == 0)
-        .flat_map(|x| it!(x, d / x))
-        .dedup()
-        .collect::<Vec<_>>();
-
-    if let Some(ans) = (2..)
-        .take_while(|&b| b * b <= n)
-        .chain(factors.into_iter().map(|b| b + 1))
-        .filter(|&b| {
-            iterate(n, |&m| m / b)
-                .take_while(|&x| x > 0)
-                .map(|x| x % b)
-                .sum::<usize>()
-                == s
-        })
-        .min()
-    {
-        println!("{}", ans);
+    if a.iter().all(|r| r.is_empty()) {
+        println!("Yes");
     } else {
-        println!("-1");
+        println!("No");
     }
 }

@@ -149,41 +149,22 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-    let s: usize = read();
+    let (l, q) = read_tuple!(usize, usize);
 
-    if s > n {
-        println!("-1");
-        return;
-    }
+    let cx = read_vec(q, || read_tuple!(usize, usize));
 
-    if s == n {
-        println!("{}", n + 1);
-        return;
-    }
+    cx.citer()
+        .scan(it![0, l].collect::<BTreeSet<_>>(), |s, (c, x)| {
+            if c == 1 {
+                s.insert(x);
+                Some(None)
+            } else {
+                let b = s.range(..x).next_back().unwrap();
+                let e = s.range(x..).next().unwrap();
 
-    let d = n - s;
-    let factors = (1..)
-        .take_while(|&x| x * x <= d)
-        .filter(|&x| d % x == 0)
-        .flat_map(|x| it!(x, d / x))
-        .dedup()
-        .collect::<Vec<_>>();
-
-    if let Some(ans) = (2..)
-        .take_while(|&b| b * b <= n)
-        .chain(factors.into_iter().map(|b| b + 1))
-        .filter(|&b| {
-            iterate(n, |&m| m / b)
-                .take_while(|&x| x > 0)
-                .map(|x| x % b)
-                .sum::<usize>()
-                == s
+                Some(Some(e - b))
+            }
         })
-        .min()
-    {
-        println!("{}", ans);
-    } else {
-        println!("-1");
-    }
+        .flatten()
+        .for_each(|ans| println!("{}", ans));
 }

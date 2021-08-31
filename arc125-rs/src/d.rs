@@ -148,53 +148,6 @@ where
 {
 }
 
-#[allow(dead_code)]
-fn is_good(s: &[char]) -> bool {
-    let factors = (1..)
-        .take_while(|&x| x * x <= s.len())
-        .filter(|&x| s.len() % x == 0)
-        .flat_map(|x| it!(x, s.len() / x))
-        .dedup()
-        .collect::<Vec<_>>();
-    let z = z_algorithm(&s);
-
-    factors.citer().filter(|&l| s.len() / l >= 2).all(|l| {
-        (0..)
-            .map(|i| i * l)
-            .take_while(|&i| i < s.len())
-            .any(|i| z[i] < l)
-    })
-}
-
-fn z_algorithm<T: std::cmp::Eq>(s: &[T]) -> Vec<usize> {
-    let n = s.len();
-
-    // z[i] = max_{j<n} s[0:j] = s[i:i+j]
-    let mut z = vec![0; n];
-    z[0] = n;
-
-    let mut l = 0;
-    let mut r = 0;
-    for i in 1..n {
-        // assert!(s[l..r] == s[0..r - l]);
-        if i < r && z[i - l] < r - i {
-            z[i] = z[i - l];
-        } else {
-            // i < rなら、 z[i - l] >= r - i なので、
-            // s[i..r] (=s[i-l..r-l]) = s[0..r-i] が保証されている
-            // i >= r なら再計算
-            l = i;
-            r = std::cmp::max(i, r);
-            while r < n && s[r] == s[r - l] {
-                r += 1;
-            }
-            z[i] = r - l;
-        }
-    }
-
-    z
-}
-
 use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
@@ -400,138 +353,264 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-fn solve(w: &[char]) -> (usize, Mod1000000007) {
-    if w.citer().all_equal() {
-        return (w.len(), Mod::one());
-    }
+trait Monoid {
+    type Item: Clone;
 
-    let factors = (1..)
-        .take_while(|&x| x * x <= w.len())
-        .filter(|&x| w.len() % x == 0)
-        .flat_map(|x| it!(x, w.len() / x))
-        .dedup()
-        .sorted()
-        .collect::<Vec<_>>();
-    let z = z_algorithm(&w);
-
-    if factors.citer().filter(|&x| w.len() / x >= 2).all(|f| {
-        (0..)
-            .map(|i| i * f)
-            .take_while(|&i| i < w.len())
-            .any(|i| z[i] < f)
-    }) {
-        return (1, Mod::one());
-    }
-
-    let wr = w.citer().rev().collect::<Vec<_>>();
-
-    let z = z_algorithm(&w);
-    let zr = z_algorithm(&wr);
-
-    let good = (1..)
-        .take_while(|&j| 2 * j <= w.len())
-        .fold(vec![true; w.len()], |mut good, j| {
-            (1..)
-                .take_while(|&k| j * k < w.len())
-                .take_while(|&k| z[j * k] >= j)
-                .for_each(|k| {
-                    good[j * (k + 1) - 1] = false;
-                });
-            good
-        });
-
-    let goodr = (1..)
-        .take_while(|&j| 2 * j <= w.len())
-        .fold(vec![true; w.len()], |mut good, j| {
-            (1..)
-                .take_while(|&k| j * k < w.len())
-                .take_while(|&k| zr[j * k] >= j)
-                .for_each(|k| {
-                    good[j * (k + 1) - 1] = false;
-                });
-            good
-        });
-
-    let x = (0..w.len() - 1)
-        .filter(|&i| good[i] && goodr[w.len() - 2 - i])
-        .count();
-
-    (2, Mod::new(x))
+    fn id() -> Self::Item;
+    fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
 }
 
-fn solve2(w: &[char]) -> (usize, Mod1000000007) {
-    let dp = (0..w.len()).fold(
-        vvec![(0, Mod::one()); (usize::MAX, Mod::zero()); w.len() + 1],
-        |mut dp, i| {
-            let z = z_algorithm(&w[i..]);
+#[derive(Debug)]
+struct LazySegmentTree<M, Op>
+where
+    M: Monoid,
+    Op: Monoid,
+{
+    height: usize,
+    cap: usize,
+    values: Vec<M::Item>,
+    lazy: Vec<Op::Item>,
+}
 
-            let good = (1..).take_while(|&j| i + 2 * j <= w.len()).fold(
-                vec![true; w.len() - i],
-                |mut good, j| {
-                    (1..)
-                        .take_while(|&k| i + j * k < w.len())
-                        .take_while(|&k| z[j * k] >= j)
-                        .for_each(|k| {
-                            good[j * (k + 1) - 1] = false;
-                        });
-                    good
-                },
-            );
-
-            (i..w.len()).filter(|&j| good[j - i]).for_each(|j| {
-                match dp[j + 1].0.cmp(&(dp[i].0 + 1)) {
-                    Ordering::Less => {
-                        // NOP
-                    }
-                    Ordering::Equal => {
-                        dp[j + 1].1 = dp[j + 1].1 + dp[i].1;
-                    }
-                    Ordering::Greater => {
-                        dp[j + 1].0 = dp[i].0 + 1;
-                        dp[j + 1].1 = dp[i].1;
-                    }
-                }
-            });
-
-            dp
-        },
-    );
-
-    dp[w.len()]
+trait Operator<T>: Monoid {
+    fn apply(op: &Self::Item, v: &T) -> T;
 }
 
 #[allow(dead_code)]
-fn check() {
-    use rand::{Rng, SeedableRng};
-    let mut rng = rand::rngs::SmallRng::from_entropy();
-    for _ in 0..10000000 {
-        let n = rng.gen_range(1, 5);
-        let t = repeat_with(|| rng.gen_range(b'a', b'z' + 1) as char)
-            .take(n)
-            .collect::<Vec<_>>();
-        let m = rng.gen_range(2, 5);
-        let w = repeat(t.citer())
-            .take(m)
-            .flatten()
-            .take(10000)
-            .collect::<Vec<_>>();
-
-        let ans = solve(&w);
-        let ans2 = solve2(&w);
-
-        if ans != ans2 {
-            println!("{} x {}", t.citer().join(""), m);
-            println!("{:?}", ans);
-            println!("{:?}", ans2);
-            return;
+impl<M, Op> LazySegmentTree<M, Op>
+where
+    M: Monoid,
+    Op: Monoid + Operator<M::Item>,
+{
+    fn new(n: usize) -> Self {
+        let cap = n.next_power_of_two();
+        LazySegmentTree {
+            height: cap.trailing_zeros() as usize + 1,
+            cap,
+            values: vec![M::id(); 2 * cap - 1],
+            lazy: vec![Op::id(); 2 * cap - 1],
         }
+    }
+
+    fn with(vals: &Vec<M::Item>) -> Self {
+        let n = vals.len();
+        let cap = n.next_power_of_two();
+
+        let mut values = Vec::with_capacity(2 * cap - 1);
+        values.resize(cap - 1, M::id());
+        values.extend(vals.iter().cloned());
+        values.resize(2 * cap - 1, M::id());
+
+        let mut st = LazySegmentTree {
+            height: cap.trailing_zeros() as usize + 1,
+            cap,
+            values,
+            lazy: vec![Op::id(); 2 * cap - 1],
+        };
+
+        for idx in (0..cap - 1).rev() {
+            st.fix_value(idx);
+        }
+
+        st
+    }
+
+    // internal
+    fn get_node_value(&mut self, idx: usize) -> M::Item {
+        Op::apply(&self.lazy[idx], &self.values[idx])
+    }
+
+    // internal
+    fn fix_value(&mut self, idx: usize) {
+        let left_idx = 2 * (idx + 1) - 1;
+        let right_idx = 2 * (idx + 1);
+        if left_idx < self.values.len() {
+            self.values[idx] = M::op(
+                &self.get_node_value(left_idx),
+                &self.get_node_value(right_idx),
+            );
+        }
+    }
+
+    // internal
+    fn resolve(&mut self, parent_idx: usize) {
+        let left_idx = 2 * (parent_idx + 1) - 1;
+        let right_idx = 2 * (parent_idx + 1);
+
+        if left_idx < self.values.len() {
+            self.lazy[left_idx] = Op::op(&self.lazy[parent_idx], &self.lazy[left_idx]);
+            self.lazy[right_idx] = Op::op(&self.lazy[parent_idx], &self.lazy[right_idx]);
+            self.lazy[parent_idx] = Op::id();
+            self.fix_value(parent_idx);
+        } else {
+            self.values[parent_idx] = Op::apply(&self.lazy[parent_idx], &self.values[parent_idx]);
+            self.lazy[parent_idx] = Op::id();
+        }
+    }
+
+    // internal
+    fn resolve_all(&mut self, pos: usize) {
+        let idx = self.cap - 1 + pos;
+        for i in (0..self.height).rev() {
+            self.resolve(((idx + 1) >> i) - 1);
+        }
+    }
+
+    fn get(&mut self, pos: usize) -> M::Item {
+        self.resolve_all(pos);
+
+        let idx = self.cap - 1 + pos;
+        self.values[idx].clone()
+    }
+
+    fn set(&mut self, pos: usize, v: M::Item) {
+        self.resolve_all(pos);
+
+        let mut idx = self.cap - 1 + pos;
+        self.values[idx] = v;
+        self.lazy[idx] = Op::id();
+
+        while idx > 0 {
+            idx = (idx - 1) / 2;
+            self.fix_value(idx);
+        }
+    }
+
+    fn update(&mut self, a: usize, b: usize, p: Op::Item) {
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        // Opが非可換の場合用に, これより前にupdateされたものを適用させておく
+        for i in (1..self.height).rev() {
+            self.resolve(((left_idx + 1) >> i) - 1);
+            self.resolve(((right_idx + 1) >> i) - 1);
+        }
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                self.lazy[left_idx] = Op::op(&p, &self.lazy[left_idx]);
+            }
+
+            if right_idx % 2 == 0 {
+                self.lazy[right_idx - 1] = Op::op(&p, &self.lazy[right_idx - 1]);
+            }
+
+            // 偶数の場合は一つ右隣の親になる
+            left_idx = left_idx >> 1;
+            right_idx = (right_idx - 1) >> 1;
+        }
+
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+        for _ in 0..self.height - 1 {
+            left_idx = (left_idx - 1) >> 1;
+            self.fix_value(left_idx);
+
+            right_idx = (right_idx - 1) >> 1;
+            // This is out of bounds if b == self.cap.
+            // (currently checked in fix_value())
+            self.fix_value(right_idx);
+        }
+    }
+
+    fn query(&mut self, a: usize, b: usize) -> M::Item {
+        let mut left = M::id();
+        let mut right = M::id();
+
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        let c0 = std::cmp::min(
+            // trailing_ones
+            (!left_idx).trailing_zeros(),
+            (right_idx + 1).trailing_zeros(),
+        ) as usize;
+
+        for i in (c0 + 1..self.height).rev() {
+            self.resolve(((left_idx + 1) >> i) - 1);
+            self.resolve(((right_idx + 1) >> i) - 1);
+        }
+
+        left_idx = left_idx >> c0;
+        right_idx = ((right_idx + 1) >> c0) - 1;
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                left = M::op(&left, &self.get_node_value(left_idx));
+                left_idx += 1;
+            }
+
+            if right_idx % 2 == 0 {
+                right = M::op(&self.get_node_value(right_idx - 1), &right);
+                right_idx -= 1;
+            }
+
+            let c = std::cmp::min(
+                // trailing_ones
+                (!left_idx).trailing_zeros(),
+                (right_idx + 1).trailing_zeros(),
+            );
+            left_idx = left_idx >> c;
+            right_idx = ((right_idx + 1) >> c) - 1;
+        }
+
+        M::op(&left, &right)
+    }
+}
+
+macro_rules! define_monoid {
+    ($name: ident, $t: ty, $id: expr, $op: expr) => {
+        #[derive(Clone, Debug)]
+        struct $name;
+
+        impl Monoid for $name {
+            type Item = $t;
+
+            fn id() -> Self::Item {
+                $id
+            }
+
+            fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item {
+                ($op)(*lhs, *rhs)
+            }
+        }
+    };
+}
+
+define_monoid!(AddValue, Mod998244353, Mod::zero(), std::ops::Add::add);
+
+impl Operator<Mod998244353> for AddValue {
+    fn apply(op: &Self::Item, v: &Mod998244353) -> Mod998244353 {
+        *op + *v
     }
 }
 
 fn main() {
-    let w = read_str();
+    let n: usize = read();
+    let a = read_row::<usize>();
 
-    let ans = solve(&w);
-    println!("{}", ans.0);
-    println!("{}", ans.1);
+    let prev_pos = a
+        .citer()
+        .enumerate()
+        .scan(vec![None; n + 1], |last, (i, aa)| {
+            Some(replace(&mut last[aa], Some(i)))
+        })
+        .collect::<Vec<_>>();
+    let mut dp = (0..n).fold(
+        LazySegmentTree::<AddValue, AddValue>::new(n),
+        |mut dp, i| {
+            if let Some(p) = prev_pos[i] {
+                let x = dp.query(p, i);
+                dp.set(p, Mod::zero());
+                dp.set(i, x);
+            } else {
+                let x = dp.query(0, i) + 1;
+                dp.set(i, x);
+            }
+            dp
+        },
+    );
+
+    let ans = dp.query(0, n);
+    println!("{}", ans);
 }
