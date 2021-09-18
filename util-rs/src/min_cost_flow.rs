@@ -82,6 +82,7 @@ impl MinCostFlowGraph {
     // (流量, コスト)のリストを返す
     fn flow(&mut self, src: usize, dst: usize, limit: usize) -> Vec<(usize, i64)> {
         let mut f = 0;
+        let mut c = 0;
         let mut v = vec![];
         // NOTE: 負辺がある場合は、hの初期値を各点への最小コストなどに変える
         // (weight(v=>u) >= h[u] - h[v] を満たせばなんでもよい)
@@ -106,7 +107,6 @@ impl MinCostFlowGraph {
             assert!(f1 > 0);
             f += f1;
 
-            let mut c = 0;
             successors(parents[dst], |(_, p)| parents[*p]).for_each(|(id, _p)| {
                 c += f1 as i64 * self.weights[id];
 
