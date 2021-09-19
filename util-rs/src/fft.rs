@@ -1,4 +1,5 @@
-use super::modulo::{pow_mod, Mod, Modulus};
+use super::modulo::{pow_mod, Mod, Mod1224736769, Mod469762049, Mod998244353, Modulus};
+use itertools::izip;
 use num::complex::Complex64;
 
 // Calculate fft: g[i] = sum[j=0 to n] f[j] * es[i * j]
@@ -127,6 +128,7 @@ fn primitive_root(m: usize) -> usize {
         469762049 => return 3,
         754974721 => return 11,
         998244353 => return 3,
+        1224736769 => return 3,
         _ => {}
     };
 
@@ -222,35 +224,95 @@ pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
     pf
 }
 
-// fn convolution_crt(p: &Vec<usize>, q: &Vec<usize>) -> Vec<usize> {
-//     define_static_mod!(469762049, Modulus469762049, Mod469762049);
-//     define_static_mod!(998244353, Modulus998244353, Mod998244353);
+// 中国剰余定理を使って畳み込み
+// 結果が1e18未満のときのみ使用可能
+#[allow(dead_code)]
+fn convolution_crt(p: &[usize], q: &[usize]) -> Vec<usize> {
+    type Mod1 = Mod998244353;
+    type Mod2 = Mod1224736769;
 
-//     type Mod1 = Mod469762049;
-//     type Mod2 = Mod998244353;
+    let p1 = p.iter().copied().map(|x| Mod1::new(x)).collect::<Vec<_>>();
+    let q1 = q.iter().copied().map(|x| Mod1::new(x)).collect::<Vec<_>>();
+    let conv1 = convolution_mod(&p1, &q1);
 
-//     let M1 = Mod1::modulus() as i64;
-//     let M2 = Mod2::modulus() as i64;
+    let p2 = p.iter().copied().map(|x| Mod2::new(x)).collect::<Vec<_>>();
+    let q2 = q.iter().copied().map(|x| Mod2::new(x)).collect::<Vec<_>>();
+    let conv2 = convolution_mod(&p2, &q2);
 
-//     let p1 = p.iter().copied().map(|x| Mod1::new(x)).collect();
-//     let q1 = q.iter().copied().map(|x| Mod1::new(x)).collect();
-//     let conv1 = convolution_mod(&p1, &q1);
+    izip!(conv1, conv2)
+        .map(|(r1, r2)| {
+            // x = v1 + v2 * M1 と表す
+            let v1 = r1.0;
+            let v2 = ((r2 - Mod2::new(v1)) / Mod2::new(Mod1::modulus())).0;
 
-//     let p2 = p.iter().copied().map(|x| Mod2::new(x)).collect();
-//     let q2 = q.iter().copied().map(|x| Mod2::new(x)).collect();
-//     let conv2 = convolution_mod(&p2, &q2);
+            v1 + v2 * Mod1::modulus()
+        })
+        .collect()
+}
 
-//     // u * M1 + v * M2 = 1
-//     let (u, v, _1) = extgcd(M1, M2);
+// 中国剰余定理を使って任意modの畳み込み
+// M^2*lenがおおよそ5e26未満のときのみ使用可能
+#[allow(dead_code)]
+fn convolution_crt_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
+    type Mod1 = Mod469762049;
+    type Mod2 = Mod998244353;
+    type Mod3 = Mod1224736769;
 
-//     conv1
-//         .into_iter()
-//         .zip(conv2)
-//         .map(|(r1, r2)| {
-//             (r1.0 as i64 * v % M1 * M2 + r2.0 as i64 * u % M2 * M1).rem_euclid(M1 * M2) as usize
-//         })
-//         .collect()
-// }
+    let p1 = p
+        .iter()
+        .copied()
+        .map(|x| Mod1::new(x.0))
+        .collect::<Vec<_>>();
+    let q1 = q
+        .iter()
+        .copied()
+        .map(|x| Mod1::new(x.0))
+        .collect::<Vec<_>>();
+    let conv1 = convolution_mod(&p1, &q1);
+
+    let p2 = p
+        .iter()
+        .copied()
+        .map(|x| Mod2::new(x.0))
+        .collect::<Vec<_>>();
+    let q2 = q
+        .iter()
+        .copied()
+        .map(|x| Mod2::new(x.0))
+        .collect::<Vec<_>>();
+    let conv2 = convolution_mod(&p2, &q2);
+
+    let p3 = p
+        .iter()
+        .copied()
+        .map(|x| Mod3::new(x.0))
+        .collect::<Vec<_>>();
+    let q3 = q
+        .iter()
+        .copied()
+        .map(|x| Mod3::new(x.0))
+        .collect::<Vec<_>>();
+    let conv3 = convolution_mod(&p3, &q3);
+
+    izip!(conv1, conv2, conv3)
+        .map(|(r1, r2, r3)| {
+            // garner algorithm
+            //   x = r1 mod M1
+            //   x = r2 mod M2
+            //   x = r3 mod M3
+            // を満たすxを x = v1 + v2 * M1 + v3 * M1 * M2 と表す
+            let v1 = r1.0;
+            let v2 = ((r2 - Mod2::new(v1)) / Mod2::new(Mod1::modulus())).0;
+            let v3 = ((r3 - Mod3::new(v1) - Mod3::new(v2) * Mod3::new(Mod1::modulus()))
+                / (Mod3::new(Mod1::modulus()) * Mod3::new(Mod2::modulus())))
+            .0;
+
+            Mod::new(v1)
+                + Mod::new(v2) * Mod::new(Mod1::modulus())
+                + Mod::new(v3) * Mod::new(Mod1::modulus()) * Mod::new(Mod2::modulus())
+        })
+        .collect()
+}
 
 #[test]
 fn test_fft_complex() {

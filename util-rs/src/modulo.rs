@@ -46,9 +46,13 @@ macro_rules! define_static_mod {
 #[snippet("modulo")]
 define_static_mod!(469762049, Modulus469762049, Mod469762049);
 
-// 2^22
+// 2^23
 #[snippet("modulo")]
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
+
+// 2^24
+#[snippet("modulo")]
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
 
 #[snippet("modulo")]
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
@@ -74,7 +78,7 @@ impl Modulus for DynamicModulus {
 
 #[snippet("modulo")]
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
 
 #[snippet("modulo")]
 #[allow(dead_code)]
