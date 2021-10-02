@@ -149,8 +149,15 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let s = read_vec(3, || read::<String>());
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    let t = read_str();
+
+    println!(
+        "{}",
+        t.citer()
+            .map(|i| i.to_digit(10).unwrap() - 1)
+            .map(|i| &s[i as usize])
+            .join("")
+    );
 }

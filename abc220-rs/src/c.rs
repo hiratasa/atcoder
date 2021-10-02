@@ -149,8 +149,14 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let n: usize = read();
+    let a = read_row::<usize>();
+    let x: usize = read();
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    let s = a.citer().sum::<usize>();
+
+    println!(
+        "{}",
+        x / s * n + a.citer().cumsum::<usize>().position(|t| t > x % s).unwrap() + 1
+    );
 }

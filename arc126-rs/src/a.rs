@@ -149,8 +149,36 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let t: usize = read();
+    let query = read_vec(t, || read_tuple!(usize, usize, usize));
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    query
+        .citer()
+        .map(|(n2, n3, n4)| {
+            let n6 = n3 / 2;
+
+            let m1 = min(n6, n4);
+            let n4 = n4 - m1;
+            let n6 = n6 - m1;
+
+            if n4 > 0 {
+                assert!(n6 == 0);
+                let m2 = min(n4 / 2, n2);
+                let n4 = n4 - 2 * m2;
+                let n2 = n2 - m2;
+
+                let m3 = min(n4, n2 / 3);
+                let n2 = n2 - 3 * m3;
+
+                m1 + m2 + m3 + n2 / 5
+            } else {
+                let m2 = min(n6, n2 / 2);
+                let n2 = n2 - m2 * 2;
+
+                m1 + m2 + n2 / 5
+            }
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
 }

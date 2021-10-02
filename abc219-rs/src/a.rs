@@ -149,8 +149,11 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let x: usize = read();
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    if let Some(y) = [40, 70, 90].citer().find(|&y| y > x) {
+        println!("{}", y - x);
+    } else {
+        println!("expert");
+    }
 }

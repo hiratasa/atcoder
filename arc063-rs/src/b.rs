@@ -148,4 +148,28 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, t) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    let m = a
+        .citer()
+        .scan(usize::MAX, |mi, aa| {
+            let b = aa.saturating_sub(*mi);
+            *mi = min(*mi, aa);
+            Some(b)
+        })
+        .max()
+        .unwrap();
+    assert!(m > 0);
+
+    let ans = a
+        .citer()
+        .scan(FxHashSet::default(), |set, aa| {
+            let k = aa.checked_sub(m).filter(|b| set.contains(b)).is_some();
+            set.insert(aa);
+            Some(k as usize)
+        })
+        .sum::<usize>();
+    println!("{}", ans);
+}

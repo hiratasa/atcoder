@@ -100,8 +100,8 @@ trait IteratorDpExt: Iterator + Sized {
 impl<I> IteratorDpExt for I where I: Iterator + Sized {}
 
 fn main() {
-    let abc = read_row::<usize>();
-
-    let ans = abc.iter().sorted().dedup().count();
-    println!("{}", ans);
+    println!(
+        "{}",
+        read_row::<usize>().into_iter().sorted().dedup().count()
+    );
 }

@@ -148,4 +148,15 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let a = read_row::<usize>();
+
+    let m = a.citer().max().unwrap();
+    let s = a.citer().sum::<usize>();
+
+    if s == 2 * m {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
+}

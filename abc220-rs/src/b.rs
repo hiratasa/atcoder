@@ -149,8 +149,17 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let k: usize = read();
+    let (a, b) = read_tuple!(String, String);
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    let aa = a
+        .chars()
+        .map(|x| x.to_digit(10).unwrap() as usize)
+        .fold(0, |x, d| x * k + d);
+    let bb = b
+        .chars()
+        .map(|x| x.to_digit(10).unwrap() as usize)
+        .fold(0, |x, d| x * k + d);
+
+    println!("{}", aa * bb);
 }

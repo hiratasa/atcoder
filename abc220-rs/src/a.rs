@@ -149,8 +149,13 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let (a, b, c) = read_tuple!(usize, usize, usize);
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    let d = (a + c - 1) / c * c;
+
+    if d <= b {
+        println!("{}", d);
+    } else {
+        println!("-1");
+    }
 }

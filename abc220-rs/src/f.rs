@@ -294,67 +294,60 @@ mod detail {
     }
 }
 
-type Graph = detail::WeightedGraph;
+type Graph = detail::UnweightedGraph;
 
-fn dijkstra1(g: &Graph, src: usize, dst: usize) -> Option<usize> {
+fn dfs1(g: &Graph, v: usize, p: usize, sizes: &mut [usize], nums: &mut [usize]) -> (usize, usize) {
+    let (sz, m) = g.out_edges[v]
+        .iter()
+        .map(|e| e.to)
+        .filter(|&u| u != p)
+        .fold((1, 0), |(sz, a), u| {
+            let (sz1, a1) = dfs1(g, u, v, sizes, nums);
+            (sz + sz1, a + a1)
+        });
+
+    sizes[v] = sz;
+    nums[v] = m + (sz - 1);
+
+    (sizes[v], nums[v])
+}
+
+fn dfs2(
+    g: &Graph,
+    v: usize,
+    p: usize,
+    k: usize,
+    sizes: &[usize],
+    nums: &[usize],
+    ans: &mut [usize],
+) {
     let n = g.size();
-    let mut q = std::collections::BinaryHeap::new();
-    let mut costs = vec![std::usize::MAX; n];
-    q.push(std::cmp::Reverse((0, src)));
-    costs[src] = 0;
-    while let Some(std::cmp::Reverse((cost, v))) = q.pop() {
-        if cost > costs[v] {
-            continue;
-        }
-        if v == dst {
-            return Some(cost);
-        }
-        for &edge in &g.out_edges[v] {
-            let next_cost = cost + edge.label;
-            if next_cost < costs[edge.to] {
-                q.push(std::cmp::Reverse((next_cost, edge.to)));
-                costs[edge.to] = next_cost;
-            }
-        }
-    }
-    None
+
+    ans[v] = k + (n - sizes[v]) + nums[v];
+
+    g.out_edges[v]
+        .iter()
+        .map(|e| e.to)
+        .filter(|&u| u != p)
+        .for_each(|u| {
+            dfs2(g, u, v, ans[v] - (nums[u] + sizes[u]), sizes, nums, ans);
+        });
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-    let pqc = read_vec(m, || read_tuple!(usize, usize, usize));
+    let n: usize = read();
+    let uv = read_vec(n - 1, || read_tuple!(usize, usize));
 
-    let comps = pqc
-        .citer()
-        .flat_map(|(p, q, c)| it![(p, c), (q, c)])
-        .chain((1..=n).map(|i| (i, 0)))
-        .sorted()
-        .dedup()
-        .collect::<Vec<_>>();
-    let idxs = comps
-        .citer()
-        .enumerate()
-        .map(|(idx, c)| (c, idx))
-        .collect::<FxHashMap<_, _>>();
+    let g = Graph::from_edges1_undirected(n, uv);
 
-    let g = Graph::from_edges_undirected(
-        idxs.len(),
-        chain(
-            pqc.citer()
-                .map(|(p, q, c)| (idxs[&(p, c)], idxs[&(q, c)], 0)),
-            comps
-                .citer()
-                .enumerate()
-                .filter(|&(_, (_, c))| c > 0)
-                .map(|(idx, (i, _c))| (idx, idxs[&(i, 0)], 1)),
-        ),
-    );
+    let mut sizes = vec![0; n];
+    let mut nums = vec![0; n];
+    dfs1(&g, 0, n, &mut sizes, &mut nums);
 
-    if let Some(ans) = dijkstra1(&g, idxs[&(1, 0)], idxs[&(n, 0)]) {
-        // 最初と最後で1ずつかかってる
-        // 乗換のところで2かかってる
-        println!("{}", ans / 2);
-    } else {
-        println!("-1");
+    let mut ans = vec![0; n];
+    dfs2(&g, 0, n, 0, &sizes, &nums, &mut ans);
+
+    for a in ans {
+        println!("{}", a);
     }
 }

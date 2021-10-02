@@ -1,5 +1,5 @@
 [package]
-name = "arc063-rs"
+name = "abc219-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,17 +18,29 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "arc063-a"
+name = "abc219-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "arc063-b"
+name = "abc219-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "arc063-c"
+name = "abc219-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "arc063-d"
+name = "abc219-d"
 path = "src/d.rs"
+
+[[bin]]
+name = "abc219-e"
+path = "src/e.rs"
+
+[[bin]]
+name = "abc219-f"
+path = "src/f.rs"
+
+[[bin]]
+name = "abc219-g"
+path = "src/g.rs"

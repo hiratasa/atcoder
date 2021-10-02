@@ -89,25 +89,17 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
 }
 
 fn main() {
-    let s = read_vec(3, || {
-        read::<String>()
-            .chars()
-            .map(|c| c as usize - 'a' as usize)
-            .collect_vec()
-    });
+    let mut s = read_vec(3, || read_str());
 
-    let ans = unfold(
-        (0, s.iter().map(|ss| ss.iter().copied()).collect_vec()),
-        |(turn, iters)| match iters[*turn].next() {
-            None => None,
-            Some(next_turn) => {
-                *turn = next_turn;
-                Some(next_turn)
-            }
-        },
-    )
+    let ans = successors(Some(0), |t| {
+        if s[*t].is_empty() {
+            None
+        } else {
+            let c = s[*t].remove(0);
+            Some(c as usize - 'a' as usize)
+        }
+    })
     .last()
     .unwrap();
-
-    println!("{}", (ans as u8 + 'A' as u8) as char);
+    println!("{}", ('A' as usize + ans) as u8 as char);
 }

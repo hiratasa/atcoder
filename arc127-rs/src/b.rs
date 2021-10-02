@@ -149,8 +149,20 @@ where
 }
 
 fn main() {
-    let s = read_str();
-
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    let (n, l) = read_tuple!(usize, usize);
+    (0..n).for_each(|m| {
+        let digits = iterate(m, |&k| k / 3)
+            .take_while(|&d| d > 0)
+            .map(|d| d % 3)
+            .chain(repeat(0))
+            .take(l - 1)
+            .collect::<Vec<_>>();
+        for i in 0..=2 {
+            println!(
+                "{}{}",
+                i,
+                digits.citer().rev().map(|x| (x + i + 1) % 3).join("")
+            );
+        }
+    });
 }

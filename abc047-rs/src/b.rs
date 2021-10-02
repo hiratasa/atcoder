@@ -150,38 +150,38 @@ where
 
 fn main() {
     let (w, h, n) = read_tuple!(usize, usize, usize);
-
     let xya = read_vec(n, || read_tuple!(usize, usize, usize));
 
-    let maxx = xya
+    let grid = xya
         .citer()
-        .filter(|t| t.2 == 1)
-        .map(|t| t.0)
-        .max()
-        .unwrap_or(0);
-    let minx = xya
-        .citer()
-        .filter(|t| t.2 == 2)
-        .map(|t| t.0)
-        .min()
-        .unwrap_or(w);
-    let maxy = xya
-        .citer()
-        .filter(|t| t.2 == 3)
-        .map(|t| t.1)
-        .max()
-        .unwrap_or(0);
-    let miny = xya
-        .citer()
-        .filter(|t| t.2 == 4)
-        .map(|t| t.1)
-        .min()
-        .unwrap_or(h);
+        .fold(vec![vec![false; h]; w], |mut grid, (x, y, a)| {
+            match a {
+                1 => {
+                    iproduct!(0..x, 0..h).for_each(|(i, j)| {
+                        grid[i][j] = true;
+                    });
+                }
+                2 => {
+                    iproduct!(x..w, 0..h).for_each(|(i, j)| {
+                        grid[i][j] = true;
+                    });
+                }
+                3 => {
+                    iproduct!(0..w, 0..y).for_each(|(i, j)| {
+                        grid[i][j] = true;
+                    });
+                }
+                4 => {
+                    iproduct!(0..w, y..h).for_each(|(i, j)| {
+                        grid[i][j] = true;
+                    });
+                }
+                _ => unreachable!(),
+            }
 
-    let ans = if maxx >= minx || maxy >= miny {
-        0
-    } else {
-        (minx - maxx) * (miny - maxy)
-    };
+            grid
+        });
+
+    let ans = iproduct!(0..w, 0..h).filter(|&(i, j)| !grid[i][j]).count();
     println!("{}", ans);
 }

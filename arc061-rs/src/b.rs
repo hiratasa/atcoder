@@ -148,4 +148,38 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (h, w, n) = read_tuple!(usize, usize, usize);
+    let ab = read_vec(n, || read_tuple!(usize, usize));
+
+    let filled = ab
+        .citer()
+        .map(|(i, j)| (i - 1, j - 1))
+        .collect::<FxHashSet<_>>();
+
+    let ans = filled
+        .citer()
+        .flat_map(|(i, j)| {
+            iproduct!(it!(usize::MAX, 0, 1), it!(usize::MAX, 0, 1))
+                .map(move |(di, dj)| (i.wrapping_add(di), j.wrapping_add(dj)))
+                .filter(|&(ni, nj)| ni < h && nj < w)
+                .filter(|&(ni, nj)| ni != 0 && ni != h - 1 && nj != 0 && nj != w - 1)
+        })
+        .sorted()
+        .dedup()
+        .fold(vvec![(h - 2) * (w - 2); 0; 10], |mut ans, (i, j)| {
+            let c = iproduct!(it!(usize::MAX, 0, 1), it!(usize::MAX, 0, 1))
+                .map(move |(di, dj)| (i.wrapping_add(di), j.wrapping_add(dj)))
+                .filter(|&(ni, nj)| filled.contains(&(ni, nj)))
+                .count();
+
+            ans[0] -= 1;
+            ans[c] += 1;
+
+            ans
+        });
+
+    for a in ans {
+        println!("{}", a);
+    }
+}

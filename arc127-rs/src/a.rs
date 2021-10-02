@@ -149,8 +149,46 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let n = read_str();
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
+    let ans = (1..=n.len())
+        .map(|i| {
+            if i == n.len() {
+                (1..=n.len())
+                    .map(|j| {
+                        // 先頭に1がj個以上続くi桁の数の個数
+                        let n0 = repeat('1')
+                            .take(j)
+                            .chain(repeat('0'))
+                            .take(n.len())
+                            .collect::<String>()
+                            .parse::<usize>()
+                            .unwrap();
+                        let n1 = repeat('1')
+                            .take(j)
+                            .chain(repeat('9'))
+                            .take(n.len())
+                            .collect::<String>()
+                            .parse::<usize>()
+                            .unwrap();
+                        let n2 = min(n1, n.citer().collect::<String>().parse::<usize>().unwrap());
+
+                        if n0 > n2 {
+                            0
+                        } else {
+                            n2 - n0 + 1
+                        }
+                    })
+                    .sum::<usize>()
+            } else {
+                (1..=i)
+                    .map(|j| {
+                        // 先頭に1がj個以上続くi桁の数の個数
+                        10usize.pow((i - j) as u32)
+                    })
+                    .sum::<usize>()
+            }
+        })
+        .sum::<usize>();
     println!("{}", ans);
 }

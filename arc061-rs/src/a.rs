@@ -148,24 +148,29 @@ where
 {
 }
 
-fn solve(s: &Vec<u64>, sum: u64, next: usize) -> u64 {
-    let n = s.len();
-    if next == n {
-        sum
-    } else {
-        (next + 1..=n)
-            .map(|r| {
-                let x = s.citer().take(r).skip(next).fold(0, |p, x| p * 10 + x);
-                solve(s, sum + x, r)
-            })
-            .sum()
-    }
-}
-
 fn main() {
-    let s = read::<String>()
-        .chars()
-        .map(|c| c.to_digit(10).unwrap() as u64)
-        .collect_vec();
-    println!("{}", solve(&s, 0, 0));
+    let s = read::<String>();
+
+    let ans = (0..1 << (s.len() - 1))
+        .map(|t| {
+            // len==1のときに(bitsetの要素数0にできないので)panicしないように1多めに確保
+            let bs = bitset!(s.len(), t);
+
+            (0..s.len() - 1)
+                .map(|i| bs[i])
+                .chain(once(true))
+                .enumerate()
+                .scan(0, |first_idx, (idx, b)| {
+                    if b {
+                        Some(Some(&s[replace(first_idx, idx + 1)..=idx]))
+                    } else {
+                        Some(None)
+                    }
+                })
+                .flatten()
+                .map(|ss| ss.parse::<usize>().unwrap())
+                .sum::<usize>()
+        })
+        .sum::<usize>();
+    println!("{}", ans);
 }

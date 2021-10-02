@@ -149,8 +149,26 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let n: usize = read();
+    let (x, y) = read_tuple!(usize, usize);
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    let ab = read_vec(n, || read_tuple!(usize, usize));
+
+    let dp = ab.citer().fold(
+        vvec![vvec![0; usize::MAX; y + 1]; vec![usize::MAX; y + 1]; x + 1],
+        |dp, (a, b)| {
+            iproduct!((0..=x).rev(), (0..=y).rev()).fold(dp, |mut dp, (i, j)| {
+                dp[min(i + a, x)][min(j + b, y)] =
+                    min(dp[min(i + a, x)][min(j + b, y)], dp[i][j].saturating_add(1));
+                dp
+            })
+        },
+    );
+    let ans = dp[x][y];
+
+    if ans == usize::MAX {
+        println!("-1");
+    } else {
+        println!("{}", ans);
+    }
 }

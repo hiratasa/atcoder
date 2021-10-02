@@ -148,9 +148,53 @@ where
 {
 }
 
-fn main() {
-    let s = read_str();
+fn minus1(y: &mut Vec<usize>) {
+    let i = y.citer().position(|d| d == 1).unwrap();
+    y[i] = 0;
+    if i == y.len() - 1 {
+        y.pop();
+    }
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    for j in 0..i {
+        y[j] = 1;
+    }
+}
+
+fn main() {
+    let n: usize = read();
+    let x = read_str();
+
+    // xを下の桁から
+    let mut y = x
+        .citer()
+        .rev()
+        .map(|d| (d == '1') as usize)
+        .collect::<Vec<_>>();
+    // 0始まりにする
+    minus1(&mut y);
+
+    let ans = once(1)
+        .chain((1..n).scan(y, |y, i| {
+            // eprintln!("{} {:?}", n - i, y);
+            // 残り部分の総数 = 2^0 + 2^1 + ... + 2^(n-i)
+            // 残り部分が空or0始まりのものの総数 = 2^(n-i)
+            if n - i >= y.len() {
+                if y.is_empty() {
+                    None
+                } else {
+                    minus1(y);
+                    Some(0)
+                }
+            } else {
+                assert!(y.len() == n - i + 1);
+                y.pop();
+                while matches!(y.last(), Some(&0)) {
+                    y.pop();
+                }
+
+                Some(1)
+            }
+        }))
+        .collect::<Vec<_>>();
+    println!("{}", ans.citer().join(""));
 }

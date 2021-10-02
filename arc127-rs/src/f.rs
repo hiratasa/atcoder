@@ -148,9 +148,4 @@ where
 {
 }
 
-fn main() {
-    let s = read_str();
-
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
-}
+fn main() {}

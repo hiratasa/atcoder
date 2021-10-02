@@ -150,7 +150,7 @@ where
 
 fn main() {
     let s = read_str();
+    let n = s.len();
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    println!("{}", n / 2 - s.citer().filter(|&c| c == 'p').count());
 }

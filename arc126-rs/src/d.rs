@@ -149,8 +149,41 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
+    let dp = a
+        .citer()
+        .map(|aa| aa - 1)
+        .fold(vvec![0; usize::MAX; 1 << k], |dp, aa| {
+            izip!(
+                (0..1 << k).map(|s| {
+                    let bs = bitset!(k, s);
+                    let c = bs.count_ones() as usize;
+
+                    if c <= k / 2 {
+                        // いま見てる要素は左に寄せる
+                        dp[s].saturating_add(c)
+                    } else {
+                        // いま見てる要素は右に寄せる
+                        dp[s].saturating_add(k - c)
+                    }
+                }),
+                (0..1 << k).map(|s| {
+                    let bs = bitset!(k, s);
+
+                    if bs[aa] {
+                        let c = (aa + 1..k).filter(|&x| bs[x]).count();
+
+                        dp[s ^ (1 << aa)].saturating_add(c)
+                    } else {
+                        usize::MAX
+                    }
+                })
+            )
+            .map(|(x, y)| min(x, y))
+            .collect()
+        });
+    let ans = dp[(1 << k) - 1];
     println!("{}", ans);
 }

@@ -149,8 +149,41 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
+    let m = a.citer().max().unwrap();
+    let r = a.citer().map(|aa| m - aa).sum::<usize>();
+
+    if k >= r {
+        println!("{}", m + (k - r) / n);
+        return;
+    }
+
+    let freq = a.citer().fold(vec![0; 2 * m + 1], |mut freq, aa| {
+        freq[aa] += 1;
+        freq
+    });
+
+    let b = freq.citer().cumsum::<usize>().collect::<Vec<_>>();
+
+    let c = freq
+        .citer()
+        .enumerate()
+        .map(|(i, f)| (2 * m + 1 - i) * f)
+        .cumsum::<usize>()
+        .collect::<Vec<_>>();
+
+    let ans = (1..=m)
+        .rev()
+        .find(|&g| {
+            (1..)
+                .map(|i| i * g)
+                .take_while(|&i| i <= m + g)
+                .map(|i| (c[i] - c[i - g]) - (2 * m + 1 - i) * (b[i] - b[i - g]))
+                .sum::<usize>()
+                <= k
+        })
+        .unwrap();
     println!("{}", ans);
 }

@@ -149,8 +149,16 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let n: usize = read();
+    let ta = read_vec(n, || read_tuple!(usize, usize));
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    let ans = ta.citer().fold((1, 1), |(x, y), (t, a)| {
+        let y = ((y - 1) / a + 1) * a;
+        let x = max(y / a * t, x);
+        let x = ((x - 1) / t + 1) * t;
+        let y = x / t * a;
+
+        (x, y)
+    });
+    println!("{}", ans.0 + ans.1);
 }

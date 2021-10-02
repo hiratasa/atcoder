@@ -149,8 +149,19 @@ where
 }
 
 fn main() {
-    let s = read_str();
+    let x = read_str();
+    let n: usize = read();
+    let s = read_vec(n, || read_str());
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+    let idxs = x
+        .citer()
+        .enumerate()
+        .map(|(idx, c)| (c, idx))
+        .collect::<FxHashMap<_, _>>();
+
+    s.iter()
+        .map(|ss| (ss.citer().map(|c| idxs[&c]).collect::<Vec<_>>(), ss))
+        .sorted()
+        .map(|(_, ss)| ss)
+        .for_each(|ss| println!("{}", ss.citer().join("")));
 }

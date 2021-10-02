@@ -148,9 +148,99 @@ where
 {
 }
 
-fn main() {
-    let s = read_str();
+#[derive(Clone, Copy, Debug)]
+enum UnionFindNode {
+    Root { size: usize },
+    Child { parent: usize },
+}
+struct UnionFind {
+    g: Vec<UnionFindNode>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        use UnionFindNode::*;
+        UnionFind {
+            g: (0..n).map(|_| Root { size: 1 }).collect(),
+        }
+    }
+    fn root(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let p = match self.g[v] {
+            Root { size: _ } => return v,
+            Child { parent: p } => p,
+        };
+        let r = self.root(p);
+        self.g[v] = Child { parent: r };
+        r
+    }
+    fn unite(&mut self, v: usize, u: usize) -> bool {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        let ru = self.root(u);
+        if rv == ru {
+            return false;
+        }
+        let size_rv = self.size(rv);
+        let size_ru = self.size(ru);
+        let (rsmall, rlarge) = if size_rv < size_ru {
+            (rv, ru)
+        } else {
+            (ru, rv)
+        };
+        self.g[rsmall] = Child { parent: rlarge };
+        self.g[rlarge] = Root {
+            size: size_rv + size_ru,
+        };
+        true
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+    fn size(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        match self.g[rv] {
+            Root { size } => size,
+            Child { parent: _ } => unreachable!(),
+        }
+    }
+}
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
-    println!("{}", ans);
+fn check(s: usize, a: &[Vec<usize>]) -> bool {
+    let bs = bitset!(16, s);
+
+    if (0..16).any(|idx| !bs[idx] && a[idx / 4][idx % 4] > 0) {
+        return false;
+    }
+
+    let mut uf = iproduct!(0usize..6, 0usize..6).fold(UnionFind::new(36), |uf, (i, j)| {
+        [(usize::MAX, 0), (1, 0), (0, usize::MAX), (0, 1)]
+            .citer()
+            .map(|(di, dj)| (i.wrapping_add(di), j.wrapping_add(dj)))
+            .filter(|&(ni, nj)| ni < 6 && nj < 6)
+            .filter(|&(ni, nj)| {
+                (0 < i && i <= 4 && 0 < j && j <= 4 && bs[4 * (i - 1) + (j - 1)])
+                    == (0 < ni && ni <= 4 && 0 < nj && nj <= 4 && bs[4 * (ni - 1) + (nj - 1)])
+            })
+            .fold(uf, |mut uf, (ni, nj)| {
+                uf.unite(6 * i + j, 6 * ni + nj);
+                uf
+            })
+    });
+
+    iproduct!(1..=4, 1..=4)
+        .filter(|&(i, j)| bs[4 * (i - 1) + j - 1])
+        .map(|(i, j)| uf.root(6 * i + j))
+        .all_equal()
+        && iproduct!(0..6, 0..6)
+            .filter(|&(i, j)| i == 0 || i == 5 || j == 0 || j == 5 || !bs[4 * (i - 1) + j - 1])
+            .map(|(i, j)| uf.root(6 * i + j))
+            .all_equal()
+}
+
+fn main() {
+    let a = read_mat::<usize>(4);
+
+    println!("{}", (1..1 << 16).filter(|&s| check(s, &a)).count());
 }

@@ -148,4 +148,47 @@ where
 {
 }
 
-fn main() {}
+fn gcd(a: usize, b: usize) -> usize {
+    if a == 0 {
+        b
+    } else {
+        gcd(b % a, a)
+    }
+}
+
+fn lcm(a: usize, b: usize) -> usize {
+    a / gcd(a, b) * b
+}
+
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+
+    let is_valid = |b: &[usize], x: usize| {
+        let l = b
+            .citer()
+            .filter(|&bb| bb != x)
+            .map(|bb| gcd(bb, x))
+            .fold(1, |l, bb| lcm(l, bb));
+
+        l < x
+    };
+
+    if let Some(ans) = (0..n)
+        .scan(a, |a, _| {
+            if let Some(idx) = a.citer().position(|aa| is_valid(a, aa)) {
+                let x = a[idx];
+                a.remove(idx);
+                Some(Some(x))
+            } else {
+                Some(None)
+            }
+        })
+        .collect::<Option<Vec<_>>>()
+    {
+        println!("Yes");
+        println!("{}", ans.citer().rev().join(" "));
+    } else {
+        println!("No");
+    };
+}

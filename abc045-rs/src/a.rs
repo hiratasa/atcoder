@@ -137,4 +137,10 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let a: usize = read();
+    let b: usize = read();
+    let h: usize = read();
+
+    println!("{}", (a + b) * h / 2);
+}

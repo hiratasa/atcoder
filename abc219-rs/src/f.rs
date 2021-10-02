@@ -150,7 +150,58 @@ where
 
 fn main() {
     let s = read_str();
+    let k: i64 = read();
 
-    let ans = s.citer().group_by(|&c| c).into_iter().count() - 1;
+    let path = once((0, 0))
+        .chain(s.citer().scan((0i64, 0i64), |(x, y), c| {
+            match c {
+                'L' => *x -= 1,
+                'R' => *x += 1,
+                'U' => *y -= 1,
+                'D' => *y += 1,
+                _ => unreachable!(),
+            }
+
+            Some((*x, *y))
+        }))
+        .collect::<Vec<_>>();
+
+    let (lx, ly) = path.last().copied().unwrap();
+
+    if lx == 0 && ly == 0 {
+        println!("{}", path.citer().sorted().dedup().count());
+        return;
+    }
+
+    let (lx, ly, path) = if lx == 0 {
+        (ly, lx, path.citer().map(|(x, y)| (y, x)).collect())
+    } else {
+        (lx, ly, path)
+    };
+
+    const Z: i64 = 1 << 20;
+    let ans = path
+        .citer()
+        .map(|(x, y)| (x + Z, y + Z))
+        .map(|(x, y)| {
+            let m = x / lx;
+            (x - m * lx, y - m * ly, m)
+        })
+        .sorted()
+        .group_by(|&(tx, ty, _)| (tx, ty))
+        .into_iter()
+        .map(|((tx, ty), it)| {
+            it.map(|(_, _, m)| (m, m + k - 1))
+                .coalesce(|(l0, u0), (l1, u1)| {
+                    if u0 >= l1 {
+                        Ok((l0, u1))
+                    } else {
+                        Err(((l0, u0), (l1, u1)))
+                    }
+                })
+                .map(|(l, u)| u - l + 1)
+                .sum::<i64>()
+        })
+        .sum::<i64>();
     println!("{}", ans);
 }
