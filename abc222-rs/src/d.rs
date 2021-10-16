@@ -353,130 +353,23 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-// fn solve0(s: &[char], lr: &[(usize, usize)]) -> Mod1000000007 {
-//     let n = s.len();
-//     let _m = lr.len();
-
-//     let mut v = once(s.to_vec()).collect::<FxHashSet<_>>();
-//     for &(l, r) in lr {
-//         let l = l - 1;
-
-//         let v2 = v
-//             .iter()
-//             .flat_map(|s0| {
-//                 s0[l..r].citer().permutations(r - l).map(move |w| {
-//                     s0[..l]
-//                         .citer()
-//                         .chain(w)
-//                         .chain(s0[r..].citer())
-//                         .collect::<Vec<_>>()
-//                 })
-//             })
-//             .collect::<FxHashSet<_>>();
-
-//         v.extend(v2);
-//     }
-
-//     Mod::new(v.len())
-// }
-
 fn main() {
-    type Mod = Mod1000000007;
+    type Mod = Mod998244353;
 
-    let (n, m) = read_tuple!(usize, usize);
-    let s = read_str();
+    let n: usize = read();
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
 
-    let lr = read_vec(m, || read_tuple!(usize, usize));
-
-    // use rand::Rng;
-    // use rand::SeedableRng;
-    // let mut rng = rand::rngs::SmallRng::from_entropy();
-    // let (n, m) = (10, 3);
-    // let s = "01".chars().cycle().take(n).collect::<Vec<_>>();
-    // let lr = repeat_with(|| {
-    //     let l = rng.gen_range(1, n - 1);
-    //     let r = rng.gen_range(l + 1, n);
-    //     (l, r)
-    // })
-    // .take(m)
-    // .sorted_by_key(|&(l, _r)| l)
-    // .collect::<Vec<_>>();
-
-    let c = once(0)
-        .chain(s.citer().map(|d| (d == '1') as usize))
-        .cumsum::<usize>()
-        .collect::<Vec<_>>();
-
-    let combi = iterate(vec![Mod::one()], |prev| {
-        once(Mod::one())
-            .chain(izip!(prev.citer(), prev.citer().skip(1)).map(|(c0, c1)| c0 + c1))
-            .chain(once(Mod::one()))
+    const M: usize = 3000;
+    let dp = izip!(a, b).fold(vec![Mod::one(); M + 1], |prev, (aa, bb)| {
+        prev.citer()
+            .enumerate()
+            .map(|(i, pp)| if aa <= i && i <= bb { pp } else { Mod::zero() })
+            .cumsum::<Mod>()
             .collect()
-    })
-    .take(n + 1)
-    .collect::<Vec<_>>();
+    });
 
-    let l0 = lr[0].0 - 1;
-    let mut init = vec![Mod::zero(); n + 1];
-    init[c[l0]] = Mod::one();
+    let ans = dp[M];
 
-    let dp = lr
-        .citer()
-        .group_by(|(l, _r)| *l)
-        .into_iter()
-        .map(|(l, it)| (l, it.map(|(_l, r)| r).max().unwrap()))
-        .scan(0, |prev_r, (l, r)| {
-            if *prev_r < r {
-                *prev_r = r;
-                Some(Some((l, r)))
-            } else {
-                Some(None)
-            }
-        })
-        .flatten()
-        .map(|(l, r)| (l - 1, r))
-        .chain(once((n, n)))
-        .tuple_windows()
-        .map(|((l, r), (l1, _r1))| (l, r, l1))
-        .fold(init, |prev, (l, r, next_l)| {
-            // eprintln!("{} {} {} {:?}", l, r, next_l, prev);
-            let mut dp = vec![Mod::zero(); n + 1];
-            for i in 0..=c[r] {
-                let k = c[r] - i;
-
-                // eprintln!(
-                //     "{} {} {}-{}",
-                //     i,
-                //     k,
-                //     k.saturating_sub(r.saturating_sub(next_l)),
-                //     min(k, min(next_l, r) - l)
-                // );
-                for j in k.saturating_sub(r.saturating_sub(next_l))..=min(k, min(next_l, r) - l) {
-                    // eprintln!("{} {} {} {}", i, j, prev[i], combi[min(next_l, r) - l][j]);
-                    dp[i + j] = dp[i + j] + prev[i] * combi[min(next_l, r) - l][j];
-                }
-            }
-            if next_l > r {
-                let mut dp1 = vec![Mod::zero(); n + 1];
-                dp1[c[next_l]] = dp[c[r]];
-                dp1
-            } else {
-                dp
-            }
-        });
-    // eprintln!("{:?}", dp);
-
-    let ans = dp[c[n]];
     println!("{}", ans);
-
-    // let ans0 = solve0(&s, &lr);
-    // if ans != ans0 {
-    //     eprintln!("ans={}, ans0={}", ans, ans0);
-    //     eprintln!("{} {}", n, m);
-    //     eprintln!("{}", s.citer().join(""));
-    //     for (l, r) in lr {
-    //         eprintln!("{} {}", l, r);
-    //     }
-    //     break;
-    // }
 }

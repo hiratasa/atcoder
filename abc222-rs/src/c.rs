@@ -149,11 +149,36 @@ where
 }
 
 fn main() {
-    let (a, b, x) = read_tuple!(usize, usize, usize);
+    let (n, m) = read_tuple!(usize, usize);
 
-    if a == 0 {
-        println!("{}", b / x + 1);
-    } else {
-        println!("{}", b / x - (a - 1) / x);
+    let a = read_vec(2 * n, || read_str());
+
+    fn win(h0: char, h1: char) -> bool {
+        (h0 == 'G' && h1 == 'C') || (h0 == 'C' && h1 == 'P') || (h0 == 'P' && h1 == 'G')
+    };
+
+    let (ans, _) = (0..m).fold(
+        ((0..2 * n).collect::<Vec<_>>(), vec![0; 2 * n]),
+        |(rank, mut wins), i| {
+            (0..n).for_each(|j| {
+                let h0 = a[rank[2 * j]][i];
+                let h1 = a[rank[2 * j + 1]][i];
+                if win(h0, h1) {
+                    wins[rank[2 * j]] += 1;
+                } else if win(h1, h0) {
+                    wins[rank[2 * j + 1]] += 1;
+                }
+            });
+
+            let rank = (0..2 * n)
+                .sorted_by_key(|&j| (Reverse(wins[j]), j))
+                .collect::<Vec<_>>();
+
+            (rank, wins)
+        },
+    );
+
+    for i in ans {
+        println!("{}", i + 1);
     }
 }

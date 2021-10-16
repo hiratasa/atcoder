@@ -148,12 +148,78 @@ where
 {
 }
 
-fn main() {
-    let (a, b, x) = read_tuple!(usize, usize, usize);
+fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
+    let mut y = 1;
 
-    if a == 0 {
-        println!("{}", b / x + 1);
-    } else {
-        println!("{}", b / x - (a - 1) / x);
+    while p > 0 {
+        if p & 1 > 0 {
+            y = y * x % m;
+        }
+
+        x = x * x % m;
+        p >>= 1;
+    }
+
+    y
+}
+
+fn main() {
+    let t: usize = read();
+
+    for _ in 0..t {
+        let k: usize = read();
+
+        if k % 4 == 0 || k % 5 == 0 {
+            println!("-1");
+            continue;
+        }
+
+        if k == 1 {
+            println!("1");
+            continue;
+        }
+
+        let k = if k % 3 == 0 { 9 * k } else { k };
+        let k = if k % 2 == 0 { k / 2 } else { k };
+
+        let factors = (2..)
+            .scan(k, |kk, p| {
+                if p * p > *kk {
+                    if *kk == 1 {
+                        return None;
+                    } else {
+                        return Some((replace(kk, 1), 1));
+                    }
+                }
+
+                let mut m = 0;
+                while *kk % p == 0 {
+                    m += 1;
+                    *kk /= p;
+                }
+
+                Some((p, m))
+            })
+            .filter(|&(_, m)| m > 0)
+            .collect::<Vec<_>>();
+
+        let phi = factors
+            .citer()
+            .map(|(p, m)| p.pow(m) - p.pow(m - 1))
+            .product::<usize>();
+
+        let candidates = (1..)
+            .take_while(|&m| m * m <= phi)
+            .filter(|&m| phi % m == 0)
+            .flat_map(|m| it!(m, phi / m))
+            .sorted()
+            .dedup()
+            .collect::<Vec<_>>();
+
+        let ans = candidates
+            .citer()
+            .find(|&m| 2 * (pow_mod(10, m, k) + k - 1) % k == 0)
+            .unwrap();
+        println!("{}", ans);
     }
 }

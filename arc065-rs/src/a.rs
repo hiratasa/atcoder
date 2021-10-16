@@ -149,18 +149,20 @@ where
 }
 
 fn main() {
-    let s: String = read();
+    let s = read::<String>();
 
-    let ans = successors(Some(s.as_str()), |t| {
-        ["dream", "dreamer", "erase", "eraser"]
-            .iter()
-            .find(|&&w| t.ends_with(w))
-            .map(|w| t.split_at(t.len() - w.len()).0)
-    })
-    .last()
-    .unwrap()
-    .is_empty();
-    if ans {
+    let dp = (1..=s.len()).fold(vec![true], |mut dp, i| {
+        dp.push(
+            ["dream", "dreamer", "erase", "eraser"]
+                .iter()
+                .filter(|w| w.len() <= i)
+                .any(|w| dp[i - w.len()] && &s[i - w.len()..i] == *w),
+        );
+
+        dp
+    });
+
+    if dp[s.len()] {
         println!("YES");
     } else {
         println!("NO");

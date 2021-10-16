@@ -149,11 +149,9 @@ where
 }
 
 fn main() {
-    let (a, b, x) = read_tuple!(usize, usize, usize);
+    let (n, p) = read_tuple!(usize, usize);
 
-    if a == 0 {
-        println!("{}", b / x + 1);
-    } else {
-        println!("{}", b / x - (a - 1) / x);
-    }
+    let a = read_row::<usize>();
+
+    println!("{}", a.citer().filter(|&aa| aa < p).count());
 }

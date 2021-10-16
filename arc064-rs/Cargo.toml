@@ -1,5 +1,5 @@
 [package]
-name = "arc065-rs"
+name = "arc064-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,17 +18,25 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "arc065-a"
+name = "arc064-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "arc065-b"
+name = "arc064-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "arc065-c"
+name = "arc064-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "arc065-d"
+name = "arc064-d"
 path = "src/d.rs"
+
+[[bin]]
+name = "arc064-e"
+path = "src/e.rs"
+
+[[bin]]
+name = "arc064-f"
+path = "src/f.rs"

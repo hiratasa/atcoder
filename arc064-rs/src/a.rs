@@ -149,11 +149,17 @@ where
 }
 
 fn main() {
-    let (a, b, x) = read_tuple!(usize, usize, usize);
+    let (n, x) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
 
-    if a == 0 {
-        println!("{}", b / x + 1);
-    } else {
-        println!("{}", b / x - (a - 1) / x);
-    }
+    let ans = a
+        .citer()
+        .scan(0, |last, aa| {
+            let b = (*last + aa).saturating_sub(x);
+            *last = aa - b;
+            Some(b)
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
 }

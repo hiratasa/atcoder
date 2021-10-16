@@ -148,12 +148,54 @@ where
 {
 }
 
-fn main() {
-    let (a, b, x) = read_tuple!(usize, usize, usize);
+fn calc_distance((x0, y0, r0): (f64, f64, f64), (x1, y1, r1): (f64, f64, f64)) -> f64 {
+    let d = ((x0 - x1).powi(2) + (y0 - y1).powi(2)).sqrt();
 
-    if a == 0 {
-        println!("{}", b / x + 1);
-    } else {
-        println!("{}", b / x - (a - 1) / x);
+    f64::max(d - r0 - r1, 0.0)
+}
+
+use ordered_float::OrderedFloat;
+
+fn main() {
+    let (xs, ys, xt, yt) = read_tuple!(f64, f64, f64, f64);
+    let n: usize = read();
+    let mut xyr = read_vec(n, || read_tuple!(f64, f64, f64));
+    xyr.push((xs, ys, 0.0));
+    xyr.push((xt, yt, 0.0));
+
+    let src = n;
+    let dst = n + 1;
+
+    let dists = (0..n + 2)
+        .map(|i| {
+            (0..n + 2)
+                .map(|j| calc_distance(xyr[i], xyr[j]))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let mut q = BinaryHeap::new();
+    let mut costs = vec![std::f64::MAX; n + 2];
+
+    q.push(Reverse((OrderedFloat(0.0), src)));
+    costs[src] = 0.0;
+
+    while let Some(Reverse((OrderedFloat(c), v))) = q.pop() {
+        if c > costs[v] {
+            continue;
+        }
+
+        if v == dst {
+            println!("{}", c);
+            return;
+        }
+
+        for u in 0..n + 2 {
+            let nc = c + dists[v][u];
+            if nc < costs[u] {
+                costs[u] = nc;
+                q.push(Reverse((OrderedFloat(nc), u)));
+            }
+        }
     }
 }

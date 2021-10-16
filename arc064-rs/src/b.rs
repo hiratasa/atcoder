@@ -149,11 +149,11 @@ where
 }
 
 fn main() {
-    let (a, b, x) = read_tuple!(usize, usize, usize);
+    let s = read_str();
 
-    if a == 0 {
-        println!("{}", b / x + 1);
+    if (s.first().unwrap() == s.last().unwrap()) == (s.len() % 2 > 0) {
+        println!("Second");
     } else {
-        println!("{}", b / x - (a - 1) / x);
+        println!("First");
     }
 }

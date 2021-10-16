@@ -149,11 +149,7 @@ where
 }
 
 fn main() {
-    let (a, b, x) = read_tuple!(usize, usize, usize);
+    let n: usize = read();
 
-    if a == 0 {
-        println!("{}", b / x + 1);
-    } else {
-        println!("{}", b / x - (a - 1) / x);
-    }
+    println!("{:04}", n);
 }
