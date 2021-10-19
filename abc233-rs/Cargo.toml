@@ -1,5 +1,5 @@
 [package]
-name = "agc022-rs"
+name = "abc233-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,25 +18,29 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "agc022-a"
+name = "abc233-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "agc022-b"
+name = "abc233-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "agc022-c"
+name = "abc233-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "agc022-d"
+name = "abc233-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "agc022-e"
+name = "abc233-e"
 path = "src/e.rs"
 
 [[bin]]
-name = "agc022-f"
+name = "abc233-f"
 path = "src/f.rs"
+
+[[bin]]
+name = "abc233-g"
+path = "src/g.rs"

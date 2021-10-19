@@ -149,14 +149,18 @@ where
 }
 
 fn main() {
-    let (n, a, b) = read_tuple!(usize, usize, usize);
-    let x = read_row::<usize>();
+    let s = read_str();
 
-    let ans = x
-        .citer()
-        .tuple_windows()
-        .map(|(x0, x1)| min((x1 - x0) * a, b))
-        .sum::<usize>();
+    let ans = (0..s.len())
+        .map(|i| {
+            let (first, second) = s.split_at(i);
 
-    println!("{}", ans);
+            second.citer().chain(first.citer()).collect::<Vec<_>>()
+        })
+        .minmax()
+        .into_option()
+        .unwrap();
+
+    println!("{}", ans.0.citer().join(""));
+    println!("{}", ans.1.citer().join(""));
 }

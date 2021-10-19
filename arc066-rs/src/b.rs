@@ -353,51 +353,96 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-#[allow(dead_code)]
-fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
-    let fact: Vec<_> = std::iter::once(Mod::one())
-        .chain((1..=n).scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        }))
-        .collect();
-    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
-        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
-        inv
-    });
-    let inv_fact: Vec<_> = inv
-        .iter()
-        .copied()
-        .scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        })
-        .collect();
-    (fact, inv, inv_fact)
-}
+// fn solve0(n: usize) -> Mod1000000007 {
+//     let mut ans = Mod::zero();
+//     for u in 0..=n {
+//         for v in u..=n {
+//             if u & 1 != v & 1 {
+//                 continue;
+//             }
+
+//             // a^b = u
+//             // a&b = (v-u)>>1
+//             let p = (v - u) >> 1;
+//             if (0..60).all(|i| (u >> i) & 1 == 0 || (p >> i) & 1 == 0) {
+//                 eprintln!("u={:04b}, v={:04b}, v-u={:04b}", u, v, v - u);
+//                 ans += 1;
+//             }
+//         }
+//     }
+
+//     ans
+// }
 
 fn main() {
     type Mod = Mod1000000007;
 
-    let (n, a, b, c, d) = read_tuple!(usize, usize, usize, usize, usize);
+    let n: usize = read();
 
-    let (fact, _, inv_fact) = generate_fact(n);
+    // a ^ b = u
+    // a + b = v
+    // a + b = a ^ b + (a & b) << 1
+    // a & b = (a + b - a ^ b) >> 1 = (v - u) >> 1
+    // u <= v <= N
+    let mut init = vec![vec![vec![Mod::zero(); 2]; 2]; 2];
+    init[0][0][0] = Mod::one();
 
-    let dp = (a..=b).fold(vvec![Mod::one(); Mod::zero(); n + 1], |mut dp, i| {
-        for j in (0..=n).rev() {
-            for k in c..=min(d, j / i) {
-                dp[j] = dp[j]
-                    + dp[j - i * k]
-                        * fact[n - (j - i * k)]
-                        * inv_fact[n - j]
-                        * inv_fact[i].pow(k)
-                        * inv_fact[k];
+    // u, v, t(=v-u) の値をうえから決めていく
+    let dp = (0..60).rev().fold(init, |prev, pos| {
+        let mut dp = vec![vec![vec![Mod::zero(); 2]; 2]; 2];
+        // v <= N が確定しているか
+        for i in 0..2 {
+            // ここまでの桁の u+t と v の差
+            for j in 0..2 {
+                // tの最後の桁
+                for k in 0..2 {
+                    // uの次の桁
+                    for u in 0..2 {
+                        // vの次の桁
+                        for v in 0..2 {
+                            // tの次の桁
+                            for t in 0..2 {
+                                if i == 0 && ((n >> pos) & 1) < v {
+                                    continue;
+                                }
+
+                                if 2 * j + v < u + t {
+                                    continue;
+                                }
+
+                                if 2 * j + v - u - t > 1 {
+                                    continue;
+                                }
+
+                                if k == 1 && u == 1 {
+                                    continue;
+                                }
+
+                                let next_i = (i > 0 || (v < (n >> pos) & 1)) as usize;
+                                let next_j = 2 * j + v - t - u;
+                                let next_k = t;
+
+                                dp[next_i][next_j][next_k] =
+                                    dp[next_i][next_j][next_k] + prev[i][j][k];
+                            }
+                        }
+                    }
+                }
             }
         }
 
+        // eprintln!("{} {:?}", pos, dp);
         dp
     });
 
-    let ans = dp[n];
+    let ans = dp[0][0][0] + dp[1][0][0];
     println!("{}", ans);
+
+    // let ans0 = solve0(n);
+    // if ans != ans0 {
+    //     eprintln!("Not match.");
+    //     eprintln!("ans={}, ans0={}", ans, ans0);
+    //     eprintln!("{}", n);
+    //     // break;
+    // }
 }

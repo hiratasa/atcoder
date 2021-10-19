@@ -149,14 +149,43 @@ where
 }
 
 fn main() {
-    let (n, a, b) = read_tuple!(usize, usize, usize);
-    let x = read_row::<usize>();
+    let (n, m) = read_tuple!(usize, usize);
+    let ab = read_vec(m, || read_tuple!(usize, usize));
 
-    let ans = x
+    let out_edges = ab
         .citer()
-        .tuple_windows()
-        .map(|(x0, x1)| min((x1 - x0) * a, b))
-        .sum::<usize>();
+        .fold(vec![vec![]; n + 1], |mut out_edges, (a, b)| {
+            out_edges[a].push(b);
 
-    println!("{}", ans);
+            out_edges
+        });
+
+    let mut in_deg = ab.citer().fold(vec![0; n + 1], |mut in_degs, (_a, b)| {
+        in_degs[b] += 1;
+        in_degs
+    });
+
+    let mut q = (1..=n)
+        .filter(|&i| in_deg[i] == 0)
+        .map(|i| Reverse(i))
+        .collect::<BinaryHeap<_>>();
+    let mut ans = vec![];
+    while let Some(Reverse(v)) = q.pop() {
+        ans.push(v);
+
+        for &u in &out_edges[v] {
+            in_deg[u] -= 1;
+            if in_deg[u] == 0 {
+                q.push(Reverse(u));
+            }
+        }
+    }
+
+    // eprintln!("{:?}", ans);
+
+    if ans.len() == n {
+        println!("{}", ans.citer().join(" "));
+    } else {
+        println!("-1");
+    }
 }

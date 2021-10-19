@@ -353,51 +353,36 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-#[allow(dead_code)]
-fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
-    let fact: Vec<_> = std::iter::once(Mod::one())
-        .chain((1..=n).scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        }))
-        .collect();
-    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
-        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
-        inv
-    });
-    let inv_fact: Vec<_> = inv
-        .iter()
-        .copied()
-        .scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        })
-        .collect();
-    (fact, inv, inv_fact)
-}
-
 fn main() {
     type Mod = Mod1000000007;
 
-    let (n, a, b, c, d) = read_tuple!(usize, usize, usize, usize, usize);
+    let n: usize = read();
+    let a = read_row::<usize>();
 
-    let (fact, _, inv_fact) = generate_fact(n);
+    // l + r = n - 1
+    // l - r = +-a
+    // => l = (n - 1 +- a)/2
+    //    r = (n - 1 -+ a)/2
+    if !a
+        .citer()
+        .sorted()
+        .group_by(|aa| *aa)
+        .into_iter()
+        .all(|(aa, it)| {
+            let c = it.count();
 
-    let dp = (a..=b).fold(vvec![Mod::one(); Mod::zero(); n + 1], |mut dp, i| {
-        for j in (0..=n).rev() {
-            for k in c..=min(d, j / i) {
-                dp[j] = dp[j]
-                    + dp[j - i * k]
-                        * fact[n - (j - i * k)]
-                        * inv_fact[n - j]
-                        * inv_fact[i].pow(k)
-                        * inv_fact[k];
+            if aa == 0 {
+                n % 2 > 0 && c == 1
+            } else if aa <= n - 1 {
+                c == 2
+            } else {
+                false
             }
-        }
+        })
+    {
+        println!("0");
+        return;
+    }
 
-        dp
-    });
-
-    let ans = dp[n];
-    println!("{}", ans);
+    println!("{}", Mod::new(2).pow(n / 2));
 }

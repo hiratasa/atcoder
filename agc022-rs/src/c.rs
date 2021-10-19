@@ -137,4 +137,54 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
+
+    if !izip!(a.citer(), b.citer()).all(|(aa, bb)| aa == bb || bb < (aa + 1) / 2) {
+        println!("-1");
+        return;
+    }
+
+    let ans = (1..=50).rev().fold(vec![], |fixed, i| {
+        let mut edges = vec![vec![]; 51];
+
+        for j in 1..i {
+            for k in 0..=50 {
+                edges[k].push(k % j);
+            }
+        }
+
+        for &j in &fixed {
+            for k in 0..=50 {
+                edges[k].push(k % j);
+            }
+        }
+
+        if izip!(a.citer(), b.citer()).any(|(aa, bb)| {
+            // check if aa => bb is reachable.
+            let mut reachable = vec![false; 51];
+            reachable[aa] = true;
+
+            for j in (bb..=aa).rev() {
+                if !reachable[j] {
+                    continue;
+                }
+
+                for &k in &edges[j] {
+                    reachable[k] = true;
+                }
+            }
+
+            !reachable[bb]
+        }) {
+            pushed!(fixed, i)
+        } else {
+            fixed
+        }
+    });
+
+    println!("{}", ans.citer().map(|x| 1 << x).sum::<usize>());
+}

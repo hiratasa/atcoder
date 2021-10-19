@@ -149,14 +149,26 @@ where
 }
 
 fn main() {
-    let (n, a, b) = read_tuple!(usize, usize, usize);
-    let x = read_row::<usize>();
+    let n: usize = read();
+    let ab = read_vec(n, || read_tuple!(f64, f64));
 
-    let ans = x
-        .citer()
-        .tuple_windows()
-        .map(|(x0, x1)| min((x1 - x0) * a, b))
-        .sum::<usize>();
+    let c = once(0.0)
+        .chain(ab.citer().map(|(a, b)| a / b))
+        .cumsum::<f64>()
+        .collect::<Vec<_>>();
+    let s = c[n];
 
+    let idx = c
+        .binary_search_by(|&t| {
+            if t >= s / 2.0 {
+                Ordering::Greater
+            } else {
+                Ordering::Less
+            }
+        })
+        .unwrap_err();
+
+    let ans = ab[0..idx - 1].citer().map(|(a, _b)| a).sum::<f64>()
+        + (s / 2.0 - c[idx - 1]) * ab[idx - 1].1;
     println!("{}", ans);
 }

@@ -148,15 +148,41 @@ where
 {
 }
 
+// A, B, C を縦に並べられるか
+fn check0(x: usize, y: usize, s: &[usize]) -> bool {
+    s.citer().map(|ss| (ss + x - 1) / x).sum::<usize>() <= y
+}
+
+// A
+// ____
+// B | C
+fn check1(x: usize, y: usize, s: &[usize]) -> bool {
+    let h0 = (s[0] + x - 1) / x;
+
+    if h0 >= y {
+        return false;
+    }
+
+    let h1 = y - h0;
+
+    (s[1] + h1 - 1) / h1 + (s[2] + h1 - 1) / h1 <= x
+}
+
 fn main() {
-    let (n, a, b) = read_tuple!(usize, usize, usize);
-    let x = read_row::<usize>();
+    let (x, y, a, b, c) = read_tuple!(usize, usize, usize, usize, usize);
 
-    let ans = x
+    if a + b + c > x * y {
+        println!("No");
+        return;
+    }
+
+    if [a, b, c]
         .citer()
-        .tuple_windows()
-        .map(|(x0, x1)| min((x1 - x0) * a, b))
-        .sum::<usize>();
-
-    println!("{}", ans);
+        .permutations(3)
+        .any(|s| check0(x, y, &s) || check0(y, x, &s) || check1(x, y, &s) || check1(y, x, &s))
+    {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
 }

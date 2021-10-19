@@ -149,14 +149,11 @@ where
 }
 
 fn main() {
-    let (n, a, b) = read_tuple!(usize, usize, usize);
-    let x = read_row::<usize>();
+    let x: usize = read();
 
-    let ans = x
-        .citer()
-        .tuple_windows()
-        .map(|(x0, x1)| min((x1 - x0) * a, b))
-        .sum::<usize>();
-
-    println!("{}", ans);
+    if x > 0 && x % 100 == 0 {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
 }
