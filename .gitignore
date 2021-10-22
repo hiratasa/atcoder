@@ -9,5 +9,6 @@
 !/.devcontainer/**/*
 /past*
 /ahc*
+/pgbattle*
 !/ahc001-rs
 !/ahc002-rs
