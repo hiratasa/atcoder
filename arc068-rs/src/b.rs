@@ -148,4 +148,11 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+
+    let b = a.citer().sorted().dedup().count();
+
+    println!("{}", (b - 1) / 2 * 2 + 1);
+}

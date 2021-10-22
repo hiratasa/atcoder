@@ -151,12 +151,5 @@ where
 fn main() {
     let x: usize = read();
 
-    let ans = if x % 11 == 0 {
-        x / 11 * 2
-    } else if x % 11 > 6 {
-        x / 11 * 2 + 2
-    } else {
-        x / 11 * 2 + 1
-    };
-    println!("{}", ans);
+    println!("{}", x / 11 * 2 + (x % 11 + 5) / 6);
 }

@@ -353,42 +353,67 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
+#[allow(dead_code)]
+fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
+    let fact: Vec<_> = std::iter::once(Mod::one())
+        .chain((1..=n).scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        }))
+        .collect();
+    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
+        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
+        inv
+    });
+    let inv_fact: Vec<_> = inv
+        .iter()
+        .copied()
+        .scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        })
+        .collect();
+    (fact, inv, inv_fact)
+}
+
 fn main() {
     type Mod = Mod1000000007;
 
-    let (n, k) = read_tuple!(usize, usize);
+    let (n, m, k) = read_tuple!(usize, usize, usize);
 
-    // 数の大きいほうから、適宜途中の数を飛ばしながら埋めていく方法の数
-    // 飛ばしたところを後から埋めることもできるが、その場合は必ず飛ばしたところのうち最大の数を埋める
-    let dp = (1..k).fold(vvec![Mod::one(); Mod::zero(); n + 1], |prev, i| {
-        let mut dp = vec![Mod::zero(); n + 1];
+    let (fact, _, inv_fact) = generate_fact(n + m + k);
 
-        // j = 飛ばしたところの数
-        // 飛ばしたところを埋める場合 ⇒ 埋める箇所はその中で最大の数に限られるので1パターン
-        // それ以外 ⇒ 追加で何個飛ばすかごとに1パターン
-        for j in 0..n - (i - 1) {
-            // j-1～n-i-1のケースに足し合わせる
-            if j > 0 {
-                dp[j - 1] = dp[j - 1] + prev[j];
-            } else {
-                dp[j] = dp[j] + prev[j];
+    let combi = |i: usize, j: usize| -> Mod { fact[i] * inv_fact[j] * inv_fact[i - j] };
+
+    // sum[b=0 to m] sum[c=0 to k] (n+b+c-1)!/(n-1)!/b!/c! 3^(m+k-b-c)
+    // = sum[l=0 to m+k] C(n+l-1,n-1) * 3^(m+k-l) sum[b+c=l, 0<=b<=m, 0<=c<=k] C(l,b)
+    // = sum[l=0 to m+k] C(n+l-1,n-1) * 3^(m+k-l) sum[0<=b<=m, 0<=l-b<=k] C(l,b)
+    // = sum[l=0 to m+k] C(n+l-1,n-1) * 3^(m+k-l) sum[max(0,l-k)<=b<=min(m,l)] C(l,b)
+
+    // sum[max(0,l-k)<=b<=min(m,l)] C(l,b)
+    let csum = once(Mod::one())
+        .chain((1..=m + k).scan(Mod::one(), |p, l| {
+            // C(l, i) = C(l - 1, i - 1) + C(l - 1, i) なので、lが増えると総和が2倍
+            *p *= 2;
+
+            if l > k {
+                // 左側が1個削れる
+                *p -= combi(l - 1, l - 1 - k);
             }
-        }
 
-        for j in 1..n - i {
-            dp[j] = dp[j] + dp[j - 1];
-        }
+            if l > m {
+                // 右側が1個削れる
+                *p -= combi(l - 1, m);
+            }
 
-        // eprintln!("{} {:?}", i, dp);
+            Some(*p)
+        }))
+        .collect::<Vec<_>>();
 
-        dp
-    });
-
-    let ans = if n == k {
-        dp.citer().sum::<Mod>()
-    } else {
-        dp.citer().sum::<Mod>() * Mod::new(2).pow(n - k - 1)
-    };
-
+    // eprintln!("{:?}", csum);
+    let ans = (0..=m + k)
+        .map(|l| combi(n + l - 1, n - 1) * Mod::new(3).pow(m + k - l) * csum[l])
+        // .inspect(|x| eprintln!("#{}", x))
+        .sum::<Mod>();
     println!("{}", ans);
 }

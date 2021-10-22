@@ -177,191 +177,97 @@ fn z_algorithm<T: std::cmp::Eq>(s: &[T]) -> Vec<usize> {
     z
 }
 
-fn suffix_array<T: Ord>(s: &[T]) -> (Vec<usize>, Vec<usize>) {
-    let n = s.len();
-    // 同じ文字間では添え字の逆順に並べる
-    let sa0 = (0..n)
-        .sorted_by_key(|&i| (&s[i], std::cmp::Reverse(i)))
-        .collect_vec();
-    let (rank0, max_rank) = sa0
-        .iter()
-        .group_by(|&&i| &s[i])
-        .into_iter()
-        .enumerate()
-        .fold((vec![0; n], 0), |(mut rank, _), (r, (_, it))| {
-            for &idx in it {
-                rank[idx] = r;
-            }
-            (rank, r)
-        });
-
-    iterate(2, |len| len * 2)
-        .take_while(|&len| len / 2 < n)
-        .try_fold(
-            (sa0, rank0, max_rank),
-            |(prev_sa, prev_rank, prev_max_rank), len| {
-                let counts =
-                    prev_rank
-                        .iter()
-                        .fold(vec![0; prev_max_rank + 1], |mut counts, &idx| {
-                            counts[idx] += 1;
-                            counts
-                        });
-                let cum_counts = counts.iter().cumsum::<usize>().collect::<Vec<_>>();
-
-                // prev_saは各suffixのlen/2文字の部分の昇順になっており、
-                // かつlen/2文字の部分が同じときは添え字の降順に並んでいる
-                // => n-len/2より大きいものはprev_saから変化なし
-                //    それ以外の部分は前半len/2文字分で安定ソートする
-                let sa = prev_sa
-                    .iter()
-                    .copied()
-                    .filter_map(|i| i.checked_sub(len / 2))
-                    .rev()
-                    .fold(
-                        (prev_sa.clone(), cum_counts),
-                        |(mut sa, mut cum_counts), i| {
-                            cum_counts[prev_rank[i]] -= 1;
-                            sa[cum_counts[prev_rank[i]]] = i;
-                            (sa, cum_counts)
-                        },
-                    )
-                    .0;
-
-                let to_key = |i: usize| (prev_rank.get(i), prev_rank.get(i + len / 2));
-                let (rank, max_rank) = sa
-                    .iter()
-                    .group_by(|&&i| to_key(i))
-                    .into_iter()
-                    .enumerate()
-                    .fold((vec![0; n], 0), |(mut rank, _), (r, (_, it))| {
-                        for &idx in it {
-                            rank[idx] = r;
-                        }
-                        (rank, r)
-                    });
-
-                if max_rank == n - 1 {
-                    // これ以上の比較は不要
-                    Err((sa, rank))
-                } else {
-                    Ok((sa, rank, max_rank))
-                }
-            },
-        )
-        // n=1のときはerrにならないので注意
-        .map_or_else(|(sa, rank)| (sa, rank), |(sa, rank, _)| (sa, rank))
-}
-
-fn lcp_array(s: &[char], sa: &[usize], sa_rank: &[usize]) -> Vec<usize> {
-    let n = sa_rank.len();
-
-    let mut lcp = vec![0; n - 1];
-
-    let mut l = 0;
-    for i in 0..n {
-        if sa_rank[i] == 0 {
-            continue;
-        }
-
-        let i1 = i;
-        let i2 = sa[sa_rank[i] - 1];
-        while i1 + l < n && i2 + l < n && s[i1 + l] == s[i2 + l] {
-            l += 1;
-        }
-
-        lcp[sa_rank[i] - 1] = l;
-        l = l.checked_sub(1).unwrap_or(0);
-    }
-
-    lcp
-}
-
 fn main() {
     let (n, k) = read_tuple!(usize, usize);
 
     let s = read_vec(n, || read_str());
 
-    let (dp0, _) = s.iter().enumerate().rev().fold(
-        (vec![bitset!(k + 1, 0); n], bitset!(k + 1, 1)),
-        |(mut dp0, mut r), (i, ss)| {
-            dp0[i] = &r << ss.len();
-            r |= &dp0[i];
+    let dp = (0..n)
+        .rev()
+        .scan(bitset!(k + 1, 1), |dp, i| {
+            let a = dp.clone() << s[i].len();
+            *dp |= &a;
+            Some(a)
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>();
 
-            (dp0, r)
-        },
-    );
+    let (ans, _) = (0..n).fold(
+        (vec![], bitset!(k + 1, 1)),
+        |(mut t, mut bs): (Vec<char>, _), i| {
+            let z = z_algorithm(&s[i].citer().chain(t.citer()).collect::<Vec<_>>());
+            let z = pushed!(z, 0);
 
-    let (ans, _) = izip!(s, dp0).fold(
-        (vec![], vec![0]),
-        |(mut ans, idxs): (Vec<char>, Vec<usize>), (ss, bs)| {
-            let (sa, rank) = suffix_array(&ss);
-            let lcp = lcp_array(&ss, &sa, &rank);
-            let z = z_algorithm(&chain(ss.citer(), ans.citer()).collect::<Vec<char>>());
+            // j番目以降をs[i]に置き換えたものとl番目以降をs[i]に置き換えたものの最初に異なる箇所
+            let first_diff_pos = |j: usize, l: usize| -> usize {
+                let (j, l) = if j < l { (j, l) } else { (l, j) };
 
-            let mut idxs2 = vec![];
-            let (pos, idxs3) = idxs
-                .citer()
-                .filter(|&idx| bs[k - idx])
-                .filter_map(|idx| {
-                    let m = if idx == ans.len() {
-                        0
-                    } else {
-                        min(z[ss.len() + idx], ss.len())
-                    };
+                let idx = min(z[s[i].len() + j], s[i].len());
 
-                    assert!(m == ss.len() || idx + m == ans.len() || ss[m] != ans[idx + m]);
+                if j + idx < l {
+                    j + idx
+                } else {
+                    let idx2 = min(z[l - j], s[i].len() - (l - j));
 
-                    if m < ss.len() {
-                        if idx + m == ans.len() || ss[m] < ans[idx + m] {
-                            Some((idx + m, rank[m], m))
+                    l + idx2
+                }
+            };
+
+            // j番目以降をs[i]に置き換えた文字列のidx番目
+            let get = |j: usize, idx: usize| -> char {
+                if idx < j {
+                    t[idx]
+                } else {
+                    s[i].get(idx - j).copied().unwrap_or(std::char::MAX)
+                }
+            };
+
+            if let Some(j0) = (0..=t.len())
+                .filter(|&j| bs[j] && dp[i][k - j])
+                .filter(|&j| {
+                    // 元より悪いやつと内包されてるやつをはじく
+                    let idx = min(z[s[i].len() + j], s[i].len());
+
+                    s[i].get(idx).copied().unwrap_or(std::char::MAX)
+                        < t.get(j + idx).copied().unwrap_or(std::char::MAX)
+                })
+                .min_by(|&j, &l| {
+                    let pos = first_diff_pos(j, l);
+
+                    get(j, pos).cmp(&get(l, pos))
+                })
+            {
+                let idx = min(z[s[i].len() + j0], s[i].len());
+
+                for l in j0 + idx + 1..=k {
+                    bs.set(l, false);
+                }
+
+                let bs2 = (0..=t.len())
+                    .filter(|&j| bs[j] && dp[i][k - j])
+                    .filter_map(|j| {
+                        let pos = first_diff_pos(j, j0);
+
+                        // 新しい文字列に内包されているか
+                        if get(j, pos) == std::char::MAX {
+                            Some(pos)
                         } else {
                             None
                         }
-                    } else {
-                        idxs2.push(idx + m);
-                        None
-                    }
-                })
-                .sorted()
-                .try_fold(
-                    (std::usize::MAX, vec![], 0),
-                    |(pos, idxs3, prev_r), (p, r, m)| {
-                        if pos == std::usize::MAX {
-                            return Ok((p, vec![p + ss.len() - m], r));
-                        }
+                    })
+                    .fold(bitset!(k + 1, 0), |mut bs2, pos| {
+                        bs2.set(pos, true);
+                        bs2
+                    });
 
-                        if pos != p {
-                            return Err((pos, idxs3));
-                        }
+                t.resize_with(j0, || unreachable!());
+                t.extend(s[i].citer());
 
-                        let prev_len = *idxs3.last().unwrap() - pos;
-                        let len = lcp[prev_r..r].citer().min().unwrap();
-
-                        if prev_len == len {
-                            Ok((pos, pushed!(idxs3, pos + ss.len() - m), r))
-                        } else {
-                            Err((pos, idxs3))
-                        }
-                    },
-                )
-                .map_or_else(|(pos, idxs3)| (pos, idxs3), |(pos, idxs3, _)| (pos, idxs3));
-            if pos != std::usize::MAX {
-                let m = ss.len() - (*idxs3.last().unwrap() - pos);
-
-                ans.resize_with(pos, || unreachable!());
-                ans.extend(&ss[m..]);
-
-                let idxs = chain(idxs, idxs2)
-                    .filter(|&idx| idx <= pos)
-                    .chain(idxs3)
-                    .sorted()
-                    .dedup()
-                    .collect::<Vec<_>>();
-                (ans, idxs)
+                (t, bs | &bs2)
             } else {
-                let idxs = chain(idxs, idxs2).sorted().dedup().collect::<Vec<_>>();
-                (ans, idxs)
+                (t, bs)
             }
         },
     );

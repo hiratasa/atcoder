@@ -148,4 +148,105 @@ where
 {
 }
 
-fn main() {}
+fn get_key(colors: &[u16]) -> [u16; 4] {
+    (0..4)
+        .map(|i| {
+            colors
+                .citer()
+                .cycle()
+                .skip(i)
+                .take(4)
+                .collect_tuple::<(_, _, _, _)>()
+                .unwrap()
+        })
+        .map(|x| [x.0, x.1, x.2, x.3])
+        .min()
+        .unwrap()
+}
+
+fn main() {
+    let n: usize = read();
+    let c = read_mat::<u16>(n);
+
+    let add = |tiles: &mut FxHashMap<[u16; 4], usize>, colors: &[u16]| {
+        *tiles.entry(get_key(colors)).or_insert(0) += 1;
+    };
+
+    let remove = |tiles: &mut FxHashMap<[u16; 4], usize>, colors: &[u16]| {
+        *tiles.entry(get_key(colors)).or_insert(0) -= 1;
+    };
+
+    let tiles = c.iter().fold(
+        FxHashMap::default(),
+        |mut map: FxHashMap<[u16; 4], usize>, colors| {
+            add(&mut map, colors);
+
+            map
+        },
+    );
+
+    let ans = c
+        .iter()
+        .enumerate()
+        .scan(tiles, |tiles, (i, colors)| {
+            let key = get_key(colors);
+
+            remove(tiles, colors);
+
+            let ret = c[i + 1..]
+                .iter()
+                .map(|colors2| {
+                    remove(tiles, colors2);
+
+                    let ret = (0..4)
+                        .map(|i| {
+                            colors2
+                                .citer()
+                                .rev()
+                                .cycle()
+                                .skip(i)
+                                .take(4)
+                                .collect_tuple::<(_, _, _, _)>()
+                                .unwrap()
+                        })
+                        .map(|x| [x.0, x.1, x.2, x.3])
+                        .map(|key2| {
+                            (0..4)
+                                .map(|j| [key[(j + 1) % 4], key[j], key2[j], key2[(j + 1) % 4]])
+                                .map(|y| get_key(&y))
+                                .sorted()
+                                .group_by(|&y| y)
+                                .into_iter()
+                                .map(|(y, it)| (y, it.count()))
+                                .map(|(y, k)| {
+                                    let m = tiles.get(&y).copied().unwrap_or(0);
+                                    (0..=m).rev().take(k).product::<usize>()
+                                        * (0..4)
+                                            .filter(|&l| {
+                                                y.citer()
+                                                    .cycle()
+                                                    .skip(l)
+                                                    .take(4)
+                                                    .collect_tuple::<(_, _, _, _)>()
+                                                    .unwrap()
+                                                    == (y[0], y[1], y[2], y[3])
+                                            })
+                                            .count()
+                                            .pow(k as u32)
+                                })
+                                .product::<usize>()
+                        })
+                        .sum::<usize>();
+
+                    add(tiles, colors2);
+
+                    ret
+                })
+                .sum::<usize>();
+
+            Some(ret)
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
+}
