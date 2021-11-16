@@ -148,4 +148,20 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, t) = read_tuple!(usize, usize);
+    let times = read_row::<usize>();
+
+    let ans = times
+        .citer()
+        .chain(once(usize::MAX))
+        .scan(0, |prev, tt| {
+            let x = min(t, tt - *prev);
+            *prev = tt;
+
+            Some(x)
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
+}

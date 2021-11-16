@@ -150,48 +150,110 @@ where
 
 fn main() {
     let n: usize = read();
+    let xy = read_vec(n, || read_tuple!(usize, usize));
 
-    let xy = read_vec(n, || read_tuple!(i64, i64));
-    let xy = xy
-        .into_iter()
-        .map(|(x, y)| (min(x, y), max(x, y)))
-        .collect_vec();
+    if n == 1 {
+        println!("0");
+        return;
+    }
 
-    let ma_idx = xy.citer().map(|(x, y)| (y, x)).position_max().unwrap();
-    let mi_idx = xy.citer().position_min().unwrap();
+    if n == 2 {
+        println!(
+            "{}",
+            min(
+                (max(xy[0].0, xy[1].0) - min(xy[0].0, xy[1].0))
+                    * (max(xy[0].1, xy[1].1) - min(xy[0].1, xy[1].1)),
+                (max(xy[0].0, xy[1].1) - min(xy[0].0, xy[1].1))
+                    * (max(xy[0].1, xy[1].0) - min(xy[0].1, xy[1].0))
+            )
+        );
 
-    // ma, miを両方同じ色で塗った場合
-    let ans0 = if ma_idx == mi_idx {
-        std::i64::MAX
-    } else {
-        let t = xy
+        return;
+    }
+
+    let mi = xy.citer().map(|(x, y)| min(x, y)).min().unwrap();
+    let ma = xy.citer().map(|(x, y)| max(x, y)).max().unwrap();
+
+    // miとmaを両方同じ色にする
+    let ans0 = if xy.citer().any(|(x, y)| min(x, y) == mi && max(x, y) != ma)
+        || xy.citer().filter(|&(x, y)| max(x, y) == ma).count() >= 2
+    {
+        let mi_idx = xy
             .citer()
             .enumerate()
-            .filter(|(i, _)| *i != ma_idx && *i != mi_idx)
-            .map(|(_, t)| t)
-            .sorted_by_key(|&(x, y)| x)
-            .collect_vec();
-
-        let x0 = xy[ma_idx].0;
-        let y0 = xy[mi_idx].1;
-        let r = t
+            .position_min_by_key(|&(i, (x, y))| (min(x, y), max(x, y), i))
+            .unwrap();
+        let ma_idx = xy
             .citer()
-            .chain(once((std::i64::MAX, std::i64::MIN)))
-            .scan((min(x0, y0), max(x0, y0)), |r, (x, y)| {
-                let ret = max(r.1, t.last().copied().map_or(0, |t| t.0)) - min(r.0, x);
-                r.1 = max(r.1, y);
-                r.0 = min(r.0, y);
-                Some(ret)
-            })
-            .min()
+            .enumerate()
+            .position_max_by_key(|&(i, (x, y))| (max(x, y), min(x, y), i))
             .unwrap();
 
-        (xy[ma_idx].1 - xy[mi_idx].0) * r
+        let xy2 = xy
+            .citer()
+            .enumerate()
+            .filter(|&(i, _)| i != mi_idx && i != ma_idx)
+            .map(|(_i, (x, y))| (min(x, y), max(x, y)))
+            .sorted()
+            .collect::<Vec<_>>();
+        let r0 = max(xy[mi_idx].0, xy[mi_idx].1);
+        let r1 = min(xy[ma_idx].0, xy[ma_idx].1);
+        (ma - mi)
+            * xy2
+                .citer()
+                .chain(once((usize::MAX, usize::MAX)))
+                .scan((min(r0, r1), max(r0, r1)), |(mi1, ma1), (x, y)| {
+                    let mi2 = min(*mi1, x);
+                    let ma2 = max(*ma1, xy2[n - 3].0);
+
+                    *mi1 = min(*mi1, y);
+                    *ma1 = max(*ma1, y);
+
+                    Some(ma2 - mi2)
+                })
+                .min()
+                .unwrap()
+    } else {
+        usize::MAX
     };
 
-    // ma, miを異なる色で塗った場合
-    let ans1 = (xy[ma_idx].1 - xy.citer().map(|t| t.1).min().unwrap())
-        * (xy.citer().map(|t| t.0).max().unwrap() - xy[mi_idx].0);
+    // miとmaを異なる色にする
+    let ans1 = {
+        let mi_idx = xy
+            .citer()
+            .position_min_by_key(|&(x, y)| (min(x, y), Reverse(max(x, y))))
+            .unwrap();
+        let ma_idx = xy
+            .citer()
+            .position_max_by_key(|&(x, y)| (max(x, y), Reverse(min(x, y))))
+            .unwrap();
+
+        let xy2 = xy
+            .citer()
+            .enumerate()
+            .filter(|&(i, _)| i != mi_idx && i != ma_idx)
+            .map(|(_i, (x, y))| (min(x, y), max(x, y)))
+            .sorted()
+            .collect::<Vec<_>>();
+        let r0 = max(xy[mi_idx].0, xy[mi_idx].1);
+        let r1 = min(xy[ma_idx].0, xy[ma_idx].1);
+        xy2.citer()
+            .chain(once((usize::MAX, 0)))
+            // r0: maと同色の最小値, r1: miと同色の最大値
+            .scan((r0, r1), |(r0, r1), (x, y)| {
+                // xをmaと同色にした場合の値
+                // 残りは大きいほうをmaと同色, 小さいほうをmiと同色にする
+                let t = (ma - min(x, *r0)) * (max(max(y, *r1), xy2.last().unwrap().0) - mi);
+
+                // xとmiと同色にした場合で更新
+                *r0 = min(*r0, y);
+                *r1 = max(*r1, x);
+
+                Some(t)
+            })
+            .min()
+            .unwrap()
+    };
 
     let ans = min(ans0, ans1);
     println!("{}", ans);

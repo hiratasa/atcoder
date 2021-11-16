@@ -148,12 +148,55 @@ where
 {
 }
 
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
+        }
+    }
+    begin
+}
+#[allow(dead_code)]
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
+}
+
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let s = a.citer().sum::<usize>();
 
+    let ans = lower_bound_int(0, s + 1, |m| {
+        m.saturating_mul(k)
+            .cmp(&a.citer().map(|aa| min(aa, m)).sum::<usize>())
+            .then(Ordering::Less)
+    }) - 1;
     println!("{}", ans);
 }

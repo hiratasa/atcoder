@@ -149,11 +149,18 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
-
-    println!("{}", ans);
+    println!(
+        "{}",
+        (1usize..)
+            .take_while(|&a| a.saturating_pow(3) <= n)
+            .map(|a| {
+                (a..)
+                    .take_while(|&b| a.saturating_mul(b.saturating_pow(2)) <= n)
+                    .map(|b| n / (a * b) - b + 1)
+                    .sum::<usize>()
+            })
+            .sum::<usize>()
+    );
 }

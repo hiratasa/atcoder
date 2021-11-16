@@ -148,12 +148,51 @@ where
 {
 }
 
+fn solve(a: &[usize], b: &[usize]) -> bool {
+    let mut c = izip!(a, b)
+        .map(|(&aa, &bb)| aa.saturating_sub(bb))
+        .collect::<Vec<_>>();
+    let mut d = izip!(a, b)
+        .map(|(&aa, &bb)| bb.saturating_sub(aa))
+        .collect::<Vec<_>>();
+
+    for i in (1..=5).rev() {
+        if c[i - 1] > 0 {
+            return false;
+        }
+
+        for j in (1..i).rev() {
+            if c[j - 1] == 0 {
+                continue;
+            }
+
+            let k = min(c[j - 1], d[i - 1]);
+            c[j - 1] -= k;
+            d[i - 1] -= k;
+
+            let r = i - j;
+            d[r - 1] += k;
+
+            let k2 = min(c[r - 1], d[r - 1]);
+            c[r - 1] -= k2;
+            d[r - 1] -= k2;
+        }
+    }
+
+    true
+}
+
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let t: usize = read();
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    for _ in 0..t {
+        let a = read_row::<usize>();
+        let b = read_row::<usize>();
 
-    println!("{}", ans);
+        if solve(&a, &b) {
+            println!("Yes");
+        } else {
+            println!("No");
+        }
+    }
 }

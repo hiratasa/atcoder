@@ -149,11 +149,15 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let s = read_row::<i64>();
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
-
-    println!("{}", ans);
+    println!(
+        "{}",
+        s.citer()
+            .filter(|&ss| {
+                iproduct!(1..400, 1..400).all(|(a, b)| 4 * a * b + 3 * a + 3 * b != ss)
+            })
+            .count()
+    );
 }

@@ -149,11 +149,42 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let s = read_str();
+    let t = read_str();
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let q = read::<usize>();
+    let queries = read_vec(q, || read_tuple!(usize, usize, usize, usize));
 
-    println!("{}", ans);
+    let u = once(0)
+        .chain(s.citer().map(|c| match c {
+            'A' => 2,
+            'B' => 1,
+            _ => unreachable!(),
+        }))
+        .cumsum::<usize>()
+        .collect::<Vec<_>>();
+    let v = once(0)
+        .chain(t.citer().map(|c| match c {
+            'A' => 2,
+            'B' => 1,
+            _ => unreachable!(),
+        }))
+        .cumsum::<usize>()
+        .collect::<Vec<_>>();
+
+    queries
+        .into_iter()
+        .map(|(a, b, c, d)| {
+            let a = a - 1;
+            let c = c - 1;
+
+            (u[b] - u[a]) % 3 == (v[d] - v[c]) % 3
+        })
+        .for_each(|ans| {
+            if ans {
+                println!("YES");
+            } else {
+                println!("NO");
+            }
+        })
 }

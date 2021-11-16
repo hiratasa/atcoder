@@ -356,44 +356,18 @@ impl<M: Modulus> num::One for Mod<M> {
 fn main() {
     type Mod = Mod1000000007;
 
-    let n: usize = read();
+    let (n, m) = read_tuple!(usize, usize);
+    let x = read_row::<i64>();
+    let y = read_row::<i64>();
 
-    // a ^ b = u
-    // a + b = v
-    // a + b = a ^ b + (a & b) << 1
-    // a & b = (a + b - a ^ b) >> 1 = (v - u) >> 1
-    // 0 <= u <= v <= N
-    // t = (v - u)/2 として, uとtを1bitずつ決めていく
-    // aとbが存在するために、各bitで(u, t) != (1, 1)
-    // 前のbitまでのN-(u+2t)を覚えておく
-    // ただし2以上はまとめる
-    let dp = (0..60)
-        .rev()
-        .fold(vvec![Mod::one(); Mod::zero(); 3], |prev, pos| {
-            let mut dp = vec![Mod::zero(); 3];
-
-            for d in 0..=2 {
-                for u in 0..=1 {
-                    for t in 0..=1 {
-                        if u == 1 && t == 1 {
-                            continue;
-                        }
-
-                        let ni = (n >> pos) & 1;
-                        if 2 * d + ni < u + 2 * t {
-                            continue;
-                        }
-
-                        let next_d = min(2 * d + ni - (u + 2 * t), 2);
-
-                        dp[next_d] = dp[next_d] + prev[d];
-                    }
-                }
-            }
-
-            dp
-        });
-
-    let ans = dp[0] + dp[1] + dp[2];
+    // [x_i, x_{i+1}] x [y_j, y_{j+1}] がカウントされる回数
+    // = (i + 1) * (n - i - 1) * (j + 1) * (m - j - 1)
+    // よって答えは Σ (i + 1) * (n - i - 1) * (j + 1) * (m - j - 1) * (x_{i+1} - x_i) * (y_{j+1} - y_j)
+    let ans = (0..n - 1)
+        .map(|i| Mod::new((x[i + 1] - x[i]) as usize) * (i + 1) * (n - i - 1))
+        .sum::<Mod>()
+        * (0..m - 1)
+            .map(|i| Mod::new((y[i + 1] - y[i]) as usize) * (i + 1) * (m - i - 1))
+            .sum::<Mod>();
     println!("{}", ans);
 }

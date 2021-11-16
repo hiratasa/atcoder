@@ -148,4 +148,45 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+
+    let a = once("+".to_string())
+        .chain(read_row::<String>().into_iter())
+        .tuples()
+        .map(|(op, num)| match op.as_ref() {
+            "+" => num.parse::<i64>().unwrap(),
+            "-" => -num.parse::<i64>().unwrap(),
+            _ => unreachable!(),
+        })
+        .collect::<Vec<_>>();
+    let s = a.citer().map(|aa| aa.abs()).sum::<i64>();
+
+    let ans = a
+        .citer()
+        .group_by(|&aa| aa.signum())
+        .into_iter()
+        .skip(1)
+        .scan((0, false), |(neg_sum, terminate), (sign, mut it)| {
+            if *terminate {
+                None
+            } else if sign < 0 {
+                *neg_sum += it.next().unwrap();
+
+                if it.next().is_none() {
+                    Some(None)
+                } else {
+                    *terminate = true;
+                    Some(Some(s + 2 * *neg_sum))
+                }
+            } else {
+                Some(Some(s + 2 * *neg_sum - 2 * it.sum::<i64>()))
+            }
+        })
+        .flatten()
+        .chain(once(a.citer().sum::<i64>()))
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
+}

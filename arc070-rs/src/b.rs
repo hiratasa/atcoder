@@ -148,4 +148,56 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    let dp_left = once(0)
+        .chain(a.citer())
+        .scan(bitset!(k + 1, 1), |bs, aa| {
+            bs.shl_or(aa);
+
+            Some(bs.clone())
+        })
+        .collect::<Vec<_>>();
+
+    let dp_right = once(0)
+        .chain(a.citer().rev())
+        .scan(bitset!(k + 1, 1), |bs, aa| {
+            bs.shl_or(aa);
+
+            Some(bs.clone())
+        })
+        .collect::<Vec<_>>();
+
+    let ans = a
+        .citer()
+        .enumerate()
+        .filter(|&(i, aa)| {
+            if aa >= k {
+                return false;
+            }
+
+            let left = &dp_left[i];
+            let right = &dp_right[n - 1 - i];
+
+            let x = (0..k)
+                .filter(|&ll| left[ll])
+                .scan(k, |rr, ll| {
+                    while *rr > 0 && (!right[*rr] || ll + *rr >= k) {
+                        *rr -= 1;
+                    }
+
+                    Some(ll + *rr)
+                })
+                .max()
+                .unwrap();
+
+            assert!(x < k);
+
+            !(x + aa >= k)
+        })
+        .count();
+
+    println!("{}", ans);
+}

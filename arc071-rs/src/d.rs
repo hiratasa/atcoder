@@ -358,42 +358,48 @@ fn main() {
 
     let n: usize = read();
 
-    // a ^ b = u
-    // a + b = v
-    // a + b = a ^ b + (a & b) << 1
-    // a & b = (a + b - a ^ b) >> 1 = (v - u) >> 1
-    // 0 <= u <= v <= N
-    // t = (v - u)/2 として, uとtを1bitずつ決めていく
-    // aとbが存在するために、各bitで(u, t) != (1, 1)
-    // 前のbitまでのN-(u+2t)を覚えておく
-    // ただし2以上はまとめる
-    let dp = (0..60)
-        .rev()
-        .fold(vvec![Mod::one(); Mod::zero(); 3], |prev, pos| {
-            let mut dp = vec![Mod::zero(); 3];
-
-            for d in 0..=2 {
-                for u in 0..=1 {
-                    for t in 0..=1 {
-                        if u == 1 && t == 1 {
-                            continue;
-                        }
-
-                        let ni = (n >> pos) & 1;
-                        if 2 * d + ni < u + 2 * t {
-                            continue;
-                        }
-
-                        let next_d = min(2 * d + ni - (u + 2 * t), 2);
-
-                        dp[next_d] = dp[next_d] + prev[d];
-                    }
-                }
+    // 第i-1項目までの数列で, 以下を満たすものの数
+    //  * 1以外の数が連続しない
+    //  * i項目に1以外の数を置ける
+    // dp2: dpの累積和
+    // dp3: i*dpの累積和
+    let (dp, dp2, dp3) = (0..n).fold(
+        (
+            vec![Mod::zero(); n],
+            vec![Mod::zero(); n + 1],
+            vec![Mod::zero(); n + 1],
+        ),
+        |(mut dp, mut dp2, mut dp3), i| {
+            // 1以外の数を置いたら、その後その数以上の1を置く必要がある
+            // dp[i]
+            // = 1 + sum[0<=j<=i-3] i-j-2 * dp[j]
+            // = 1 + (i-2) * sum[i-1-n<=j<=i-3] dp[j]
+            //   - sum[i-1-n<=j<=i-3] j * dp[j]
+            // = 1 + (i-2)*(dp2[i-2] - dp2[i-1-n]) - dp3[i-2]
+            if i == 0 {
+                dp[i] = Mod::one();
+            } else if i == 1 {
+                dp[i] = Mod::one();
+            } else if i < n + 1 {
+                dp[i] = Mod::one() + dp2[i - 2] * (i - 2) - dp3[i - 2];
             }
 
-            dp
-        });
+            dp2[i + 1] = dp2[i] + dp[i];
+            dp3[i + 1] = dp3[i] + dp[i] * i;
 
-    let ans = dp[0] + dp[1] + dp[2];
+            (dp, dp2, dp3)
+        },
+    );
+
+    let ans = /* 全部1 */ Mod::one() + (0..n).map(|i| {
+        if i < n - 1 {
+            // i番目に1以外の数, それ以降は全て任意の同じ数
+            dp[i] * (n - 1) * n
+        } else {
+            // n-1番目以降全て同じ1以外の数
+            dp[i] * (n - 1)
+        }
+    }).sum::<Mod>();
+
     println!("{}", ans);
 }

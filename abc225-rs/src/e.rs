@@ -149,11 +149,24 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let xy = read_vec(n, || read_tuple!(i64, i64));
+
+    let (_, ans) = xy
+        .citer()
+        .map(|(x, y)| ((x, y - 1), (x - 1, y)))
+        .sorted_by(|&(_, (x0, y0)), &(_, (x1, y1))| (x0 * y1 - y0 * x1).cmp(&0).reverse())
+        .fold(
+            ((1, 0), 0),
+            |((last_x, last_y), num), ((x0, y0), (x1, y1))| {
+                if last_x * y0 - last_y * x0 >= 0 {
+                    ((x1, y1), num + 1)
+                } else {
+                    ((last_x, last_y), num)
+                }
+            },
+        );
 
     println!("{}", ans);
 }

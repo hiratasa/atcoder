@@ -148,12 +148,55 @@ where
 {
 }
 
+// 先手が勝つかどうか
+#[allow(dead_code)]
+fn solve_simple(x: usize, y: usize, memo: &mut [Vec<Option<bool>>]) -> bool {
+    if let Some(ans) = memo[x][y] {
+        return ans;
+    }
+
+    let ans = {
+        if x <= 1 && y <= 1 {
+            false
+        } else {
+            let ans0 = (1..)
+                .take_while(|&i| 2 * i <= x)
+                .any(|i| !solve_simple(x - 2 * i, y + i, memo));
+
+            let ans1 = (1..)
+                .take_while(|&i| 2 * i <= y)
+                .any(|i| !solve_simple(x + i, y - 2 * i, memo));
+
+            ans0 || ans1
+        }
+    };
+
+    memo[x][y] = Some(ans);
+
+    ans
+}
+
+#[allow(dead_code)]
+fn dump() {
+    const M: usize = 10;
+
+    let mut memo = vec![vec![None; 500]; 500];
+    for i in 0..M {
+        println!(
+            "{}",
+            (0..M)
+                .map(|j| solve_simple(i, j, &mut memo) as u8)
+                .join(" ")
+        );
+    }
+}
+
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let (x, y) = read_tuple!(i64, i64);
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
-
-    println!("{}", ans);
+    if (x - y).abs() > 1 {
+        println!("Alice");
+    } else {
+        println!("Brown");
+    }
 }

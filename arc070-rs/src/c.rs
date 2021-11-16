@@ -148,4 +148,50 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let lr = read_vec(n, || read_tuple!(i64, i64));
+
+    // slope trick with offset
+    let (_left_q, _right_q, _left_offset, _right_offset, ans, _len) = lr.citer().fold(
+        (
+            once(-(1i64 << 40)).collect::<BinaryHeap<_>>(),
+            once(Reverse(1i64 << 40)).collect::<BinaryHeap<_>>(),
+            0,
+            0,
+            0,
+            0,
+        ),
+        |(mut left_q, mut right_q, mut left_offset, mut right_offset, mut min, last_len),
+         (l, r)| {
+            let len = r - l;
+
+            left_offset -= len;
+            right_offset += last_len;
+
+            // Add max(l - x, 0)
+            min += max(0, l - (right_offset + right_q.peek().unwrap().0));
+            right_q.push(Reverse(l - right_offset));
+            left_q.push(right_q.pop().unwrap().0 + right_offset - left_offset);
+
+            // Add max(x - l, 0)
+            min += max(0, (left_offset + left_q.peek().unwrap()) - l);
+            left_q.push(l - left_offset);
+            right_q.push(Reverse(left_q.pop().unwrap() + left_offset - right_offset));
+
+            // eprintln!(
+            //     "{} (={}+{}), {} (={}+{}), {}",
+            //     left_q.peek().unwrap() + left_offset,
+            //     left_q.peek().unwrap(),
+            //     left_offset,
+            //     right_q.peek().unwrap().0 + right_offset,
+            //     right_q.peek().unwrap().0,
+            //     right_offset,
+            //     min
+            // );
+            (left_q, right_q, left_offset, right_offset, min, len)
+        },
+    );
+
+    println!("{}", ans);
+}

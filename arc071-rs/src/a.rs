@@ -149,11 +149,30 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let s = read_vec(n, || read_str());
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let counts = s
+        .iter()
+        .map(|ss| {
+            ss.citer().fold(vec![0; 26], |mut counts, c| {
+                counts[c as usize - 'a' as usize] += 1;
+                counts
+            })
+        })
+        .fold1(|mut counts, counts1| {
+            for c in 0..26 {
+                counts[c] = min(counts[c], counts1[c]);
+            }
 
-    println!("{}", ans);
+            counts
+        })
+        .unwrap();
+
+    let ans = counts
+        .citer()
+        .enumerate()
+        .flat_map(|(c, num)| repeat(('a' as usize + c) as u8 as char).take(num))
+        .collect::<Vec<_>>();
+    println!("{}", ans.citer().join(""));
 }

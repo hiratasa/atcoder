@@ -354,46 +354,27 @@ impl<M: Modulus> num::One for Mod<M> {
 }
 
 fn main() {
-    type Mod = Mod1000000007;
+    type Mod = Mod998244353;
 
-    let n: usize = read();
+    let s = read_str();
 
-    // a ^ b = u
-    // a + b = v
-    // a + b = a ^ b + (a & b) << 1
-    // a & b = (a + b - a ^ b) >> 1 = (v - u) >> 1
-    // 0 <= u <= v <= N
-    // t = (v - u)/2 として, uとtを1bitずつ決めていく
-    // aとbが存在するために、各bitで(u, t) != (1, 1)
-    // 前のbitまでのN-(u+2t)を覚えておく
-    // ただし2以上はまとめる
-    let dp = (0..60)
-        .rev()
-        .fold(vvec![Mod::one(); Mod::zero(); 3], |prev, pos| {
-            let mut dp = vec![Mod::zero(); 3];
+    let (_, _, _, ans) = s.citer().map(|d| d.to_digit(10).unwrap() as usize).fold(
+        (Mod::zero(), Mod::one(), Mod::zero(), Mod::zero()),
+        |(sum_of_sum, sum_of_num, sum_of_num2, _), d| {
+            // dを末尾としたときのありうる式の値の総和
+            let sum = sum_of_sum + sum_of_num2 * 10 + sum_of_num * d;
 
-            for d in 0..=2 {
-                for u in 0..=1 {
-                    for t in 0..=1 {
-                        if u == 1 && t == 1 {
-                            continue;
-                        }
+            // dを末尾としたときのありうる式の個数
+            let num = sum_of_num;
 
-                        let ni = (n >> pos) & 1;
-                        if 2 * d + ni < u + 2 * t {
-                            continue;
-                        }
+            (
+                sum_of_sum + sum,
+                sum_of_num + num,
+                sum_of_num2 * 10 + sum_of_num * d,
+                sum,
+            )
+        },
+    );
 
-                        let next_d = min(2 * d + ni - (u + 2 * t), 2);
-
-                        dp[next_d] = dp[next_d] + prev[d];
-                    }
-                }
-            }
-
-            dp
-        });
-
-    let ans = dp[0] + dp[1] + dp[2];
     println!("{}", ans);
 }

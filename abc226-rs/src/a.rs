@@ -149,11 +149,7 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let x = read::<f64>();
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
-
-    println!("{}", ans);
+    println!("{}", x.round());
 }

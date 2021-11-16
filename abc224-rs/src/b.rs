@@ -149,11 +149,16 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let (h, w) = read_tuple!(usize, usize);
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let a = read_mat::<usize>(h);
 
-    println!("{}", ans);
+    if iproduct!(0..h, 0..h, 0..w, 0..w)
+        .filter(|&(i1, i2, j1, j2)| i1 < i2 && j1 < j2)
+        .all(|(i1, i2, j1, j2)| a[i1][j1] + a[i2][j2] <= a[i2][j1] + a[i1][j2])
+    {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
 }

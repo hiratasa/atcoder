@@ -149,11 +149,32 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let (h, w, n) = read_tuple!(usize, usize, usize);
+    let rca = read_vec(n, || read_tuple!(usize, usize, usize));
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    rca.citer()
+        .enumerate()
+        .sorted_by_key(|&(_, (_, _, aa))| Reverse(aa))
+        .group_by(|&(_, (_, _, aa))| aa)
+        .into_iter()
+        .scan(
+            (vec![0; h + 1], vec![0; w + 1]),
+            |(max_in_row, max_in_col), (_aa, it)| {
+                let tmp = it
+                    .map(|(i, (r, c, _aa))| (i, r, c, max(max_in_row[r], max_in_col[c])))
+                    .collect::<Vec<_>>();
 
-    println!("{}", ans);
+                for &(_, r, c, ans) in &tmp {
+                    max_in_row[r] = max(max_in_row[r], ans + 1);
+                    max_in_col[c] = max(max_in_col[c], ans + 1);
+                }
+
+                Some(tmp)
+            },
+        )
+        .flatten()
+        .sorted()
+        .for_each(|(_, _, _, ans)| {
+            println!("{}", ans);
+        });
 }

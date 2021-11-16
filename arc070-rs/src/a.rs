@@ -151,7 +151,6 @@ where
 fn main() {
     let x: usize = read();
 
-    let s = (2. * x as f64).sqrt() as usize;
-    let ans = if s * (s + 1) / 2 >= x { s } else { s + 1 };
+    let ans = (1usize..).find(|i| i * (i + 1) / 2 >= x).unwrap();
     println!("{}", ans);
 }

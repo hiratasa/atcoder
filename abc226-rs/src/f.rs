@@ -353,47 +353,74 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
+fn gcd(a: usize, b: usize) -> usize {
+    if a == 0 {
+        b
+    } else {
+        gcd(b % a, a)
+    }
+}
+
+fn lcm(a: usize, b: usize) -> usize {
+    let g = gcd(a, b);
+    a / g * b
+}
+
+#[allow(dead_code)]
+fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
+    let fact: Vec<_> = std::iter::once(Mod::one())
+        .chain((1..=n).scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        }))
+        .collect();
+    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
+        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
+        inv
+    });
+    let inv_fact: Vec<_> = inv
+        .iter()
+        .copied()
+        .scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        })
+        .collect();
+    (fact, inv, inv_fact)
+}
+
 fn main() {
-    type Mod = Mod1000000007;
+    type Mod = Mod998244353;
 
-    let n: usize = read();
+    let (n, k) = read_tuple!(usize, usize);
 
-    // a ^ b = u
-    // a + b = v
-    // a + b = a ^ b + (a & b) << 1
-    // a & b = (a + b - a ^ b) >> 1 = (v - u) >> 1
-    // 0 <= u <= v <= N
-    // t = (v - u)/2 として, uとtを1bitずつ決めていく
-    // aとbが存在するために、各bitで(u, t) != (1, 1)
-    // 前のbitまでのN-(u+2t)を覚えておく
-    // ただし2以上はまとめる
-    let dp = (0..60)
-        .rev()
-        .fold(vvec![Mod::one(); Mod::zero(); 3], |prev, pos| {
-            let mut dp = vec![Mod::zero(); 3];
+    let (fact, _, inv_fact) = generate_fact(n + 1);
+    let combi = |a: usize, b: usize| fact[a] * inv_fact[b] * inv_fact[a - b];
 
-            for d in 0..=2 {
-                for u in 0..=1 {
-                    for t in 0..=1 {
-                        if u == 1 && t == 1 {
-                            continue;
-                        }
+    let mut dp = vec![FxHashMap::default(); n + 1];
+    dp[0].insert(1, Mod::one());
+    dp[1].insert(1, Mod::one());
+    for i in 2..=n {
+        dp[i] = (1..=i)
+            .flat_map(|j| {
+                let fact = &fact;
+                dp[i - j]
+                    .iter()
+                    .map(move |(&a, &b)| (lcm(a, j), b * combi(i - 1, j - 1) * fact[j - 1]))
+            })
+            .sorted_by_key(|&(l, _)| l)
+            .group_by(|&(l, _)| l)
+            .into_iter()
+            .map(|(l, it)| (l, it.map(|(_, c)| c).sum::<Mod>()))
+            .collect();
+    }
 
-                        let ni = (n >> pos) & 1;
-                        if 2 * d + ni < u + 2 * t {
-                            continue;
-                        }
+    // eprintln!("{:?}", dp);
 
-                        let next_d = min(2 * d + ni - (u + 2 * t), 2);
+    let ans = dp[n]
+        .iter()
+        .map(|(&l, &c)| Mod::new(l).pow(k) * c)
+        .sum::<Mod>();
 
-                        dp[next_d] = dp[next_d] + prev[d];
-                    }
-                }
-            }
-
-            dp
-        });
-
-    let ans = dp[0] + dp[1] + dp[2];
     println!("{}", ans);
 }

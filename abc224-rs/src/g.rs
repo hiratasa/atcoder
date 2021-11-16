@@ -149,11 +149,24 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let (n, s, t, a, b) = read_tuple!(usize, usize, usize, usize, usize);
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let x = f64::min(((2.0 * n as f64 * b as f64) / a as f64).sqrt(), t as f64);
 
+    let ans0 = if s <= t {
+        ((t - s) * a) as f64
+    } else {
+        std::f64::MAX
+    };
+
+    let x0 = x.floor();
+    let x1 = x.ceil();
+    let ans1 = n as f64 * b as f64 / x0 + x0 * a as f64 / 2.0 - a as f64 / 2.0;
+    let ans2 = n as f64 * b as f64 / x1 + x1 * a as f64 / 2.0 - a as f64 / 2.0;
+
+    eprintln!("{}", ans0);
+    eprintln!("{} at {}", ans1, x0);
+    eprintln!("{} at {}", ans2, x1);
+    let ans = f64::min(f64::min(ans0, ans1), ans2);
     println!("{}", ans);
 }

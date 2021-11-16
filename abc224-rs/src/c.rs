@@ -149,11 +149,19 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let xy = read_vec(n, || read_tuple!(i64, i64));
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let ans = iproduct!(0..n, 0..n, 0..n)
+        .filter(|&(i, j, k)| i < j && j < k)
+        .filter(|&(i, j, k)| {
+            let x0 = xy[k].0 - xy[i].0;
+            let y0 = xy[k].1 - xy[i].1;
+            let x1 = xy[j].0 - xy[i].0;
+            let y1 = xy[j].1 - xy[i].1;
 
+            x0 * y1 - y0 * x1 != 0
+        })
+        .count();
     println!("{}", ans);
 }

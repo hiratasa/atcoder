@@ -149,11 +149,23 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let waza = read_vec(n, || read_row::<usize>());
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let mut required = vec![false; n];
+    let mut s = 0;
+    required[n - 1] = true;
+    for i in (0..n).rev() {
+        if !required[i] {
+            continue;
+        }
 
-    println!("{}", ans);
+        s += waza[i][0];
+
+        for &j in &waza[i][2..] {
+            required[j - 1] = true;
+        }
+    }
+
+    println!("{}", s);
 }

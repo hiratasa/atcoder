@@ -148,4 +148,36 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, w) = read_tuple!(usize, usize);
+    let wv = read_vec(n, || read_tuple!(usize, usize));
+
+    let w0 = wv[0].0;
+    let dp = wv
+        .citer()
+        .fold(vec![vec![0; 3 * n + 1]; n + 1], |prev, (ww_, vv)| {
+            let ww = ww_ - w0;
+            (0..=n)
+                .map(|i| {
+                    if i == 0 {
+                        vec![0; 3 * n + 1]
+                    } else {
+                        izip!(
+                            prev[i].citer(),
+                            repeat(0)
+                                .take(ww)
+                                .chain(prev[i - 1].citer().map(|u| u + vv))
+                        )
+                        .map(|(u0, u1)| max(u0, u1))
+                        .collect()
+                    }
+                })
+                .collect()
+        });
+
+    let ans = (0..=n)
+        .filter_map(|i| w.checked_sub(i * w0).map(|ww| dp[i][min(ww, 3 * n)]))
+        .max()
+        .unwrap();
+    println!("{}", ans);
+}

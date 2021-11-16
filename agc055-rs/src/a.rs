@@ -149,11 +149,50 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let s = read_str();
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let map = it![
+        ([0, 1, 2], 1),
+        ([0, 2, 1], 2),
+        ([1, 0, 2], 3),
+        ([1, 2, 0], 4),
+        ([2, 0, 1], 5),
+        ([2, 1, 0], 6)
+    ]
+    .collect::<FxHashMap<_, _>>();
 
-    println!("{}", ans);
+    let mut q = (0..3)
+        .map(|i| {
+            s[n * i..n * (i + 1)]
+                .citer()
+                .enumerate()
+                .fold(vec![vec![]; 3], |mut q, (j, c)| {
+                    q[c as usize - 'A' as usize].push(n * i + j);
+                    q
+                })
+        })
+        .collect::<Vec<_>>();
+
+    let mut ans = vec![0; 3 * n];
+    for i in 0..n {
+        let c0 = (0..3).find(|&c| !q[0][c].is_empty()).unwrap();
+
+        let c1 = (0..3)
+            .find(|&c| c != c0 && !q[1][c].is_empty() && !q[2][3 - c0 - c].is_empty())
+            .unwrap();
+
+        let c2 = 3 - c0 - c1;
+
+        let pos0 = q[0][c0].pop().unwrap();
+        let pos1 = q[1][c1].pop().unwrap();
+        let pos2 = q[2][c2].pop().unwrap();
+
+        let idx = *map.get(&[c0, c1, c2]).unwrap();
+        ans[pos0] = idx;
+        ans[pos1] = idx;
+        ans[pos2] = idx;
+    }
+
+    println!("{}", ans.citer().join(""));
 }

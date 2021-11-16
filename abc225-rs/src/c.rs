@@ -150,10 +150,20 @@ where
 
 fn main() {
     let (n, m) = read_tuple!(usize, usize);
+    let b = read_mat::<i64>(n);
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
-
-    println!("{}", ans);
+    let ans = b
+        .iter()
+        .all(|row| row.citer().tuple_windows().all(|(b0, b1)| b0 + 1 == b1))
+        && b.iter()
+            .all(|row| row.citer().map(|bb| (bb - 1) / 7).all_equal())
+        && b.iter()
+            .map(|row| row[0])
+            .tuple_windows()
+            .all(|(b0, b1)| b0 + 7 == b1);
+    if ans {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
 }

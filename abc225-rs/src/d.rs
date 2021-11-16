@@ -149,11 +149,39 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let (n, q) = read_tuple!(usize, usize);
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let mut trains = vec![(None, None); n + 1];
+    for _ in 0..q {
+        let query = read::<String>();
 
-    println!("{}", ans);
+        match query.chars().next().unwrap() {
+            '1' => {
+                let mut it = query.split_whitespace().skip(1);
+                let x = it.next().unwrap().parse::<usize>().unwrap();
+                let y = it.next().unwrap().parse::<usize>().unwrap();
+
+                trains[x].1 = Some(y);
+                trains[y].0 = Some(x);
+            }
+            '2' => {
+                let mut it = query.split_whitespace().skip(1);
+                let x = it.next().unwrap().parse::<usize>().unwrap();
+                let y = it.next().unwrap().parse::<usize>().unwrap();
+
+                trains[x].1 = None;
+                trains[y].0 = None;
+            }
+            '3' => {
+                let mut it = query.split_whitespace().skip(1);
+                let x = it.next().unwrap().parse::<usize>().unwrap();
+
+                let head = successors(Some(x), |&y| trains[y].0).last().unwrap();
+
+                let ans = successors(Some(head), |&y| trains[y].1).collect::<Vec<_>>();
+                println!("{} {}", ans.len(), ans.citer().join(" "));
+            }
+            _ => unreachable!(),
+        }
+    }
 }

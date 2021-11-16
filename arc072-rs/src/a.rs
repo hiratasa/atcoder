@@ -149,11 +149,26 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+    let n: usize = read();
+    let a = read_row::<i64>();
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+    let ans = it![-1, 1]
+        .map(|sgn0| {
+            izip!(iterate(sgn0, |&prev| -prev), a.citer().cumsum::<i64>())
+                .fold((0, 0), |(ops, delta), (sgn, ss)| {
+                    let ss2 = ss + delta;
+                    if sgn == ss2.signum() {
+                        (ops, delta)
+                    } else {
+                        let t = ss2.abs() + 1;
+
+                        (ops + t, delta + sgn * t)
+                    }
+                })
+                .0
+        })
+        .min()
+        .unwrap();
 
     println!("{}", ans);
 }

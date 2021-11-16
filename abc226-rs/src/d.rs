@@ -148,12 +148,29 @@ where
 {
 }
 
-fn main() {
-    let (n, m) = read_tuple!(usize, usize);
+fn gcd(a: i64, b: i64) -> i64 {
+    if a == 0 {
+        b
+    } else {
+        gcd(b % a, a)
+    }
+}
 
-    let ans0 = min(n, m / 2);
-    let ans1 = (m - 2 * ans0) / 4;
-    let ans = ans0 + ans1;
+fn main() {
+    let n: usize = read();
+    let xy = read_vec(n, || read_tuple!(i64, i64));
+
+    let ans = iproduct!(0..n, 0..n)
+        .filter(|&(i, j)| i != j)
+        .map(|(i, j)| (xy[j].0 - xy[i].0, xy[j].1 - xy[i].1))
+        .map(|(dx, dy)| {
+            let g = gcd(dx.abs(), dy.abs());
+
+            (dx / g, dy / g)
+        })
+        .sorted()
+        .dedup()
+        .count();
 
     println!("{}", ans);
 }

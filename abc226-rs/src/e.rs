@@ -148,6 +148,65 @@ where
 {
 }
 
+#[derive(Clone, Copy, Debug)]
+enum UnionFindNode {
+    Root { size: usize },
+    Child { parent: usize },
+}
+struct UnionFind {
+    g: Vec<UnionFindNode>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        use UnionFindNode::*;
+        UnionFind {
+            g: (0..n).map(|_| Root { size: 1 }).collect(),
+        }
+    }
+    fn root(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let p = match self.g[v] {
+            Root { size: _ } => return v,
+            Child { parent: p } => p,
+        };
+        let r = self.root(p);
+        self.g[v] = Child { parent: r };
+        r
+    }
+    fn unite(&mut self, v: usize, u: usize) -> bool {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        let ru = self.root(u);
+        if rv == ru {
+            return false;
+        }
+        let size_rv = self.size(rv);
+        let size_ru = self.size(ru);
+        let (rsmall, rlarge) = if size_rv < size_ru {
+            (rv, ru)
+        } else {
+            (ru, rv)
+        };
+        self.g[rsmall] = Child { parent: rlarge };
+        self.g[rlarge] = Root {
+            size: size_rv + size_ru,
+        };
+        true
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+    fn size(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        match self.g[rv] {
+            Root { size } => size,
+            Child { parent: _ } => unreachable!(),
+        }
+    }
+}
+
 use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
@@ -354,46 +413,40 @@ impl<M: Modulus> num::One for Mod<M> {
 }
 
 fn main() {
-    type Mod = Mod1000000007;
+    type Mod = Mod998244353;
 
-    let n: usize = read();
+    let (n, m) = read_tuple!(usize, usize);
 
-    // a ^ b = u
-    // a + b = v
-    // a + b = a ^ b + (a & b) << 1
-    // a & b = (a + b - a ^ b) >> 1 = (v - u) >> 1
-    // 0 <= u <= v <= N
-    // t = (v - u)/2 として, uとtを1bitずつ決めていく
-    // aとbが存在するために、各bitで(u, t) != (1, 1)
-    // 前のbitまでのN-(u+2t)を覚えておく
-    // ただし2以上はまとめる
-    let dp = (0..60)
-        .rev()
-        .fold(vvec![Mod::one(); Mod::zero(); 3], |prev, pos| {
-            let mut dp = vec![Mod::zero(); 3];
+    let uv = read_vec(m, || read_tuple!(usize, usize));
 
-            for d in 0..=2 {
-                for u in 0..=1 {
-                    for t in 0..=1 {
-                        if u == 1 && t == 1 {
-                            continue;
-                        }
+    if n != m {
+        println!("0");
+        return;
+    }
 
-                        let ni = (n >> pos) & 1;
-                        if 2 * d + ni < u + 2 * t {
-                            continue;
-                        }
+    let mut uf =
+        uv.citer()
+            .map(|(u, v)| (u - 1, v - 1))
+            .fold(UnionFind::new(n), |mut uf, (u, v)| {
+                uf.unite(u, v);
 
-                        let next_d = min(2 * d + ni - (u + 2 * t), 2);
+                uf
+            });
 
-                        dp[next_d] = dp[next_d] + prev[d];
-                    }
-                }
-            }
+    let num_edges =
+        uv.citer()
+            .map(|(u, v)| (u - 1, v - 1))
+            .fold(FxHashMap::default(), |mut map, (u, _v)| {
+                *map.entry(uf.root(u)).or_insert(0) += 1;
+                map
+            });
 
-            dp
-        });
+    for (&r, &k) in num_edges.iter() {
+        if uf.size(r) != k {
+            println!("0");
+            return;
+        }
+    }
 
-    let ans = dp[0] + dp[1] + dp[2];
-    println!("{}", ans);
+    println!("{}", Mod::new(2).pow(num_edges.len()));
 }

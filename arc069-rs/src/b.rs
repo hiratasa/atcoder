@@ -148,4 +148,33 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let s = read_str()
+        .into_iter()
+        .map(|c| (c == 'o'))
+        .collect::<Vec<_>>();
+
+    // 答えを {a_i} (正直者ならT, 嘘つきならF) として,
+    // s_i = a_{i-1} ^ a_i ^ a_{i+1}
+    // a_{i+2} = a_i ^ a_{i+1} ^ s_{i+1}
+    if let Some(ans) = iproduct!(it![false, true], it![false, true])
+        .map(|(a0, a1)| {
+            let mut a = vvec![a0, a1; false; n];
+
+            for i in 2..n {
+                a[i] = a[i - 2] ^ a[i - 1] ^ s[i - 1];
+            }
+
+            a
+        })
+        .find(|a| (s[0] == a[n - 1] ^ a[0] ^ a[1]) && (s[n - 1] == a[n - 2] ^ a[n - 1] ^ a[0]))
+    {
+        println!(
+            "{}",
+            ans.citer().map(|c| if c { 'S' } else { 'W' }).join("")
+        );
+    } else {
+        println!("-1");
+    }
+}

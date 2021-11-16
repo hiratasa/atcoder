@@ -148,4 +148,41 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+
+    let ans = a
+        .citer()
+        .enumerate()
+        .sorted_by_key(|&(i, aa)| (Reverse(aa), i))
+        .group_by(|&(_, aa)| aa)
+        .into_iter()
+        .map(|(aa, mut it)| (aa, it.next().unwrap().0 + 1, it.count() + 1))
+        .chain(once((0, 0, 0)))
+        .scan(
+            (usize::MAX, 0, 0),
+            |(prev_i, num_greater, sum_greater), (aa, i, num)| {
+                if i < *prev_i {
+                    let x = *sum_greater - *num_greater * aa;
+                    *num_greater += num;
+                    *sum_greater = *num_greater * aa;
+                    Some(Some((replace(prev_i, i), x)))
+                } else {
+                    *num_greater += num;
+                    *sum_greater += num * aa;
+                    Some(None)
+                }
+            },
+        )
+        .skip(1)
+        .flatten()
+        .fold(vec![0; n], |mut ans, (i, x)| {
+            ans[i - 1] = x;
+            ans
+        });
+
+    for x in ans {
+        println!("{}", x);
+    }
+}
