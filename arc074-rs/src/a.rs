@@ -148,4 +148,38 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (h, w) = read_tuple!(usize, usize);
+
+    let ans = if h % 3 == 0 || w % 3 == 0 {
+        0
+    } else {
+        min(
+            min(h, w),
+            min(
+                (0..h)
+                    .map(|i| {
+                        let x = i * w;
+                        let y = (h - i) * (w / 2);
+                        let z = (h - i) * ((w + 1) / 2);
+
+                        max(x, z) - min(x, y)
+                    })
+                    .min()
+                    .unwrap(),
+                (0..w)
+                    .map(|i| {
+                        let x = i * h;
+                        let y = (w - i) * (h / 2);
+                        let z = (w - i) * ((h + 1) / 2);
+
+                        max(x, z) - min(x, y)
+                    })
+                    .min()
+                    .unwrap(),
+            ),
+        )
+    };
+
+    println!("{}", ans);
+}

@@ -177,6 +177,7 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -228,10 +229,11 @@ impl<M> std::fmt::Debug for Mod<M> {
 }
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::From<T>,
+    usize: std::convert::TryFrom<T>,
 {
     fn from(v: T) -> Self {
-        Mod::new(usize::from(v))
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
 impl<M: Modulus> std::str::FromStr for Mod<M> {
@@ -358,52 +360,48 @@ fn main() {
 
     let lrx = read_vec(m, || read_tuple!(usize, usize, usize));
 
-    let dp = lrx
-        .citer()
-        .fold(vec![vec![]; n], |mut a, (l, r, x)| {
-            a[r - 1].push((l - 1, x));
-            a
-        })
-        .into_iter()
-        .enumerate()
-        .fold(
-            vvec![vvec![Mod::one(); Mod::zero(); n]; vec![Mod::zero(); n]; n],
-            |dp, (r, conds)| {
-                // update
-                let mut next = vec![vec![Mod::zero(); n]; n];
-                for i in 0..=r {
-                    if i == 0 {
-                        // i = j = 0
-                        next[0][0] += dp[0][0];
-                        next[0][r] += dp[0][0] * 2usize;
-                    }
+    let t =
+        lrx.citer()
+            .map(|(l, r, x)| (l - 1, r, x))
+            .fold(vec![vec![]; n + 1], |mut t, (l, r, x)| {
+                t[r].push((l, x));
+                t
+            });
 
-                    for j in i + 1..=r {
-                        next[i][j] += dp[i][j];
-                        next[i][r] += dp[i][j];
-                        next[j][r] += dp[i][j];
+    let dp = (0..n).fold(
+        vvec![vvec![Mod::one(); Mod::zero(); n]; vec![Mod::zero(); n]; n],
+        |prev, i| {
+            let mut dp = vec![vec![Mod::zero(); n]; n];
+
+            for a in 0..n {
+                for b in a..n {
+                    dp[b][i] = dp[b][i] + prev[a][b];
+                    dp[a][i] = dp[a][i] + prev[a][b];
+                    dp[a][b] = dp[a][b] + prev[a][b];
+                }
+            }
+
+            for a in 0..n {
+                for b in 0..n {
+                    let ok = t[i + 1].citer().all(|(l, x)| match x {
+                        1 => b <= l,
+                        2 => a <= l && l < b,
+                        3 => l < a,
+                        _ => unreachable!(),
+                    });
+
+                    if !ok {
+                        dp[a][b] = Mod::zero();
                     }
                 }
+            }
 
-                // eprintln!("{:?}", next);
+            // eprintln!("{:?}", dp);
 
-                // check and update
-                for i in 0..=r {
-                    for j in i..=r {
-                        if !conds.citer().all(|(l, x)| match x {
-                            1 => j <= l,
-                            2 => i <= l && l < j,
-                            3 => l < i,
-                            _ => unreachable!(),
-                        }) {
-                            next[i][j] = Mod::zero();
-                        }
-                    }
-                }
+            dp
+        },
+    );
 
-                next
-            },
-        );
     let ans = dp.iter().map(|row| row.citer().sum::<Mod>()).sum::<Mod>();
     println!("{}", ans);
 }

@@ -148,4 +148,52 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a = read_row::<i64>();
+
+    let b = a
+        .citer()
+        .scan((BinaryHeap::new(), 0), |(q, s), aa| {
+            q.push(Reverse(aa));
+            *s += aa;
+
+            if q.len() < n {
+                Some(std::i64::MIN)
+            } else {
+                if q.len() > n {
+                    *s -= q.pop().unwrap().0;
+                }
+                assert!(q.len() == n);
+
+                Some(*s)
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let c = a
+        .citer()
+        .rev()
+        .scan((BinaryHeap::new(), 0), |(q, s), aa| {
+            q.push(aa);
+            *s += aa;
+
+            if q.len() < n {
+                Some(std::i64::MAX)
+            } else {
+                if q.len() > n {
+                    *s -= q.pop().unwrap();
+                }
+                assert!(q.len() == n);
+
+                Some(*s)
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let ans = izip!(b[n - 1..2 * n].citer(), c[n - 1..2 * n].citer().rev(),)
+        .map(|(x, y)| x - y)
+        .max()
+        .unwrap();
+    println!("{}", ans);
+}
