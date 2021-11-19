@@ -296,58 +296,58 @@ mod detail {
 
 type Graph = detail::UnweightedGraph;
 
-fn check(
-    g: &Graph,
-    v: usize,
-    p: usize,
-    nums: &[Option<i64>],
-    lower: &mut [i64],
-    upper: &mut [i64],
-) -> bool {
-    if let Some(m) = nums[v] {
-        if !(lower[v] <= m && m <= upper[v] && m.rem_euclid(2) == lower[v].rem_euclid(2)) {
-            return false;
-        }
-
-        lower[v] = m;
-        upper[v] = m;
+fn dfs(g: &Graph, v: usize, p: usize, nums: &mut [Option<(i64, i64)>]) -> bool {
+    if g.out_edges[v]
+        .citer()
+        .filter(|e| e.to != p)
+        .any(|e| !dfs(g, e.to, v, nums))
+    {
+        return false;
     }
 
-    g.out_edges[v].citer().filter(|&e| e.to != p).all(|e| {
-        lower[e.to] = lower[v] - 1;
-        upper[e.to] = upper[v] + 1;
-        if check(g, e.to, v, nums, lower, upper) {
-            lower[v] = max(lower[v], lower[e.to] - 1);
-            upper[v] = min(upper[v], upper[e.to] + 1);
+    let nums0 = nums[v];
+    nums[v] = if let Some(tmp) = g.out_edges[v]
+        .citer()
+        .filter(|e| e.to != p)
+        .map(|e| nums[e.to])
+        .map(|m| m.map(|(l, u)| (l - 1, u + 1)))
+        .try_fold(nums0, |nums0, nums1| {
+            nums0.map_or(Some(nums1), |(l0, u0)| {
+                nums1.map_or(Some(Some((l0, u0))), |(l1, u1)| {
+                    if (l0 + l1) % 2 > 0 {
+                        None
+                    } else {
+                        let l = max(l0, l1);
+                        let u = min(u0, u1);
 
-            true
-        } else {
-            false
-        }
-    })
-}
-
-fn solve(
-    g: &Graph,
-    v: usize,
-    p: usize,
-    nums: &mut [Option<i64>],
-    lower: &mut [i64],
-    upper: &mut [i64],
-) {
-    let m = if let Some(m) = nums[v] {
-        assert!(lower[v] <= m && m <= upper[v] && m.rem_euclid(2) == lower[v].rem_euclid(2));
-        m
+                        if l > u {
+                            None
+                        } else {
+                            Some(Some((l, u)))
+                        }
+                    }
+                })
+            })
+        }) {
+        tmp
     } else {
-        nums[v] = Some(lower[v]);
-        lower[v]
+        return false;
     };
 
-    g.out_edges[v].citer().filter(|&e| e.to != p).for_each(|e| {
-        lower[e.to] = max(lower[e.to], m - 1);
-        upper[e.to] = min(upper[e.to], m + 1);
-        solve(g, e.to, v, nums, lower, upper)
-    })
+    true
+}
+
+fn dfs2(g: &Graph, v: usize, p: usize, nums: &[Option<(i64, i64)>], ans: &mut [i64]) {
+    if p >= g.size() {
+        ans[v] = nums[v].unwrap().0;
+    } else {
+        ans[v] = max(nums[v].map_or(std::i64::MIN, |(l, _u)| l), ans[p] - 1);
+    }
+
+    g.out_edges[v]
+        .citer()
+        .filter(|e| e.to != p)
+        .for_each(|e| dfs2(g, e.to, v, nums, ans));
 }
 
 fn main() {
@@ -360,25 +360,20 @@ fn main() {
     let g = Graph::from_edges1_undirected(n, ab);
 
     let mut nums = vp.citer().fold(vec![None; n], |mut nums, (v, p)| {
-        nums[v - 1] = Some(p);
+        nums[v - 1] = Some((p, p));
         nums
     });
 
-    let v0 = (0..n).find(|&v| nums[v].is_some()).unwrap();
-
-    let mut lower = vec![0; n];
-    let mut upper = vec![0; n];
-    lower[v0] = nums[v0].unwrap();
-    upper[v0] = nums[v0].unwrap();
-    if !check(&g, v0, n, &nums, &mut lower, &mut upper) {
+    if !dfs(&g, 0, n, &mut nums) {
         println!("No");
         return;
     }
 
-    solve(&g, v0, n, &mut nums, &mut lower, &mut upper);
+    let mut ans = vec![0; n];
+    dfs2(&g, 0, n, &nums, &mut ans);
 
     println!("Yes");
-    for m in nums {
-        println!("{}", m.unwrap());
+    for a in ans {
+        println!("{}", a);
     }
 }
