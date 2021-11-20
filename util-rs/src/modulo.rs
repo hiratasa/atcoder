@@ -8,6 +8,7 @@ use num::{One, Zero};
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
     let mut y = 1;
 
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;

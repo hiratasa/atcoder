@@ -5,6 +5,7 @@ use std::mem::replace;
 fn pow_mod(mut x: u128, mut p: u128, m: u128) -> u128 {
     let mut y = 1;
 
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;
