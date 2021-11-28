@@ -150,12 +150,14 @@ where
 
 fn main() {
     let n: usize = read();
-
     let s = read_vec(n, || read::<usize>());
 
-    let sum = s.citer().sum::<usize>();
-    let m = s.citer().filter(|ss| ss % 10 > 0).min().unwrap_or(sum);
+    const M: usize = 100 * 100;
+    let dp = s.citer().fold(bitset!(M + 1, 1), |mut bs, ss| {
+        bs.shl_or(ss);
+        bs
+    });
 
-    let ans = if sum % 10 > 0 { sum } else { sum - m };
+    let ans = (0..=M).filter(|&x| x % 10 > 0 && dp[x]).max().unwrap_or(0);
     println!("{}", ans);
 }
