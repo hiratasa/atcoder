@@ -137,4 +137,51 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (r, c, n) = read_tuple!(usize, usize, usize);
+    let xy = read_vec(n, || read_tuple!(usize, usize, usize, usize));
+
+    let on_edge = |x: usize, y: usize| (x == 0 || x == r) || (y == 0 || y == c);
+
+    let to_idx = |x: usize, y: usize| {
+        assert!(on_edge(x, y));
+
+        if y == 0 {
+            x
+        } else if x == r {
+            r + y
+        } else if y == c {
+            r + c + (r - x)
+        } else {
+            assert!(x == 0);
+            r + c + r + (c - y)
+        }
+    };
+
+    let ans = xy
+        .citer()
+        .filter(|&(x0, y0, x1, y1)| on_edge(x0, y0) && on_edge(x1, y1))
+        .enumerate()
+        .flat_map(|(i, (x0, y0, x1, y1))| it![(to_idx(x0, y0), i), (to_idx(x1, y1), i)])
+        .sorted()
+        // .inspect(|x| eprintln!("{:?}", x))
+        .try_fold((vec![], vec![false; n]), |(mut st, mut used), (_, i)| {
+            if matches!(st.last(), Some(&j) if i == j) {
+                st.pop();
+                used[i] = false;
+            } else if used[i] {
+                return None;
+            } else {
+                st.push(i);
+                used[i] = true;
+            }
+
+            Some((st, used))
+        })
+        .is_some();
+    if ans {
+        println!("YES");
+    } else {
+        println!("NO");
+    }
+}
