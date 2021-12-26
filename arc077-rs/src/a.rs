@@ -152,21 +152,11 @@ fn main() {
     let n: usize = read();
     let a = read_row::<usize>();
 
-    let b = a
-        .citer()
-        .enumerate()
-        .fold(VecDeque::new(), |mut b, (i, aa)| {
-            if i % 2 == 0 {
-                b.push_back(aa);
-            } else {
-                b.push_front(aa)
-            }
-            b
-        });
+    let ans = chain(
+        successors(n.checked_sub(1), |m| m.checked_sub(2)).map(|i| a[i]),
+        (n % 2..).step_by(2).take_while(|&i| i < n).map(|i| a[i]),
+    )
+    .collect::<Vec<_>>();
 
-    if n % 2 == 0 {
-        println!("{}", b.citer().join(" "));
-    } else {
-        println!("{}", b.citer().rev().join(" "));
-    }
+    println!("{}", ans.citer().join(" "));
 }

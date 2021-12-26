@@ -152,41 +152,48 @@ fn main() {
     let (n, m) = read_tuple!(usize, usize);
     let a = read_row::<usize>();
 
-    let (b, c, s) = a.citer().tuple_windows().fold(
-        (vec![0i64; m], vec![0i64; m], 0),
-        |(mut b, mut c, s), (a0, a1)| {
-            let a0 = a0 - 1;
-            let a1 = a1 - 1;
+    let b = a
+        .citer()
+        .map(|aa| aa - 1)
+        .tuple_windows()
+        .fold(vec![(0i64, 0i64); 2 * m], |mut t, (a0, a1)| {
+            let a1 = if a0 < a1 { a1 } else { a1 + m };
 
-            if a0 + 1 < m {
-                b[a0 + 1] += 1;
+            t[a0 + 1].0 += 1;
+            t[a1].0 -= 1;
+            t[a1].1 -= (a1 - a0 - 1) as i64;
+
+            t
+        })
+        .into_iter()
+        .scan((0, 0), |(x, y), (z, w)| {
+            *y += *x;
+            let c = *y;
+
+            *x += z;
+            *y += w;
+
+            Some(c)
+        })
+        .collect::<Vec<_>>();
+    let x = (0..m).max_by_key(|&i| b[i] + b[i + m]).unwrap();
+
+    let ans = a
+        .citer()
+        .map(|aa| aa - 1)
+        .tuple_windows()
+        .map(|(a0, a1)| {
+            let a1 = if a0 < a1 { a1 } else { a1 + m };
+            let x = if x <= a0 { x + m } else { x };
+
+            assert!(a0 < x);
+            if x <= a1 {
+                a1 - x + 1
+            } else {
+                a1 - a0
             }
-
-            b[a1] -= 1;
-
-            if a1 + 1 < m {
-                c[a1 + 1] -= ((a1 + m - a0 - 1) % m) as i64;
-            }
-
-            if a0 > a1 {
-                b[0] += 1;
-                c[0] += (m - a0 - 1) as i64;
-            }
-
-            (b, c, s + (a1 + m - a0) % m)
-        },
-    );
-
-    let ans = s
-        - (0..m)
-            .scan((0, 0), |(acc, k), i| {
-                *acc += *k + c[i];
-                *k += b[i];
-                Some(*acc)
-            })
-            // .inspect(|x| eprintln!("{}", x))
-            .max()
-            .unwrap() as usize;
+        })
+        .sum::<usize>();
 
     println!("{}", ans);
 }

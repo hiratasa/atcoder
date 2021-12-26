@@ -382,34 +382,33 @@ fn main() {
     let n: usize = read();
     let a = read_row::<usize>();
 
-    let d = a
+    let (i0, i1) = a
         .citer()
         .enumerate()
-        .scan(vec![None; n], |pos, (i, aa)| {
-            if let Some(p) = pos[aa - 1] {
-                Some(Some(i - p))
+        .scan(vec![None; n + 1], |seen, (i, aa)| {
+            if let Some(prev) = seen[aa] {
+                Some(Some((prev, i)))
             } else {
-                pos[aa - 1] = Some(i);
+                seen[aa] = Some(i);
                 Some(None)
             }
         })
         .flatten()
         .next()
         .unwrap();
-
     let (fact, _, inv_fact) = generate_fact(n + 1);
 
-    let combi = |n: usize, m: usize| {
-        if m > n {
+    let combi = |x: usize, y: usize| -> Mod {
+        if y > x {
             Mod::zero()
         } else {
-            fact[n] * inv_fact[n - m] * inv_fact[m]
+            fact[x] * inv_fact[y] * inv_fact[x - y]
         }
     };
 
-    (1..=n + 1)
-        .map(|k| combi(n + 1, k) - combi(n + 1 - (d + 1), k - 1))
-        .for_each(|ans| {
-            println!("{}", ans);
-        });
+    for k in 1..=n + 1 {
+        let ans = combi(n + 1, k) - combi(n + 1 - (i1 - i0) - 1, k - 1);
+
+        println!("{}", ans);
+    }
 }
