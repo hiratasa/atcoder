@@ -29,11 +29,3 @@ path = "src/c.rs"
 [[bin]]
 name = "arc076-d"
 path = "src/d.rs"
-
-[[bin]]
-name = "arc076-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "arc076-f"
-path = "src/f.rs"

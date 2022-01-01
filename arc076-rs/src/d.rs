@@ -14,8 +14,6 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use bitset_fixed::BitSet;
-#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -50,15 +48,6 @@ macro_rules! it {
             it!($($x),+)
         )
     }
-}
-
-#[allow(unused_macros)]
-macro_rules! bitset {
-    ($n:expr, $x:expr) => {{
-        let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
-        bs
-    }};
 }
 
 #[allow(unused_macros)]
@@ -148,4 +137,275 @@ where
 {
 }
 
-fn main() {}
+trait Monoid {
+    type Item: Clone;
+
+    fn id() -> Self::Item;
+    fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
+}
+
+// M: Monoid of value
+// Op: Monoid of lazy operation
+#[derive(Debug)]
+struct LazySegmentTree<M, Op>
+where
+    M: Monoid,
+    Op: Monoid,
+{
+    height: usize,
+    cap: usize,
+    values: Vec<M::Item>,
+    lazy: Vec<Op::Item>,
+}
+
+trait Operator<T>: Monoid {
+    fn apply(op: &Self::Item, v: &T) -> T;
+}
+
+#[allow(dead_code)]
+impl<M, Op> LazySegmentTree<M, Op>
+where
+    M: Monoid,
+    Op: Monoid + Operator<M::Item>,
+{
+    fn new(n: usize) -> Self {
+        let cap = n.next_power_of_two();
+        LazySegmentTree {
+            height: cap.trailing_zeros() as usize + 1,
+            cap,
+            values: vec![M::id(); 2 * cap - 1],
+            lazy: vec![Op::id(); 2 * cap - 1],
+        }
+    }
+
+    fn with(vals: &Vec<M::Item>) -> Self {
+        let n = vals.len();
+        let cap = n.next_power_of_two();
+
+        let mut values = Vec::with_capacity(2 * cap - 1);
+        values.resize(cap - 1, M::id());
+        values.extend(vals.iter().cloned());
+        values.resize(2 * cap - 1, M::id());
+
+        let mut st = LazySegmentTree {
+            height: cap.trailing_zeros() as usize + 1,
+            cap,
+            values,
+            lazy: vec![Op::id(); 2 * cap - 1],
+        };
+
+        for idx in (0..cap - 1).rev() {
+            st.fix_value(idx);
+        }
+
+        st
+    }
+
+    // internal
+    fn get_node_value(&mut self, idx: usize) -> M::Item {
+        Op::apply(&self.lazy[idx], &self.values[idx])
+    }
+
+    // internal
+    fn fix_value(&mut self, idx: usize) {
+        let left_idx = 2 * (idx + 1) - 1;
+        let right_idx = 2 * (idx + 1);
+        if left_idx < self.values.len() {
+            self.values[idx] = M::op(
+                &self.get_node_value(left_idx),
+                &self.get_node_value(right_idx),
+            );
+        }
+    }
+
+    // internal
+    fn resolve(&mut self, parent_idx: usize) {
+        let left_idx = 2 * (parent_idx + 1) - 1;
+        let right_idx = 2 * (parent_idx + 1);
+
+        if left_idx < self.values.len() {
+            self.lazy[left_idx] = Op::op(&self.lazy[parent_idx], &self.lazy[left_idx]);
+            self.lazy[right_idx] = Op::op(&self.lazy[parent_idx], &self.lazy[right_idx]);
+            self.lazy[parent_idx] = Op::id();
+            self.fix_value(parent_idx);
+        } else {
+            self.values[parent_idx] = Op::apply(&self.lazy[parent_idx], &self.values[parent_idx]);
+            self.lazy[parent_idx] = Op::id();
+        }
+    }
+
+    // internal
+    fn resolve_all(&mut self, pos: usize) {
+        let idx = self.cap - 1 + pos;
+        for i in (0..self.height).rev() {
+            self.resolve(((idx + 1) >> i) - 1);
+        }
+    }
+
+    fn get(&mut self, pos: usize) -> M::Item {
+        self.resolve_all(pos);
+
+        let idx = self.cap - 1 + pos;
+        self.values[idx].clone()
+    }
+
+    fn set(&mut self, pos: usize, v: M::Item) {
+        self.resolve_all(pos);
+
+        let mut idx = self.cap - 1 + pos;
+        self.values[idx] = v;
+        self.lazy[idx] = Op::id();
+
+        while idx > 0 {
+            idx = (idx - 1) / 2;
+            self.fix_value(idx);
+        }
+    }
+
+    fn update(&mut self, a: usize, b: usize, p: Op::Item) {
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        // Opが非可換の場合用に, これより前にupdateされたものを適用させておく
+        for i in (1..self.height).rev() {
+            self.resolve(((left_idx + 1) >> i) - 1);
+            self.resolve(((right_idx + 1) >> i) - 1);
+        }
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                self.lazy[left_idx] = Op::op(&p, &self.lazy[left_idx]);
+            }
+
+            if right_idx % 2 == 0 {
+                self.lazy[right_idx - 1] = Op::op(&p, &self.lazy[right_idx - 1]);
+            }
+
+            // 偶数の場合は一つ右隣の親になる
+            left_idx = left_idx >> 1;
+            right_idx = (right_idx - 1) >> 1;
+        }
+
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+        for _ in 0..self.height - 1 {
+            left_idx = (left_idx - 1) >> 1;
+            self.fix_value(left_idx);
+
+            right_idx = (right_idx - 1) >> 1;
+            // This is out of bounds if b == self.cap.
+            // (currently checked in fix_value())
+            self.fix_value(right_idx);
+        }
+    }
+
+    fn query(&mut self, a: usize, b: usize) -> M::Item {
+        let mut left = M::id();
+        let mut right = M::id();
+
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        let c0 = std::cmp::min(
+            // trailing_ones
+            (!left_idx).trailing_zeros(),
+            (right_idx + 1).trailing_zeros(),
+        ) as usize;
+
+        for i in (c0 + 1..self.height).rev() {
+            self.resolve(((left_idx + 1) >> i) - 1);
+            self.resolve(((right_idx + 1) >> i) - 1);
+        }
+
+        left_idx = left_idx >> c0;
+        right_idx = ((right_idx + 1) >> c0) - 1;
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                left = M::op(&left, &self.get_node_value(left_idx));
+                left_idx += 1;
+            }
+
+            if right_idx % 2 == 0 {
+                right = M::op(&self.get_node_value(right_idx - 1), &right);
+                right_idx -= 1;
+            }
+
+            let c = std::cmp::min(
+                // trailing_ones
+                (!left_idx).trailing_zeros(),
+                (right_idx + 1).trailing_zeros(),
+            );
+            left_idx = left_idx >> c;
+            right_idx = ((right_idx + 1) >> c) - 1;
+        }
+
+        M::op(&left, &right)
+    }
+}
+
+macro_rules! define_monoid {
+    ($name: ident, $t: ty, $id: expr, $op: expr) => {
+        #[derive(Clone, Debug)]
+        struct $name;
+
+        impl Monoid for $name {
+            type Item = $t;
+
+            fn id() -> Self::Item {
+                $id
+            }
+
+            fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item {
+                ($op)(*lhs, *rhs)
+            }
+        }
+    };
+}
+
+define_monoid!(Maximum, i64, -(1 << 60), i64::max);
+define_monoid!(AddValue, i64, 0, std::ops::Add::add);
+
+impl Operator<i64> for AddValue {
+    fn apply(op: &Self::Item, v: &i64) -> i64 {
+        op + v
+    }
+}
+
+#[allow(dead_code)]
+type ST = LazySegmentTree<Maximum, AddValue>;
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let lr = read_vec(n, || read_tuple!(usize, usize));
+
+    let r_of_l = lr.citer().fold(vec![vec![]; m + 1], |mut r_of_l, (l, r)| {
+        r_of_l[l].push(r);
+
+        r_of_l
+    });
+
+    let init = (0..=m + 1)
+        .map(|r| r as i64 - (m + 1) as i64)
+        .collect::<Vec<_>>();
+    let ans = r_of_l
+        .iter()
+        .enumerate()
+        .scan(ST::with(&init), |st, (l, rs)| {
+            for r in rs {
+                st.update(0, r + 1, 1);
+            }
+
+            // for r in 0..=m + 1 {
+            //     eprintln!("{} {} {}", l, r, st.get(r) - l as i64);
+            // }
+
+            Some(st.query(l + 1, m + 2) - l as i64)
+        })
+        .chain(once(n as i64 - m as i64))
+        // .inspect(|x| eprintln!("{}", x))
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
+}
