@@ -148,4 +148,73 @@ where
 {
 }
 
-fn main() {}
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
+        }
+    }
+    begin
+}
+#[allow(dead_code)]
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
+}
+
+fn query(x: usize) -> bool {
+    println!("? {}", x);
+    read::<char>() == 'Y'
+}
+
+fn main() {
+    if !query(999999999) {
+        println!("! 1000000000");
+        return;
+    }
+
+    let a = lower_bound_int(100000000, 999999999, |x: usize| {
+        if query(x * 100) {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
+    });
+
+    let ans = if a == 100000000 {
+        iterate(a, |&b| b / 10)
+            .find(|&b| b == 1 || !query(b / 10 + 1))
+            .unwrap()
+    } else {
+        izip!(iterate(a, |&b| b / 10), iterate(100000000, |&b| b / 10))
+            .find(|&(b, c)| b % 10 > 0 || query(c))
+            .unwrap()
+            .0
+    };
+    println!("! {}", ans);
+}

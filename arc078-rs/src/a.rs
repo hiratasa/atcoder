@@ -150,16 +150,15 @@ where
 
 fn main() {
     let n: usize = read();
-
     let a = read_row::<i64>();
 
     let s = a.citer().sum::<i64>();
 
     let ans = a
-        .iter()
-        .cumsum::<i64>()
+        .citer()
         .take(n - 1)
-        .map(|cs| (cs - (s - cs)).abs())
+        .cumsum::<i64>()
+        .map(|x| (x - (s - x)).abs())
         .min()
         .unwrap();
     println!("{}", ans);
