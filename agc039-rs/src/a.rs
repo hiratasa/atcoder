@@ -148,4 +148,27 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_str();
+    let k: usize = read();
+
+    let u = s
+        .citer()
+        .group_by(|&c| c)
+        .into_iter()
+        .map(|(c, it)| (c, it.count()))
+        .collect::<Vec<_>>();
+
+    let ans = if u.len() == 1 {
+        s.len() * k / 2
+    } else if u[0].0 == u[u.len() - 1].0 {
+        u[1..u.len() - 1].citer().map(|(_, l)| l / 2).sum::<usize>() * k
+            + (u[0].1 + u[u.len() - 1].1) / 2 * (k - 1)
+            + u[0].1 / 2
+            + u[u.len() - 1].1 / 2
+    } else {
+        u.citer().map(|(_, l)| l / 2).sum::<usize>() * k
+    };
+
+    println!("{}", ans);
+}
