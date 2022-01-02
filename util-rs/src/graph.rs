@@ -167,6 +167,10 @@ mod detail {
             self.out_edges[edge.from].push(edge);
             self.in_edges[edge.to].push(edge);
         }
+
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
     }
 }
 
