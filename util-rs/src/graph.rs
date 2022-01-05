@@ -171,6 +171,18 @@ mod detail {
         pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
             self.out_edges[v].iter().map(|e| e.to)
         }
+
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
     }
 }
 
