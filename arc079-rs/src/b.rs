@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -138,28 +149,17 @@ where
 }
 
 fn main() {
-    let k: i64 = read();
+    let k: usize = read();
 
-    let ans = (2..=50)
-        .find_map(|n| {
-            let a = (0..n)
-                .map(|i| {
-                    if i < k % n {
-                        n - 1 - k + (k / n + 1) * (n + 1)
-                    } else {
-                        n - 1 - k + k / n * (n + 1)
-                    }
-                })
-                .collect::<Vec<_>>();
+    let n = 50;
+    println!("{}", n);
 
-            if a.citer().all(|x| x >= 0 && x <= 10000000000000000 + 1000) {
-                Some(a)
-            } else {
-                None
-            }
-        })
-        .unwrap();
-
-    println!("{}", ans.len());
-    println!("{}", ans.citer().join(" "));
+    println!(
+        "{}",
+        chain(
+            repeat(n - 1 + k / n + n - k % n + 1).take(k % n),
+            repeat(n - 1 + k / n - k % n).take(n - k % n)
+        )
+        .join(" ")
+    );
 }
