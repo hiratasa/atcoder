@@ -148,4 +148,21 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+
+    let ans = a
+        .citer()
+        .sorted()
+        .rev()
+        .group_by(|&aa| aa)
+        .into_iter()
+        .flat_map(|(aa, it)| repeat(aa).take(it.count() / 2))
+        .take(2)
+        .next_tuple()
+        .map(|(a0, a1)| a0 * a1)
+        .unwrap_or(0);
+
+    println!("{}", ans);
+}

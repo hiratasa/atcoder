@@ -149,34 +149,35 @@ where
 }
 
 fn main() {
+    const M: usize = 'z' as usize - 'a' as usize + 1;
+
     let a = read_str();
 
-    let (dp, prevs) = a.citer().enumerate().rev().fold(
-        (
-            (b'a'..=b'z')
-                .map(|c| (1usize, Err(c as char)))
-                .collect::<Vec<_>>(),
-            vec![Err('a'); a.len()],
-        ),
-        |(mut dp, mut prevs), (i, c)| {
-            let (l, p) = dp.citer().min_by_key(|t| t.0).unwrap();
+    let dp = a
+        .citer()
+        .rev()
+        .scan(vec![1; M], |dp, c| {
+            dp[c as usize - 'a' as usize] = dp.citer().min().unwrap() + 1;
 
-            dp[c as usize - 'a' as usize] = (l + 1, Ok(i));
-            prevs[i] = p;
+            Some(dp.clone())
+        })
+        .collect::<Vec<_>>();
 
-            (dp, prevs)
-        },
-    );
-
-    let (_, p) = dp.citer().min_by_key(|t| t.0).unwrap();
-    let ans = successors(Some(p), |&q| match q {
-        Ok(pos) => Some(prevs[pos]),
-        Err(_) => None,
+    let ans = izip!(
+        dp.iter().rev().chain(once(&vec![1; M])),
+        once('#').chain(a.citer())
+    )
+    .scan('#', |c, (dp, d)| {
+        if *c == d {
+            let idx = dp.citer().position_min().unwrap();
+            *c = (b'a' + idx as u8) as char;
+            Some(Some(*c))
+        } else {
+            Some(None)
+        }
     })
-    .map(|p| match p {
-        Ok(pos) => a[pos],
-        Err(c) => c,
-    })
-    .collect::<String>();
-    println!("{}", ans);
+    .flatten()
+    .collect::<Vec<_>>();
+
+    println!("{}", ans.citer().join(""));
 }
