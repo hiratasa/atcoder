@@ -149,16 +149,27 @@ where
 }
 
 fn main() {
-    let (n, t) = read_tuple!(usize, usize);
-    let ab = read_vec(n, || read_tuple!(usize, usize));
+    let n: usize = read();
+    let a = read_vec(n, || read_str());
 
-    let dp = ab.citer().sorted().fold(vec![0; 6001], |dp, (a, b)| {
-        (0..t).rev().fold(dp, |mut dp, i| {
-            dp[i + a] = max(dp[i + a], dp[i] + b);
-            dp
+    if a.iter().all(|row| row.citer().all(|c| c == '.')) {
+        println!("-1");
+        return;
+    }
+
+    if a.iter().any(|row| row.citer().all(|c| c == '#')) {
+        let ans = (0..n).filter(|&i| (0..n).any(|j| a[j][i] == '.')).count();
+        println!("{}", ans);
+        return;
+    }
+
+    let m = (0..n)
+        .map(|i| {
+            a[i].citer().filter(|&c| c == '.').count() + (0..n).all(|j| a[j][i] == '.') as usize
         })
-    });
-
-    let ans = dp.citer().max().unwrap();
+        .min()
+        .unwrap();
+    let m2 = (0..n).filter(|&i| (0..n).any(|j| a[j][i] == '.')).count();
+    let ans = m + m2;
     println!("{}", ans);
 }

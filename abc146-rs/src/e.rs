@@ -149,16 +149,28 @@ where
 }
 
 fn main() {
-    let (n, t) = read_tuple!(usize, usize);
-    let ab = read_vec(n, || read_tuple!(usize, usize));
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
 
-    let dp = ab.citer().sorted().fold(vec![0; 6001], |dp, (a, b)| {
-        (0..t).rev().fold(dp, |mut dp, i| {
-            dp[i + a] = max(dp[i + a], dp[i] + b);
-            dp
+    let b = once(0)
+        .chain(a.citer().cumsum::<usize>())
+        .enumerate()
+        .map(|(i, x)| (i + k - x % k) % k)
+        .collect::<Vec<_>>();
+
+    let ans = (0..=n)
+        .scan(BTreeMap::new(), |map, i| {
+            let bb = b[i];
+            *map.entry(bb).or_insert(0) += 1;
+
+            if i >= k {
+                let b0 = b[i - k];
+                *map.get_mut(&b0).unwrap() -= 1;
+            }
+
+            Some(map[&bb] - 1)
         })
-    });
+        .sum::<usize>();
 
-    let ans = dp.citer().max().unwrap();
     println!("{}", ans);
 }

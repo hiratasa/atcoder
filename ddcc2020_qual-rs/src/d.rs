@@ -148,4 +148,13 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let m: usize = read();
+    let dc = read_vec(m, || read_tuple!(usize, usize));
+
+    let s = dc.citer().map(|(d, c)| d * c).sum::<usize>();
+    let n = dc.citer().map(|(_d, c)| c).sum::<usize>();
+    let ans = n - 1 + (s - ((s - 1) % 9 + 1)) / 9;
+
+    println!("{}", ans);
+}

@@ -149,16 +149,52 @@ where
 }
 
 fn main() {
-    let (n, t) = read_tuple!(usize, usize);
-    let ab = read_vec(n, || read_tuple!(usize, usize));
+    let n: usize = read();
+    let a = read_str()
+        .into_iter()
+        .map(|c| c.to_digit(10).unwrap())
+        .collect::<Vec<_>>();
 
-    let dp = ab.citer().sorted().fold(vec![0; 6001], |dp, (a, b)| {
-        (0..t).rev().fold(dp, |mut dp, i| {
-            dp[i + a] = max(dp[i + a], dp[i] + b);
-            dp
+    let s = a
+        .citer()
+        .enumerate()
+        .map(|(i, aa)| {
+            // C(n - 1, i) の偶奇
+            let e = (n - 1 == (n - 1) | i) as u32;
+
+            (aa * e % 2) as usize
         })
-    });
+        .sum::<usize>()
+        % 2;
+    if s == 1 {
+        println!("1");
+        return;
+    }
 
-    let ans = dp.citer().max().unwrap();
-    println!("{}", ans);
+    if a.citer()
+        .tuple_windows()
+        .any(|(a0, a1)| a0 == a1 + 1 || a0 + 1 == a1)
+    {
+        println!("0");
+        return;
+    }
+
+    if a.citer().all_equal() {
+        println!("0");
+        return;
+    }
+
+    let s2 = a
+        .citer()
+        .map(|aa| aa / 2)
+        .enumerate()
+        .map(|(i, aa)| {
+            // C(n - 1, i) の偶奇
+            let e = (n - 1 == (n - 1) | i) as u32;
+
+            (aa * e % 2) as usize
+        })
+        .sum::<usize>()
+        % 2;
+    println!("{}", s2 * 2);
 }

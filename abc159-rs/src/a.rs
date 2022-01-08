@@ -148,17 +148,4 @@ where
 {
 }
 
-fn main() {
-    let (n, t) = read_tuple!(usize, usize);
-    let ab = read_vec(n, || read_tuple!(usize, usize));
-
-    let dp = ab.citer().sorted().fold(vec![0; 6001], |dp, (a, b)| {
-        (0..t).rev().fold(dp, |mut dp, i| {
-            dp[i + a] = max(dp[i + a], dp[i] + b);
-            dp
-        })
-    });
-
-    let ans = dp.citer().max().unwrap();
-    println!("{}", ans);
-}
+fn main() {}

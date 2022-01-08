@@ -148,4 +148,58 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m, l) = read_tuple!(usize, usize, usize);
+    let abc = read_vec(m, || read_tuple!(usize, usize, usize));
+
+    let q: usize = read();
+    let st = read_vec(q, || read_tuple!(usize, usize));
+
+    let mut dist = vec![vec![usize::MAX; n]; n];
+    for i in 0..n {
+        dist[i][i] = 0;
+    }
+
+    for (a, b, c) in abc {
+        dist[a - 1][b - 1] = c;
+        dist[b - 1][a - 1] = c;
+    }
+
+    for k in 0..n {
+        for i in 0..n {
+            for j in 0..n {
+                dist[i][j] = min(dist[i][j], dist[i][k].saturating_add(dist[k][j]));
+            }
+        }
+    }
+
+    let mut dist2 = vec![vec![usize::MAX; n]; n];
+    for i in 0..n {
+        dist2[i][i] = 0;
+    }
+
+    for i in 0..n {
+        for j in 0..n {
+            if dist[i][j] <= l {
+                dist2[i][j] = 1;
+            }
+        }
+    }
+
+    for k in 0..n {
+        for i in 0..n {
+            for j in 0..n {
+                dist2[i][j] = min(dist2[i][j], dist2[i][k].saturating_add(dist2[k][j]));
+            }
+        }
+    }
+
+    for (s, t) in st {
+        let d = dist2[s - 1][t - 1];
+        if d == usize::MAX {
+            println!("-1");
+        } else {
+            println!("{}", d - 1);
+        }
+    }
+}
