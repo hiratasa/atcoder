@@ -148,4 +148,75 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let x: i64 = read();
+    let k: usize = read();
+    let r = read_row::<i64>();
+    let q: usize = read();
+    let ta = read_vec(q, || read_tuple!(i64, i64));
+
+    let simulate = |a: i64| {
+        once(0)
+            .chain(once(0))
+            .chain(r.citer())
+            .tuple_windows()
+            .map(|(rr0, rr1)| rr1 - rr0)
+            .enumerate()
+            .scan(a, |aa, (i, delta)| {
+                if i % 2 == 0 {
+                    *aa = min(x, *aa + delta);
+                    Some(*aa)
+                } else {
+                    *aa = max(0, *aa - delta);
+                    Some(*aa)
+                }
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let upper = simulate(x);
+    let lower = simulate(0);
+
+    let d = once(0)
+        .chain(once(0))
+        .chain(r.citer())
+        .tuple_windows()
+        .map(|(rr0, rr1)| rr1 - rr0)
+        .enumerate()
+        .map(|(i, delta)| if i % 2 == 0 { delta } else { -delta })
+        .cumsum::<i64>()
+        .collect::<Vec<_>>();
+    let d_max = d
+        .citer()
+        .scan(std::i64::MIN, |m, dd| {
+            *m = max(*m, dd);
+            Some(*m)
+        })
+        .collect::<Vec<_>>();
+    let d_min = d
+        .citer()
+        .scan(std::i64::MAX, |m, dd| {
+            *m = min(*m, dd);
+            Some(*m)
+        })
+        .collect::<Vec<_>>();
+
+    for (t, a) in ta {
+        let idx = r
+            .binary_search_by(|&rr| rr.cmp(&t).then(Ordering::Less))
+            .unwrap_err();
+        let t0 = if idx == 0 { 0 } else { r[idx - 1] };
+        let sign = if idx % 2 == 0 { -1 } else { 1 };
+
+        let ans = if a + d_max[idx] >= x {
+            // 上にさちってる
+            max(0, min(x, upper[idx] + sign * (t - t0)))
+        } else if a + d_min[idx] <= 0 {
+            // 下にさちってる
+            max(0, min(x, lower[idx] + sign * (t - t0)))
+        } else {
+            max(0, min(x, a + d[idx] + sign * (t - t0)))
+        };
+        println!("{}", ans);
+    }
+}

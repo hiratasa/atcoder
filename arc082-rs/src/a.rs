@@ -197,16 +197,17 @@ where
 
 fn main() {
     let n: usize = read();
-
-    let a = read_row::<usize>();
+    let a = read_row::<i64>();
 
     let ans = a
         .citer()
-        .fold_vec2(vec![0; 100000], |f, aa| (aa, f[aa] + 1))
+        .flat_map(|aa| it![aa - 1, aa, aa + 1])
+        .sorted()
+        .group_by(|&aa| aa)
         .into_iter()
-        .tuple_windows()
-        .map(|(s0, s1, s2)| s0 + s1 + s2)
+        .map(|(_aa, it)| it.count())
         .max()
         .unwrap();
+
     println!("{}", ans);
 }

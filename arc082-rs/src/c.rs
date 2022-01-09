@@ -152,6 +152,7 @@ use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
     let mut y = 1;
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;
@@ -179,9 +180,10 @@ macro_rules! define_static_mod {
 }
 define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
 #[allow(dead_code)]
 impl<M: Modulus> Mod<M> {
     pub fn modulus() -> usize {
@@ -353,38 +355,108 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+enum UnionFindNode {
+    Root { size: usize },
+    Child { parent: usize },
+}
+struct UnionFind {
+    g: Vec<UnionFindNode>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        use UnionFindNode::*;
+        UnionFind {
+            g: (0..n).map(|_| Root { size: 1 }).collect(),
+        }
+    }
+    fn root(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let p = match self.g[v] {
+            Root { size: _ } => return v,
+            Child { parent: p } => p,
+        };
+        let r = self.root(p);
+        self.g[v] = Child { parent: r };
+        r
+    }
+    fn unite(&mut self, v: usize, u: usize) -> bool {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        let ru = self.root(u);
+        if rv == ru {
+            return false;
+        }
+        let size_rv = self.size(rv);
+        let size_ru = self.size(ru);
+        let (rsmall, rlarge) = if size_rv < size_ru {
+            (rv, ru)
+        } else {
+            (ru, rv)
+        };
+        self.g[rsmall] = Child { parent: rlarge };
+        self.g[rlarge] = Root {
+            size: size_rv + size_ru,
+        };
+        true
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+    fn size(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        match self.g[rv] {
+            Root { size } => size,
+            Child { parent: _ } => unreachable!(),
+        }
+    }
+}
+
 fn main() {
     type Mod = Mod998244353;
 
     let n: usize = read();
     let xy = read_vec(n, || read_tuple!(i64, i64));
 
-    let lines = (0..n)
-        .flat_map(|i| (i + 1..n).map(move |j| (i, j)))
-        .map(|(i, j)| {
-            let (x0, y0) = xy[i];
-            let (x1, y1) = xy[j];
+    let line_id = |i: usize, j: usize| min(i, j) * n + max(i, j);
 
-            (0..n)
-                .filter(|&k| {
-                    let (x, y) = xy[k];
+    let mut uf = iproduct!(0..n, 0..n, 0..n)
+        .filter(|&(i, j, k)| i < j && j < k)
+        .filter(|&(i, j, k)| {
+            let dx0 = xy[i].0 - xy[j].0;
+            let dy0 = xy[i].1 - xy[j].1;
+            let dx1 = xy[j].0 - xy[k].0;
+            let dy1 = xy[j].1 - xy[k].1;
 
-                    (y1 - y0) * (x - x0) - (x1 - x0) * (y - y0) == 0
-                })
-                .collect::<Vec<_>>()
+            dx0 * dy1 == dx1 * dy0
         })
-        .sorted()
-        .dedup()
-        .collect::<Vec<_>>();
+        .fold(UnionFind::new(n * n), |mut uf, (i, j, k)| {
+            uf.unite(line_id(i, j), line_id(j, k));
+            uf.unite(line_id(i, j), line_id(i, k));
+            uf
+        });
 
-    // eprintln!("{:?}", lines);
-    let ans = Mod::new(2).pow(n) - /* empty set */ 1 - /* single point */ n - lines.iter().map(|line| {
-        // lineから2点以上とる方法の数
-        let m = line.len();
-        assert!(m >= 2);
+    let m = iproduct!(0..n, 0..n)
+        .filter(|&(i, j)| i < j)
+        .map(|(i, j)| line_id(i, j))
+        .filter_map(|id| {
+            if uf.root(id) == id {
+                Some(uf.size(id))
+            } else {
+                None
+            }
+        })
+        .map(|s| {
+            // s本の線分 => ceil(sqrt(2s))個の点
+            let k = ((2 * s) as f64).sqrt().ceil() as usize;
 
-        Mod::new(2).pow(m) - /* empty set */ 1 - /* single point */ m
-    }).sum::<Mod>();
+            // k個の点から2個以上を選ぶ方法
+            Mod::new(2).pow(k) - /* empty */ 1 - /* single point */ k
+        })
+        .sum::<Mod>();
 
+    let ans = Mod::new(2).pow(n) - /* empty */ 1 - /* single point */ n - /* on line */ m;
     println!("{}", ans);
 }

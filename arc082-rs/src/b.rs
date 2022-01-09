@@ -148,4 +148,19 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let p = read_row::<usize>();
+
+    let ans = p
+        .citer()
+        .enumerate()
+        .map(|(i, pp)| i + 1 == pp)
+        .group_by(|&x| x)
+        .into_iter()
+        .filter(|(x, _)| *x)
+        .map(|(_x, it)| (it.count() + 1) / 2)
+        .sum::<usize>();
+
+    println!("{}", ans);
+}
