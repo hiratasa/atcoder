@@ -148,62 +148,32 @@ where
 {
 }
 
-#[allow(dead_code)]
-fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
-where
-    T: std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Div<T, Output = T>
-        + std::cmp::PartialOrd<T>
-        + std::convert::TryFrom<i32>,
-    F: Fn(T) -> std::cmp::Ordering,
-{
-    let two = T::try_from(2).ok().unwrap();
-    while end - begin >= epsilon {
-        let mid = begin + (end - begin) / two;
-        match f(mid) {
-            std::cmp::Ordering::Less => {
-                begin = mid + epsilon;
-            }
-            _ => {
-                end = mid;
-            }
-        }
-    }
-    begin
-}
-#[allow(dead_code)]
-fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
-where
-    T: std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Div<T, Output = T>
-        + std::cmp::PartialOrd<T>
-        + std::convert::TryFrom<i32>,
-    F: Fn(T) -> std::cmp::Ordering,
-{
-    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
-}
-
 fn main() {
-    let n: usize = read();
-    let hs = read_vec(n, || read_tuple!(i64, i64));
+    let (t1, t2) = read_tuple!(usize, usize);
+    let (a1, a2) = read_tuple!(usize, usize);
+    let (b1, b2) = read_tuple!(usize, usize);
 
-    let ans = lower_bound_int(1i64, 1 << 60, |m| {
-        if hs
-            .citer()
-            .map(|(h, s)| (m - h).div_euclid(s))
-            .sorted()
-            .enumerate()
-            .all(|(i, t)| i as i64 <= t)
-        {
-            Ordering::Greater
+    let c = t1 * a1 + t2 * a2;
+    let d = t1 * b1 + t2 * b2;
+
+    if c == d {
+        println!("infinity");
+        return;
+    }
+
+    let ans = if (c < d) == (a1 < b1) {
+        0
+    } else {
+        let e = t1 * (max(a1, b1) - min(a1, b1));
+
+        let f = max(c, d) - min(c, d);
+
+        if e / f * f == e {
+            e / f * 2
         } else {
-            Ordering::Less
+            e / f * 2 + 1
         }
-    });
+    };
 
     println!("{}", ans);
 }

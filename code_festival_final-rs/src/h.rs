@@ -148,62 +148,54 @@ where
 {
 }
 
-#[allow(dead_code)]
-fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
-where
-    T: std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Div<T, Output = T>
-        + std::cmp::PartialOrd<T>
-        + std::convert::TryFrom<i32>,
-    F: Fn(T) -> std::cmp::Ordering,
-{
-    let two = T::try_from(2).ok().unwrap();
-    while end - begin >= epsilon {
-        let mid = begin + (end - begin) / two;
-        match f(mid) {
-            std::cmp::Ordering::Less => {
-                begin = mid + epsilon;
-            }
-            _ => {
-                end = mid;
-            }
-        }
-    }
-    begin
-}
-#[allow(dead_code)]
-fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
-where
-    T: std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Div<T, Output = T>
-        + std::cmp::PartialOrd<T>
-        + std::convert::TryFrom<i32>,
-    F: Fn(T) -> std::cmp::Ordering,
-{
-    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
-}
-
 fn main() {
-    let n: usize = read();
-    let hs = read_vec(n, || read_tuple!(i64, i64));
+    let (n, k) = read_tuple!(usize, usize);
+    let s = read_str();
 
-    let ans = lower_bound_int(1i64, 1 << 60, |m| {
-        if hs
-            .citer()
-            .map(|(h, s)| (m - h).div_euclid(s))
-            .sorted()
-            .enumerate()
-            .all(|(i, t)| i as i64 <= t)
-        {
-            Ordering::Greater
-        } else {
-            Ordering::Less
-        }
-    });
+    let (rooms, nums) = s.citer().map(|c| c == '1').fold(
+        (once((0, k)).collect::<BTreeMap<_, _>>(), vec![]),
+        |(mut rooms, nums), c| {
+            if c {
+                let x = *rooms.keys().next_back().unwrap();
+                *rooms.get_mut(&x).unwrap() -= 1;
+                if rooms[&x] == 0 {
+                    rooms.remove(&x);
+                }
+                rooms.insert(x + 1, 1);
+                (rooms, pushed!(nums, x + 1))
+            } else {
+                let x = *rooms.keys().next().unwrap();
+                *rooms.get_mut(&x).unwrap() -= 1;
+                if rooms[&x] == 0 {
+                    rooms.remove(&x);
+                }
+                *rooms.entry(x + 1).or_insert(0) += 1;
+                (rooms, pushed!(nums, x + 1))
+            }
+        },
+    );
 
-    println!("{}", ans);
+    let ans_rev = nums
+        .citer()
+        .rev()
+        .scan(
+            rooms
+                .iter()
+                .map(|(&m, &l)| (m, (l, m as f64)))
+                .collect::<BTreeMap<_, _>>(),
+            |exs, x| {
+                let e = exs[&x].1;
+                let (l, e2) = exs.get(&(x - 1)).copied().unwrap_or((0, 0.0));
+
+                exs.get_mut(&x).unwrap().0 -= 1;
+                exs.insert(x - 1, (l + 1, (e2 * l as f64 + e) / (l + 1) as f64));
+
+                Some(e)
+            },
+        )
+        .collect::<Vec<_>>();
+
+    for a in ans_rev.citer().rev() {
+        println!("{}", a);
+    }
 }
