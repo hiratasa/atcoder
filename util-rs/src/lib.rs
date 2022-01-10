@@ -17,5 +17,6 @@ mod prime;
 mod segment_tree;
 mod stringutil;
 mod suffix_array;
+mod treap;
 mod union_find;
 mod z_algorithm;
