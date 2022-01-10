@@ -9,6 +9,7 @@ trait Operator<T>: Monoid {
     fn apply(op: &Self::Item, v: &T) -> T;
 }
 
+// 通常のtreapとimplicit treap兼用
 struct TreapNode<K, M, Op>
 where
     M: Monoid,
@@ -19,21 +20,12 @@ where
     size: usize,
     priority: usize,
     key: K,
+    reversed: bool,
     lazy: Op::Item,
     // lazy適用後の値
     acc: M::Item,
     // lazy適用後の値
     value: M::Item,
-}
-
-struct Treap<K, M, Op>
-where
-    M: Monoid,
-    Op: Monoid,
-{
-    // To share when split, use Rc.
-    rng: std::rc::Rc<std::cell::RefCell<rand::rngs::SmallRng>>,
-    root: Option<Box<TreapNode<K, M, Op>>>,
 }
 
 impl<K, M, Op> TreapNode<K, M, Op>
@@ -47,6 +39,7 @@ where
             left: None,
             right: None,
             size: 1,
+            reversed: false,
             priority,
             key,
             lazy: Op::id(),
@@ -79,13 +72,27 @@ where
             t.lazy = Op::op(&self.lazy, &t.lazy);
             t.acc = Op::apply(&self.lazy, &t.acc);
             t.value = Op::apply(&self.lazy, &t.value);
+
+            if self.reversed {
+                t.reversed ^= true;
+            }
         }
         if let Some(t) = self.right.as_deref_mut() {
             t.lazy = Op::op(&self.lazy, &t.lazy);
             t.acc = Op::apply(&self.lazy, &t.acc);
             t.value = Op::apply(&self.lazy, &t.value);
+
+            if self.reversed {
+                t.reversed ^= true;
+            }
         }
+
+        if self.reversed {
+            std::mem::swap(&mut self.left, &mut self.right);
+        }
+
         self.lazy = Op::id();
+        self.reversed = false;
     }
 
     // selfの要素がrhsの要素より小さいときのみ使用可
@@ -124,16 +131,16 @@ where
         };
 
         t.push();
-        if t.key <= *x {
-            let (l, r) = TreapNode::split_upper_bound(t.right, x);
-            t.right = l;
-            t.fix();
-            (Some(t), r)
-        } else {
+        if *x < t.key {
             let (l, r) = TreapNode::split_upper_bound(t.left, x);
             t.left = r;
             t.fix();
             (l, Some(t))
+        } else {
+            let (l, r) = TreapNode::split_upper_bound(t.right, x);
+            t.right = l;
+            t.fix();
+            (Some(t), r)
         }
     }
 
@@ -146,16 +153,40 @@ where
         };
 
         t.push();
-        if t.key < *x {
-            let (l, r) = TreapNode::split_lower_bound(t.right, x);
-            t.right = l;
-            t.fix();
-            (Some(t), r)
-        } else {
+        if *x <= t.key {
             let (l, r) = TreapNode::split_lower_bound(t.left, x);
             t.left = r;
             t.fix();
             (l, Some(t))
+        } else {
+            let (l, r) = TreapNode::split_lower_bound(t.right, x);
+            t.right = l;
+            t.fix();
+            (Some(t), r)
+        }
+    }
+
+    // nth番目以降を分離
+    fn split_at(t: Option<Box<Self>>, nth: usize) -> (Option<Box<Self>>, Option<Box<Self>>) {
+        let mut t = if let Some(t) = t {
+            t
+        } else {
+            return (None, None);
+        };
+
+        t.push();
+        let left_size = TreapNode::size(&t.left);
+
+        if nth <= left_size {
+            let (l, r) = TreapNode::split_at(t.left, nth);
+            t.left = r;
+            t.fix();
+            (l, Some(t))
+        } else {
+            let (l, r) = TreapNode::split_at(t.right, nth - (left_size + 1));
+            t.right = l;
+            t.fix();
+            (Some(t), r)
         }
     }
 
@@ -173,14 +204,55 @@ where
             v.right = r;
             v.fix();
             v
-        } else if t.key < key {
+        } else if key < t.key {
             t.push();
-            t.right = Some(TreapNode::insert(t.right, priority, key, value));
+            t.left = Some(TreapNode::insert(t.left, priority, key, value));
             t.fix();
             t
         } else {
             t.push();
-            t.left = Some(TreapNode::insert(t.left, priority, key, value));
+            t.right = Some(TreapNode::insert(t.right, priority, key, value));
+            t.fix();
+            t
+        }
+    }
+
+    // keyの順序を無視してnth番目に挿入する
+    // Implicit treap用
+    fn insert_at(
+        t: Option<Box<Self>>,
+        nth: usize,
+        priority: usize,
+        key: K,
+        value: M::Item,
+    ) -> Box<Self> {
+        let mut t = if let Some(t) = t {
+            t
+        } else {
+            return Box::new(TreapNode::new(priority, key, value));
+        };
+
+        t.push();
+        let left_size = TreapNode::size(&t.left);
+        if t.priority < priority {
+            let (l, r) = TreapNode::split_at(Some(t), nth);
+            let mut v = Box::new(TreapNode::new(priority, key, value));
+            v.left = l;
+            v.right = r;
+            v.fix();
+            v
+        } else if nth <= left_size {
+            t.left = Some(TreapNode::insert_at(t.left, nth, priority, key, value));
+            t.fix();
+            t
+        } else {
+            t.right = Some(TreapNode::insert_at(
+                t.right,
+                nth - (left_size + 1),
+                priority,
+                key,
+                value,
+            ));
             t.fix();
             t
         }
@@ -272,32 +344,6 @@ where
         TreapNode::at(&mut t.right, nth - (left_size + 1))
     }
 
-    fn query(t: Option<Box<Self>>, lower: &K, upper: &K) -> (Option<Box<Self>>, M::Item) {
-        assert!(*lower <= *upper);
-
-        let (t0, t12) = TreapNode::split_lower_bound(t, lower);
-        let (t1, t2) = TreapNode::split_lower_bound(t12, upper);
-
-        let v = t1.as_deref().map_or(M::id(), |t1| t1.acc.clone());
-
-        (TreapNode::merge(t0, TreapNode::merge(t1, t2)), v)
-    }
-
-    fn update(t: Option<Box<Self>>, lower: &K, upper: &K, x: Op::Item) -> Option<Box<Self>> {
-        assert!(*lower <= *upper);
-
-        let (t0, t12) = TreapNode::split_lower_bound(t, lower);
-        let (mut t1, t2) = TreapNode::split_lower_bound(t12, upper);
-
-        if let Some(t1) = t1.as_deref_mut() {
-            t1.acc = Op::apply(&x, &t1.acc);
-            t1.value = Op::apply(&x, &t1.value);
-            t1.lazy = x;
-        }
-
-        TreapNode::merge(t0, TreapNode::merge(t1, t2))
-    }
-
     // TODO: implement without Box
     fn iter<'a>(
         t: &'a mut Option<Box<Self>>,
@@ -310,6 +356,16 @@ where
                 .chain(TreapNode::iter(&mut t.right))
         }))
     }
+}
+
+struct Treap<K, M, Op>
+where
+    M: Monoid,
+    Op: Monoid,
+{
+    // To share when split, use Rc.
+    rng: std::rc::Rc<std::cell::RefCell<rand::rngs::SmallRng>>,
+    root: Option<Box<TreapNode<K, M, Op>>>,
 }
 
 #[allow(dead_code)]
@@ -378,18 +434,155 @@ where
 
     // 内部的に変更走るのでmut
     fn query(&mut self, lower: &K, upper: &K) -> M::Item {
-        let (root, v) = TreapNode::query(std::mem::replace(&mut self.root, None), lower, upper);
-        self.root = root;
+        assert!(*lower <= *upper);
+
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t0, t12) = TreapNode::split_lower_bound(root, lower);
+        let (t1, t2) = TreapNode::split_lower_bound(t12, upper);
+
+        let v = t1.as_deref().map_or(M::id(), |t1| t1.acc.clone());
+
+        self.root = TreapNode::merge(t0, TreapNode::merge(t1, t2));
 
         v
     }
 
     fn update(&mut self, lower: &K, upper: &K, x: Op::Item) {
-        self.root = TreapNode::update(std::mem::replace(&mut self.root, None), lower, upper, x);
+        assert!(*lower <= *upper);
+
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t0, t12) = TreapNode::split_lower_bound(root, lower);
+        let (mut t1, t2) = TreapNode::split_lower_bound(t12, upper);
+
+        if let Some(t1) = t1.as_deref_mut() {
+            t1.acc = Op::apply(&x, &t1.acc);
+            t1.value = Op::apply(&x, &t1.value);
+            t1.lazy = x;
+        }
+
+        self.root = TreapNode::merge(t0, TreapNode::merge(t1, t2));
     }
 
     fn iter(&mut self) -> impl Iterator<Item = (&K, &M::Item)> {
         TreapNode::iter(&mut self.root)
+    }
+}
+
+// keyを保持せずにindexで操作するtreap
+struct ImplicitTreap<M, Op>
+where
+    M: Monoid,
+    Op: Monoid,
+{
+    // To share when split, use Rc.
+    rng: std::rc::Rc<std::cell::RefCell<rand::rngs::SmallRng>>,
+    root: Option<Box<TreapNode<(), M, Op>>>,
+}
+
+#[allow(dead_code)]
+impl<M, Op> ImplicitTreap<M, Op>
+where
+    M: Monoid,
+    Op: Monoid + Operator<M::Item>,
+{
+    fn new() -> ImplicitTreap<M, Op> {
+        use rand::SeedableRng;
+
+        ImplicitTreap {
+            rng: std::rc::Rc::new(std::cell::RefCell::new(rand::rngs::SmallRng::from_entropy())),
+            root: None,
+        }
+    }
+
+    fn merge(&mut self, rhs: ImplicitTreap<M, Op>) {
+        self.root = TreapNode::merge(std::mem::replace(&mut self.root, None), rhs.root);
+    }
+
+    fn split_at(&mut self, nth: usize) -> ImplicitTreap<M, Op> {
+        let (l, r) = TreapNode::split_at(std::mem::replace(&mut self.root, None), nth);
+        self.root = l;
+
+        ImplicitTreap {
+            rng: std::rc::Rc::clone(&self.rng),
+            root: r,
+        }
+    }
+
+    fn insert_at(&mut self, nth: usize, value: M::Item) {
+        use rand::Rng;
+
+        self.root = Some(TreapNode::insert_at(
+            std::mem::replace(&mut self.root, None),
+            nth,
+            self.rng.borrow_mut().gen(),
+            (),
+            value,
+        ));
+    }
+
+    fn remove_at(&mut self, nth: usize) -> Option<M::Item> {
+        let (t, v) = TreapNode::remove_at(std::mem::replace(&mut self.root, None), nth);
+        self.root = t;
+        v.map(|(_, v)| v)
+    }
+
+    fn size(&self) -> usize {
+        TreapNode::size(&self.root)
+    }
+
+    // 内部的に変更走るのでmut
+    fn at(&mut self, nth: usize) -> Option<&M::Item> {
+        TreapNode::at(&mut self.root, nth).map(|(_, v)| v)
+    }
+
+    // 内部的に変更走るのでmut
+    fn query(&mut self, lower: usize, upper: usize) -> M::Item {
+        assert!(lower <= upper);
+
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t0, t12) = TreapNode::split_at(root, lower);
+        let (t1, t2) = TreapNode::split_at(t12, upper - lower);
+
+        let v = t1.as_deref().map_or(M::id(), |t1| t1.acc.clone());
+
+        self.root = TreapNode::merge(t0, TreapNode::merge(t1, t2));
+
+        v
+    }
+
+    fn update(&mut self, lower: usize, upper: usize, x: Op::Item) {
+        assert!(lower <= upper);
+
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t0, t12) = TreapNode::split_at(root, lower);
+        let (mut t1, t2) = TreapNode::split_at(t12, upper - lower);
+
+        if let Some(t1) = t1.as_deref_mut() {
+            t1.acc = Op::apply(&x, &t1.acc);
+            t1.value = Op::apply(&x, &t1.value);
+            t1.lazy = x;
+        }
+
+        self.root = TreapNode::merge(t0, TreapNode::merge(t1, t2));
+    }
+
+    fn reverse(&mut self, lower: usize, upper: usize) {
+        assert!(lower <= upper);
+
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t0, t12) = TreapNode::split_at(root, lower);
+        let (mut t1, t2) = TreapNode::split_at(t12, upper - lower);
+
+        if let Some(t1) = t1.as_deref_mut() {
+            t1.reversed ^= true;
+        }
+
+        self.root = TreapNode::merge(t0, TreapNode::merge(t1, t2));
     }
 }
 
