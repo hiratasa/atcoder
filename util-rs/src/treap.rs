@@ -1,5 +1,3 @@
-use std::cmp::Ord;
-
 trait Monoid {
     type Item: Clone;
 
