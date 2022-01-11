@@ -137,4 +137,20 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_str();
+    let n = s.len();
+
+    let ans = s
+        .citer()
+        .tuple_windows()
+        .positions(|(s0, s1)| s0 != s1)
+        .map(|i| {
+            // i + 1 >= k || n - 1 - i >= k
+            max(i + 1, n - 1 - i)
+        })
+        .min()
+        .unwrap_or(n);
+
+    println!("{}", ans);
+}

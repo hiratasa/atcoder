@@ -137,4 +137,33 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let s = read_col::<usize>(n);
+
+    if s.citer().any(|x| x == 0) {
+        println!("{}", n);
+        return;
+    }
+
+    let ans = (0..n)
+        .scan((0, 1), |(r, p), l| {
+            if *r < l {
+                *r += 1;
+            }
+            while *r < n && *p * s[*r] <= k {
+                *p *= s[*r];
+                *r += 1;
+            }
+
+            if *r > l {
+                *p /= s[l];
+            }
+
+            Some(*r - l)
+        })
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
+}

@@ -148,4 +148,25 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+
+    let ans = a
+        .citer()
+        .enumerate()
+        .scan([[0, 0]; 20], |t, (i, aa)| {
+            for j in 0..20 {
+                if (aa >> j) & 1 > 0 {
+                    t[j] = [t[j][1], i + 1];
+                }
+            }
+
+            let j = t.citer().map(|[idx, _]| idx).max().unwrap();
+
+            Some(i + 1 - j)
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
+}

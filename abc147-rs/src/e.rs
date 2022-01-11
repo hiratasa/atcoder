@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -48,6 +50,15 @@ macro_rules! it {
             it!($($x),+)
         )
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
@@ -137,4 +148,38 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (h, w) = read_tuple!(usize, usize);
+    let a = read_mat::<usize>(h);
+    let b = read_mat::<usize>(h);
+
+    const M: usize = 80 * 160;
+
+    let init = vec![vec![bitset!(2 * M + 1, 0); w]; h];
+    let dp = iproduct!(0..h, 0..w).fold(init, |mut dp, (i, j)| {
+        let c = max(a[i][j], b[i][j]) - min(a[i][j], b[i][j]);
+
+        if i == 0 {
+            if j == 0 {
+                dp[i][j].set(M + c, true);
+                dp[i][j].set(M - c, true);
+            } else {
+                dp[i][j] = (&dp[i][j - 1] << c) | &(&dp[i][j - 1] >> c);
+            }
+        } else {
+            if j == 0 {
+                dp[i][j] = (&dp[i - 1][j] << c) | &(&dp[i - 1][j] >> c);
+            } else {
+                dp[i][j] = (&dp[i][j - 1] << c)
+                    | &(&dp[i][j - 1] >> c)
+                    | &(&dp[i - 1][j] << c)
+                    | &(&dp[i - 1][j] >> c);
+            }
+        }
+
+        dp
+    });
+
+    let ans = (0..=M).find(|&i| dp[h - 1][w - 1][M + i]).unwrap();
+    println!("{}", ans);
+}

@@ -148,4 +148,81 @@ where
 {
 }
 
-fn main() {}
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
+        }
+    }
+    begin
+}
+#[allow(dead_code)]
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
+}
+
+fn main() {
+    let (n, m, v, p) = read_tuple!(usize, usize, usize, usize);
+    let mut a = read_row::<usize>();
+    a.sort_by_key(|&aa| Reverse(aa));
+    let a = a;
+
+    let ans = lower_bound_int(0, n, |idx| {
+        let ok = if idx < p {
+            true
+        } else {
+            let b = a[idx] + m;
+            let idx2 = a
+                .binary_search_by(|&aa| b.cmp(&aa).then(Ordering::Greater))
+                .unwrap_err();
+
+            if idx2 >= p {
+                false
+            } else if v <= p {
+                true
+            } else {
+                a.citer()
+                    .enumerate()
+                    .filter(|&(i, _)| i >= p - 1 && i != idx)
+                    .map(|(_, aa)| min(b - aa, m))
+                    .sum::<usize>()
+                    / (v - p)
+                    >= m
+            }
+        };
+
+        if ok {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        }
+    });
+
+    println!("{}", ans);
+}
