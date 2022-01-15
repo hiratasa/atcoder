@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -148,41 +149,72 @@ where
 {
 }
 
-fn gcd(x: usize, y: usize) -> usize {
-    if x == 0 {
-        y
-    } else {
-        gcd(y % x, x)
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
+        }
     }
+    begin
+}
+
+fn norm((x, y): (f64, f64)) -> f64 {
+    (x.powi(2) + y.powi(2)).sqrt()
+}
+
+fn dist((x0, y0): (f64, f64), (x1, y1): (f64, f64)) -> f64 {
+    norm((x0 - x1, y0 - y1))
 }
 
 fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
-    let b = a.citer().map(|aa| aa / 2).collect::<Vec<_>>();
+    let n: usize = read();
+    let xy = read_vec(n, || read_tuple!(f64, f64));
 
-    let l = if let Some(l) = b.citer().skip(1).try_fold(b[0], |l, bb| {
-        let g = gcd(l, bb);
+    let ans = lower_bound(0.0, 2000.0, 5e-7, |r| {
+        let ok = (0..n).any(|i| {
+            (i + 1..n)
+                .filter(|&j| dist(xy[i], xy[j]) < 2.0 * r + 1e-9)
+                .any(|j| {
+                    let p0 = xy[i];
+                    let p1 = xy[j];
 
-        l.checked_mul(bb / g)
-    }) {
-        l
-    } else {
-        println!("0");
-        return;
-    };
+                    let p2 = ((p0.0 + p1.0) / 2.0, (p0.1 + p1.1) / 2.0);
+                    let d = dist(p0, p2);
 
-    if l > m {
-        println!("0");
-        return;
-    }
+                    let q = (p1.1 - p0.1, p0.0 - p1.0);
+                    let q0 = (q.0 / norm(q), q.1 / norm(q));
+                    let q1 = (-q0.0, -q0.1);
+                    let s = (r * r - d * d).sqrt();
 
-    if b.citer().any(|bb| (l / bb) % 2 == 0) {
-        println!("0");
-        return;
-    }
+                    it![q0, q1]
+                        .map(|qq| (p2.0 + qq.0 * s, p2.1 + qq.1 * s))
+                        .any(|c| xy.citer().all(|p| dist(p, c) < r + 1e-9))
+                })
+        });
 
-    let ans = m / l - m / (2 * l);
+        if ok {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
+    });
 
     println!("{}", ans);
 }

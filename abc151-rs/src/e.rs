@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -232,10 +233,16 @@ impl<M> std::fmt::Debug for Mod<M> {
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
     usize: std::convert::TryFrom<T>,
+    T: std::convert::TryFrom<usize>,
+    T: std::ops::Add<Output = T>,
 {
     fn from(v: T) -> Self {
         use std::convert::TryFrom;
-        Mod::new(usize::try_from(v).ok().unwrap())
+        Mod::new(
+            usize::try_from(v + T::try_from(Self::modulus()).ok().unwrap())
+                .ok()
+                .unwrap(),
+        )
     }
 }
 impl<M: Modulus> std::str::FromStr for Mod<M> {
@@ -355,25 +362,51 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
+#[allow(dead_code)]
+fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
+    let fact: Vec<_> = std::iter::once(Mod::one())
+        .chain((1..=n).scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        }))
+        .collect();
+    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
+        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
+        inv
+    });
+    let inv_fact: Vec<_> = inv
+        .iter()
+        .copied()
+        .scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        })
+        .collect();
+    (fact, inv, inv_fact)
+}
+
 fn main() {
     type Mod = Mod1000000007;
 
-    let n: usize = read();
-    let c = read_row::<usize>();
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<i64>();
 
-    let ans = c
+    let (fact, _, inv_fact) = generate_fact(n);
+
+    let combi = |a: usize, b: usize| {
+        if b > a {
+            Mod::zero()
+        } else {
+            fact[a] * inv_fact[b] * inv_fact[a - b]
+        }
+    };
+
+    let ans = a
         .citer()
         .sorted()
-        .rev()
-        .scan((Mod::zero(), Mod::one(), Mod::one()), |(x, y, z), cc| {
-            let p = *x + *y * cc;
-            *x += p;
-            *y += *y + *z;
-            *z += *z;
-            Some(p)
-        })
-        .sum::<Mod>()
-        * Mod::new(2).pow(n);
+        .enumerate()
+        .map(|(i, aa)| (combi(i, k - 1) - combi(n - i - 1, k - 1)) * aa)
+        .sum::<Mod>();
 
     println!("{}", ans);
 }

@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -359,21 +360,19 @@ fn main() {
     type Mod = Mod1000000007;
 
     let n: usize = read();
-    let c = read_row::<usize>();
+    let x = read_row::<usize>();
 
-    let ans = c
+    let ans = x
         .citer()
-        .sorted()
-        .rev()
-        .scan((Mod::zero(), Mod::one(), Mod::one()), |(x, y, z), cc| {
-            let p = *x + *y * cc;
-            *x += p;
-            *y += *y + *z;
-            *z += *z;
-            Some(p)
+        .tuple_windows()
+        .map(|(x0, x1)| x1 - x0)
+        .enumerate()
+        .scan(Mod::zero(), |s, (i, y)| {
+            *s += Mod::one() / (i + 1);
+            Some(*s * y)
         })
         .sum::<Mod>()
-        * Mod::new(2).pow(n);
+        * (1..n).map_into::<Mod>().product::<Mod>();
 
     println!("{}", ans);
 }

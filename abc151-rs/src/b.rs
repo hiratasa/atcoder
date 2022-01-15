@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -148,41 +149,4 @@ where
 {
 }
 
-fn gcd(x: usize, y: usize) -> usize {
-    if x == 0 {
-        y
-    } else {
-        gcd(y % x, x)
-    }
-}
-
-fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
-    let b = a.citer().map(|aa| aa / 2).collect::<Vec<_>>();
-
-    let l = if let Some(l) = b.citer().skip(1).try_fold(b[0], |l, bb| {
-        let g = gcd(l, bb);
-
-        l.checked_mul(bb / g)
-    }) {
-        l
-    } else {
-        println!("0");
-        return;
-    };
-
-    if l > m {
-        println!("0");
-        return;
-    }
-
-    if b.citer().any(|bb| (l / bb) % 2 == 0) {
-        println!("0");
-        return;
-    }
-
-    let ans = m / l - m / (2 * l);
-
-    println!("{}", ans);
-}
+fn main() {}
