@@ -1,5 +1,5 @@
 [package]
-name = "code_formula_2014_final-rs"
+name = "acl1-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -21,29 +21,17 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "code_formula_2014_final-a"
+name = "acl1-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "code_formula_2014_final-b"
+name = "acl1-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "code_formula_2014_final-c"
+name = "acl1-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "code_formula_2014_final-d"
+name = "acl1-d"
 path = "src/d.rs"
-
-[[bin]]
-name = "code_formula_2014_final-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "code_formula_2014_final-f"
-path = "src/f.rs"
-
-[[bin]]
-name = "code_formula_2014_final-h"
-path = "src/h.rs"
