@@ -1,4 +1,4 @@
-use super::modulo::{pow_mod, Mod, Mod1224736769, Mod469762049, Mod998244353, Modulus};
+use super::modulo::{pow_mod, Mod, Mod1811939329, Mod2013265921, Mod469762049, Modulus};
 use itertools::izip;
 use num::complex::Complex64;
 
@@ -386,4 +386,46 @@ fn test_convolution_mod() {
             Mod::new(180000000000),
         ]
     );
+}
+
+#[test]
+fn test_convolution_crt() {
+    // 2^25まで動作確認済み
+    // ただし時間かかるので小さめにしておく
+    let len = 1usize << 10;
+    let a = (0..len).collect::<Vec<_>>();
+    let b = vec![1; len];
+
+    // aとbの畳み込み
+    let expected = (0..=2 * len - 2)
+        .map(|i| {
+            // sum[j=max(0,i-(len-1)) to min(len-1,i)] j
+            let l = i.saturating_sub(len - 1);
+            let u = usize::min(len - 1, i);
+            (u + l) * (u - l + 1) / 2
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(convolution_crt(&a, &b), expected);
+}
+
+#[test]
+fn test_convolution_crt_mod() {
+    type Mod = super::modulo::Mod1000000007;
+
+    let len = 1usize << 10;
+    let a = (0..len).map(|i| Mod::new(i)).collect::<Vec<_>>();
+    let b = vec![Mod::new(1); len];
+
+    // aとbの畳み込み
+    let expected = (0..=2 * len - 2)
+        .map(|i| {
+            // sum[j=max(0,i-(len-1)) to min(len-1,i)] j
+            let l = i.saturating_sub(len - 1);
+            let u = usize::min(len - 1, i);
+            Mod::new((u + l) * (u - l + 1) / 2)
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(convolution_crt_mod(&a, &b), expected);
 }
