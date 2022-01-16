@@ -129,6 +129,8 @@ fn primitive_root(m: usize) -> usize {
         754974721 => return 11,
         998244353 => return 3,
         1224736769 => return 3,
+        1811939329 => return 13,
+        2013265921 => return 31,
         _ => {}
     };
 
@@ -225,11 +227,12 @@ pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
 }
 
 // 中国剰余定理を使って畳み込み
-// 結果が1e18未満のときのみ使用可能
+// 結果が3e18未満, 畳み込み後の長さが2^26以下のときのみ使用可能
+// (実際に2^26の長さの畳み込みやるとかなり時間かかる)
 #[allow(dead_code)]
 fn convolution_crt(p: &[usize], q: &[usize]) -> Vec<usize> {
-    type Mod1 = Mod998244353;
-    type Mod2 = Mod1224736769;
+    type Mod1 = Mod1811939329;
+    type Mod2 = Mod2013265921;
 
     let p1 = p.iter().copied().map(|x| Mod1::new(x)).collect::<Vec<_>>();
     let q1 = q.iter().copied().map(|x| Mod1::new(x)).collect::<Vec<_>>();
@@ -251,12 +254,12 @@ fn convolution_crt(p: &[usize], q: &[usize]) -> Vec<usize> {
 }
 
 // 中国剰余定理を使って任意modの畳み込み
-// M^2*lenがおおよそ5e26未満のときのみ使用可能
+// M^2*lenがおおよそ1e27未満, 畳み込み後の長さが2^26以下のときのみ使用可能
 #[allow(dead_code)]
 fn convolution_crt_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
     type Mod1 = Mod469762049;
-    type Mod2 = Mod998244353;
-    type Mod3 = Mod1224736769;
+    type Mod2 = Mod1811939329;
+    type Mod3 = Mod2013265921;
 
     let p1 = p
         .iter()
