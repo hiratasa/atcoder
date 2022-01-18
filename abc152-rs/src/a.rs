@@ -149,33 +149,4 @@ where
 {
 }
 
-fn main() {
-    let (a, b, c, d, e, f) = read_tuple!(usize, usize, usize, usize, usize, usize);
-
-    let waters = (0..)
-        .map(|i| 100 * i * a)
-        .take_while(|&w| w <= f)
-        .flat_map(|w| {
-            (0..)
-                .map(move |j| w + 100 * j * b)
-                .take_while(|&w2| w2 <= f)
-        })
-        .sorted()
-        .dedup()
-        .collect::<Vec<_>>();
-
-    let sugars = (0..)
-        .map(|i| i * c)
-        .take_while(|&w| w <= f)
-        .flat_map(|w| (0..).map(move |j| w + j * d).take_while(|&w2| w2 <= f))
-        .sorted()
-        .dedup()
-        .collect::<Vec<_>>();
-
-    let ans = iproduct!(waters, sugars)
-        .filter(|&(w, s)| w + s <= f)
-        .filter(|&(w, s)| s <= w * e / 100)
-        .max_by(|&(w0, s0), (w1, s1)| (s0 * w1).cmp(&(s1 * w0)))
-        .unwrap();
-    println!("{} {}", ans.0 + ans.1, ans.1);
-}
+fn main() {}

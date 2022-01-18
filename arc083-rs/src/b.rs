@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -66,6 +78,59 @@ macro_rules! inserted {
         c.insert($($x),*);
         c
     }};
+}
+
+#[allow(unused_macros)]
+macro_rules! read_tuple {
+    ($($t:ty),+) => {{
+        let mut line = String::new();
+        io::stdin().read_line(&mut line).unwrap();
+
+        let mut it = line.trim()
+            .split_whitespace();
+
+        ($(
+            it.next().unwrap().parse::<$t>().ok().unwrap()
+        ),+)
+    }}
+}
+
+#[allow(dead_code)]
+fn read<T: FromStr>() -> T {
+    let mut line = String::new();
+    io::stdin().read_line(&mut line).unwrap();
+    line.trim().to_string().parse().ok().unwrap()
+}
+
+#[allow(dead_code)]
+fn read_str() -> Vec<char> {
+    read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_row<T: FromStr>() -> Vec<T> {
+    let mut line = String::new();
+    io::stdin().read_line(&mut line).unwrap();
+
+    line.trim()
+        .split_whitespace()
+        .map(|s| s.parse().ok().unwrap())
+        .collect()
+}
+
+#[allow(dead_code)]
+fn read_col<T: FromStr>(n: usize) -> Vec<T> {
+    (0..n).map(|_| read()).collect()
+}
+
+#[allow(dead_code)]
+fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
+    (0..n).map(|_| read_row()).collect()
+}
+
+#[allow(dead_code)]
+fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
+    (0..n).map(|_| f()).collect()
 }
 
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
@@ -84,41 +149,41 @@ where
 {
 }
 
-use proconio::input;
-
 fn main() {
-    input! {
-        n: usize,
-        a: [[usize; n]; n]
-    }
+    let n: usize = read();
+    let a = read_mat::<usize>(n);
 
-    let a = &a;
-
-    let ans = (0..n)
-        .flat_map(|i| (i + 1..n).map(move |j| (i, j)))
-        .map(|(i, j)| {
-            (
-                a[i][j],
-                (0..n)
-                    .filter(|&k| k != i && k != j)
-                    .map(move |k| a[i][k] + a[j][k])
-                    .min()
-                    .unwrap_or(usize::MAX),
-            )
-        })
-        .try_fold(0usize, |acc, (w0, w1)| {
-            if w0 < w1 {
-                Some(acc + w0)
-            } else if w0 == w1 {
-                Some(acc)
-            } else {
-                None
+    let mut b = a.clone();
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                if k == i || k == j {
+                    continue;
+                }
+                match a[i][j].cmp(&(a[i][k] + a[k][j])) {
+                    Ordering::Less => {
+                        // NOP
+                    }
+                    Ordering::Equal => {
+                        b[i][j] = usize::MAX;
+                    }
+                    Ordering::Greater => {
+                        println!("-1");
+                        return;
+                    }
+                }
             }
-        });
-
-    if let Some(ans) = ans {
-        println!("{}", ans);
-    } else {
-        println!("-1");
+        }
     }
+
+    // eprintln!("{:?}", b);
+
+    let ans = b
+        .iter()
+        .flatten()
+        .copied()
+        .filter(|&w| w != usize::MAX)
+        .sum::<usize>()
+        / 2;
+    println!("{}", ans);
 }

@@ -308,29 +308,47 @@ mod detail {
     }
 }
 
-type Graph = detail::UnweightedGraph;
+type Graph = detail::WeightedGraph;
 
-fn dfs(g: &Graph, v: usize, x: &[usize]) -> Option<(usize, usize)> {
-    g.adjs(v)
-        .map(|u| dfs(g, u, x))
-        .try_fold((bitset!(x[v] + 1, 1), 0), |(bs, s), o| {
-            let (xx, yy) = o?;
+fn find_path(g: &Graph, v: usize, p: usize, dst: usize) -> Option<BitSet> {
+    if v == dst {
+        return Some(bitset!(g.size() - 1, 0));
+    }
 
-            Some(((&bs << xx) | &(&bs << yy), s + xx + yy))
+    g.children_edge(v, p).find_map(|e| {
+        find_path(g, e.to, v, dst).map(|mut path| {
+            path.set(e.label, true);
+            path
         })
-        .and_then(|(bs, s)| (0..=x[v]).rev().find(|&xx| bs[xx]).map(|xx| (x[v], s - xx)))
+    })
 }
 
 fn main() {
     let n: usize = read();
-    let p = read_row::<usize>();
-    let x = read_row::<usize>();
+    let ab = read_vec(n - 1, || read_tuple!(usize, usize));
 
-    let g = Graph::from_edges_directed(n, p.citer().enumerate().map(|(i, pp)| (pp - 1, i + 1)));
+    let m: usize = read();
+    let uv = read_vec(m, || read_tuple!(usize, usize));
 
-    if dfs(&g, 0, &x).is_some() {
-        println!("POSSIBLE");
-    } else {
-        println!("IMPOSSIBLE");
-    }
+    let g = Graph::from_edges1_undirected(n, ab.citer().enumerate().map(|(i, (a, b))| (a, b, i)));
+
+    let paths = uv
+        .citer()
+        .map(|(u, v)| find_path(&g, u - 1, n, v - 1).unwrap())
+        .collect::<Vec<_>>();
+
+    let ans = (0..1 << m)
+        .map(|s| {
+            let bs = bitset!(m, s);
+
+            let q = paths
+                .iter()
+                .enumerate()
+                .filter(|&(i, _)| bs[i])
+                .fold(bitset!(n - 1, 0), |q, (_, path)| q | path);
+            2i64.pow((n - 1) as u32 - q.count_ones()) * (-1i64).pow(bs.count_ones())
+        })
+        .sum::<i64>();
+
+    println!("{}", ans);
 }
