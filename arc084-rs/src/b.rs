@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -154,27 +155,28 @@ fn main() {
     let mut q = VecDeque::new();
     let mut costs = vec![usize::MAX; k];
 
-    q.push_back(1);
+    q.push_back((1, 1));
     costs[1] = 1;
+    while let Some((c, v)) = q.pop_front() {
+        if c > costs[v] {
+            continue;
+        }
 
-    while let Some(i) = q.pop_front() {
-        let cost = costs[i];
-
-        if i == 0 {
-            println!("{}", cost);
+        if v == 0 {
+            println!("{}", c);
             return;
         }
 
-        // +1
-        if cost + 1 < costs[(i + 1) % k] {
-            costs[(i + 1) % k] = cost + 1;
-            q.push_back((i + 1) % k);
+        let u0 = (10 * v) % k;
+        if c < costs[u0] {
+            q.push_front((c, u0));
+            costs[u0] = c;
         }
 
-        // *10
-        if cost < costs[(i * 10) % k] {
-            costs[(i * 10) % k] = cost;
-            q.push_front((i * 10) % k);
+        let u1 = (v + 1) % k;
+        if c + 1 < costs[u1] {
+            q.push_back((c + 1, u1));
+            costs[u1] = c + 1;
         }
     }
 }

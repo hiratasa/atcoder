@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -148,4 +149,37 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let mut a = read_row::<usize>();
+    let mut b = read_row::<usize>();
+    let mut c = read_row::<usize>();
+
+    a.sort();
+    b.sort();
+    c.sort();
+
+    let sb = once(0)
+        .chain(b.citer().scan(0, |i, bb| {
+            while *i < n && a[*i] < bb {
+                *i += 1;
+            }
+
+            Some(*i)
+        }))
+        .cumsum::<usize>()
+        .collect::<Vec<_>>();
+
+    let ans = c
+        .citer()
+        .scan(0, |i, cc| {
+            while *i < n && b[*i] < cc {
+                *i += 1;
+            }
+
+            Some(sb[*i])
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
+}

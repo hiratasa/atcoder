@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -148,4 +149,48 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (k, n) = read_tuple!(usize, usize);
+
+    if k == 1 {
+        println!("{}", repeat(1).take((n + 1) / 2).join(" "));
+        return;
+    }
+
+    if k % 2 == 0 {
+        println!("{}", once(k / 2).chain(repeat(k)).take(n).join(" "));
+        return;
+    }
+
+    let ans = (0..n)
+        .scan(Err(0), |s, i| {
+            if i == 0 {
+                Some((k + 1) / 2)
+            } else {
+                let m = n - i;
+
+                if let Some(l) = k.checked_pow(m as u32 + 1).map(|p| (p - k) / (k - 1)) {
+                    let l0 = l + 1;
+                    let l1 = l / k;
+
+                    let idx = s.map_or_else(|ss| (l0 - 1) / 2 - ss, |idx| idx);
+                    assert!(idx < l0);
+
+                    if idx == 0 {
+                        None
+                    } else {
+                        let i = (idx - 1) / l1;
+                        *s = Ok(idx - (1 + i * l1));
+                        Some(i + 1)
+                    }
+                } else {
+                    if m % 2 > 0 {
+                        *s = Err(s.unwrap_err() + 1);
+                    }
+                    Some((k + 1) / 2)
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+    println!("{}", ans.citer().join(" "));
+}
