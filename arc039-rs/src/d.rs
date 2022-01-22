@@ -156,61 +156,45 @@ mod detail {
     #[allow(dead_code)]
     #[derive(Clone, Debug)]
     pub struct Graph {
-        pub out_edges: Vec<Vec<u32>>,
+        pub adjs_list: Vec<u32>,
+        pub adjs_idxs: Vec<u32>,
     }
     #[allow(dead_code)]
     impl Graph {
         pub fn new(n: usize) -> Self {
             Self {
-                out_edges: vec![vec![]; n],
+                adjs_list: vec![],
+                adjs_idxs: vec![0; n + 1],
             }
         }
-        pub fn from_edges_directed<I>(n: usize, edges: I) -> Self
-        where
-            I: IntoIterator<Item = (usize, usize)>,
-        {
+        pub fn from_edges1_undirected(n: usize, edges: &[(u32, u32)]) -> Self {
             let mut g = Graph::new(n);
-            for (from, to) in edges {
-                g.add_edge(from, to);
+            for &(from, to) in edges {
+                g.adjs_idxs[from as usize - 1] += 1;
+                g.adjs_idxs[to as usize - 1] += 1;
             }
+            for i in 1..=n {
+                g.adjs_idxs[i] += g.adjs_idxs[i - 1];
+            }
+            g.adjs_list.resize(2 * edges.len(), 0);
+            for &(from, to) in edges {
+                let from = from as usize - 1;
+                let to = to as usize - 1;
+                g.adjs_idxs[from] -= 1;
+                g.adjs_list[g.adjs_idxs[from] as usize] = to as u32;
+                g.adjs_idxs[to] -= 1;
+                g.adjs_list[g.adjs_idxs[to] as usize] = from as u32;
+            }
+
             g
         }
-        pub fn from_edges1_directed<I>(n: usize, edges: I) -> Self
-        where
-            I: IntoIterator<Item = (usize, usize)>,
-        {
-            Graph::from_edges_directed(n, edges.into_iter().map(|(from, to)| (from - 1, to - 1)))
-        }
-        pub fn from_edges_undirected<I>(n: usize, edges: I) -> Self
-        where
-            I: IntoIterator<Item = (usize, usize)>,
-        {
-            Graph::from_edges_directed(
-                n,
-                edges.into_iter().flat_map(|(from, to)| {
-                    std::iter::once((from, to)).chain(std::iter::once((to, from)))
-                }),
-            )
-        }
-        pub fn from_edges1_undirected<I>(n: usize, edges: I) -> Self
-        where
-            I: IntoIterator<Item = (usize, usize)>,
-        {
-            Graph::from_edges1_directed(
-                n,
-                edges.into_iter().flat_map(|(from, to)| {
-                    std::iter::once((from, to)).chain(std::iter::once((to, from)))
-                }),
-            )
-        }
         pub fn size(&self) -> usize {
-            self.out_edges.len()
-        }
-        pub fn add_edge(&mut self, from: usize, to: usize) {
-            self.out_edges[from].push(to as u32);
+            self.adjs_idxs.len() - 1
         }
         pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
-            self.out_edges[v].iter().copied().map(|u| u as usize)
+            let s = self.adjs_idxs[v] as usize;
+            let e = self.adjs_idxs[v + 1] as usize;
+            self.adjs_list[s..e].iter().copied().map(|u| u as usize)
         }
         pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
             self.adjs(v).filter(move |&u| u != p)
@@ -277,12 +261,12 @@ fn main() {
     input! {
         n: usize,
         m: usize,
-        xy: [(usize, usize); m],
+        xy: [(u32, u32); m],
         q: usize,
-        abc: [(usize, usize, usize); q]
+        abc: [(u32, u32, u32); q]
     }
 
-    let g = Graph::from_edges1_undirected(n, xy);
+    let g = Graph::from_edges1_undirected(n, &xy);
 
     let mut components = vec![0; n];
     let mut bridges = vec![];
@@ -352,9 +336,9 @@ fn main() {
     abc.citer()
         .map(|(a, b, c)| {
             (
-                components[a - 1] as usize,
-                components[b - 1] as usize,
-                components[c - 1] as usize,
+                components[a as usize - 1] as usize,
+                components[b as usize - 1] as usize,
+                components[c as usize - 1] as usize,
             )
         })
         .map(|(a, b, c)| {
