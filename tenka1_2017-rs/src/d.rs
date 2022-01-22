@@ -148,4 +148,22 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let ab = read_vec(n, || read_tuple!(usize, usize));
+
+    let ans = (0..30)
+        .filter(|&i| (k >> i) & 1 > 0)
+        .map(|i| (k ^ (1 << i)) | ((1 << i) - 1))
+        .chain(once(k))
+        .map(|mask| {
+            ab.citer()
+                .filter(|&(a, _)| a & mask == a)
+                .map(|(_, b)| b)
+                .sum::<usize>()
+        })
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
+}
