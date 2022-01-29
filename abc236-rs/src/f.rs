@@ -149,4 +149,52 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let c = read_row::<usize>();
+
+    let (ans, _) =
+        (1..1 << n)
+            .sorted_by_key(|&i| c[i - 1])
+            .fold((0, vec![]), |(s, mut basis), x| {
+                let cc = c[x - 1];
+
+                if basis.is_empty() {
+                    return (s + cc, vec![x]);
+                }
+
+                if basis.len() == n {
+                    return (s, basis);
+                }
+
+                let mut idx = 0;
+                let mut y = x;
+                for i in 0..n {
+                    let mask = 1 << i;
+                    if basis[idx] & mask == 0 {
+                        if y & mask > 0 {
+                            basis.insert(idx, y);
+                            return (s + cc, basis);
+                        }
+
+                        continue;
+                    } else if y & mask > 0 {
+                        y ^= basis[idx];
+                    }
+
+                    idx += 1;
+                    if idx == basis.len() {
+                        if y == 0 {
+                            return (s, basis);
+                        } else {
+                            basis.push(y);
+                            return (s + cc, basis);
+                        }
+                    }
+                }
+
+                unreachable!()
+            });
+
+    println!("{}", ans);
+}

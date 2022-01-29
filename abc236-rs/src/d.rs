@@ -149,4 +149,31 @@ where
 {
 }
 
-fn main() {}
+fn solve(idxs: &mut Vec<usize>, a: &[Vec<usize>], b: usize) -> usize {
+    if let Some(x) = idxs.pop() {
+        let l = idxs.len();
+        let ret = (0..l)
+            .map(|i| {
+                let y = idxs[i];
+                idxs.remove(i);
+                let s = solve(idxs, a, b ^ a[min(x, y)][max(x, y) - min(x, y) - 1]);
+                idxs.insert(i, y);
+                s
+            })
+            .max()
+            .unwrap();
+        idxs.push(x);
+        ret
+    } else {
+        b
+    }
+}
+
+fn main() {
+    let n: usize = read();
+    let a = read_mat::<usize>(2 * n - 1);
+
+    let ans = solve(&mut (0..2 * n).collect(), &a, 0);
+
+    println!("{}", ans);
+}

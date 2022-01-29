@@ -149,4 +149,68 @@ where
 {
 }
 
-fn main() {}
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
+        }
+    }
+    begin
+}
+#[allow(dead_code)]
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
+}
+
+fn main() {
+    let n: usize = read();
+    let a = read_row::<i64>();
+
+    let max_avg = lower_bound(0.0f64, 1e9, 0.0005, |m| {
+        let (s0, s1) = a.citer().fold((0.0, 0.0), |(s0, s1), aa| {
+            let aa = aa as f64;
+            (s1, f64::max(s0, s1) + aa - m)
+        });
+
+        f64::max(s0, s1).partial_cmp(&0.0).unwrap().reverse()
+    });
+
+    let max_med = lower_bound_int(0, 1000000000, |m| {
+        // 中央値をmより真に大きくできるか
+        let (s0, s1) = a
+            .citer()
+            .map(|aa| if aa > m { 1i64 } else { -1i64 })
+            .fold((0, 0), |(s0, s1), bb| (s1, max(s0, s1) + bb));
+
+        max(s0, s1).cmp(&0).reverse().then(Ordering::Greater)
+    });
+
+    println!("{}", max_avg);
+    println!("{}", max_med);
+}

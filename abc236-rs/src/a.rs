@@ -149,4 +149,11 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let mut s = read_str();
+    let (a, b) = read_tuple!(usize, usize);
+
+    s.swap(a - 1, b - 1);
+
+    println!("{}", s.citer().join(""));
+}

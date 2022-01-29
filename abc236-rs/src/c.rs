@@ -149,4 +149,20 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let s = read_row::<String>();
+    let t = read_row::<String>();
+
+    let set = t.iter().collect::<FxHashSet<_>>();
+
+    s.iter().map(|ss| set.contains(ss)).for_each(
+        |ans| {
+            if ans {
+                println!("Yes")
+            } else {
+                println!("No")
+            }
+        },
+    )
+}

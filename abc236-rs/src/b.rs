@@ -149,4 +149,10 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n: usize = read();
+    let a = read_row::<usize>();
+
+    let ans = n * (n + 1) * 2 - a.citer().sum::<usize>();
+    println!("{}", ans);
+}
