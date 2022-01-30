@@ -188,8 +188,9 @@ fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
             .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
             .collect::<Vec<_>>(),
     );
+    let invn = Mod::new(n).inv();
     for x in f {
-        *x /= n;
+        *x *= invn;
     }
 }
 
@@ -197,6 +198,17 @@ fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
 pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
     let n0 = p.len();
     let n1 = q.len();
+
+    // naive
+    if std::cmp::min(n0, n1) <= 64 {
+        let mut r = vec![Mod::new(0); n0 + n1 - 1];
+        for (i, &pp) in p.iter().enumerate() {
+            for (j, &qq) in q.iter().enumerate() {
+                r[i + j] = r[i + j] + pp * qq;
+            }
+        }
+        return r;
+    }
 
     let n = (n0 + n1 - 1).next_power_of_two();
 
@@ -371,7 +383,7 @@ fn test_primitive_root() {
 }
 
 #[test]
-fn test_convolution_mod() {
+fn test_convolution_mod_naive() {
     type Mod = super::modulo::Mod998244353;
     let a: Vec<Mod> = vec![Mod::new(100000), Mod::new(200000), Mod::new(300000)];
     let b: Vec<Mod> = vec![Mod::new(400000), Mod::new(500000), Mod::new(600000)];
@@ -386,6 +398,27 @@ fn test_convolution_mod() {
             Mod::new(180000000000),
         ]
     );
+}
+
+#[test]
+fn test_convolution_mod() {
+    type Mod = super::modulo::Mod998244353;
+
+    let len = 1usize << 10;
+    let a = (0..len).map(|i| Mod::new(i)).collect::<Vec<_>>();
+    let b = vec![Mod::new(1); len];
+
+    // aとbの畳み込み
+    let expected = (0..=2 * len - 2)
+        .map(|i| {
+            // sum[j=max(0,i-(len-1)) to min(len-1,i)] j
+            let l = i.saturating_sub(len - 1);
+            let u = usize::min(len - 1, i);
+            Mod::new((u + l) * (u - l + 1) / 2)
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(convolution_mod(&a, &b), expected);
 }
 
 #[test]
