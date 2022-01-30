@@ -150,8 +150,6 @@ fn gcd(x: u32, y: u32) -> u32 {
 use proconio::input;
 
 fn main() {
-    let start = std::time::Instant::now();
-
     input! {
         n: usize,
         m: usize,
@@ -193,6 +191,4 @@ fn main() {
         .for_each(|ans| {
             writeln!(stdout, "{}", ans).unwrap();
         });
-
-    eprintln!("{}ms", start.elapsed().as_millis());
 }
