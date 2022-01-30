@@ -13,6 +13,8 @@ use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
 
+use std::io::{BufWriter, Write};
+
 #[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
@@ -137,4 +139,60 @@ where
 {
 }
 
-fn main() {}
+fn gcd(x: u32, y: u32) -> u32 {
+    if x == 0 {
+        y
+    } else {
+        gcd(y % x, x)
+    }
+}
+
+use proconio::input;
+
+fn main() {
+    let start = std::time::Instant::now();
+
+    input! {
+        n: usize,
+        m: usize,
+        a: [u32; n],
+        x: [u32; m],
+    }
+
+    let (t, _) = a
+        .citer()
+        .fold((FxHashMap::default(), vec![]), |(mut map, mut s), aa| {
+            s.push((aa, 1usize));
+
+            s[0] = (gcd(s[0].0, aa), s[0].1);
+            *map.entry(s[0].0).or_insert(0) += s[0].1;
+            let mut i = 0;
+            let mut j = 1;
+            while j < s.len() {
+                let g = gcd(s[j].0, aa);
+                let k = s[j].1;
+
+                if g == s[i].0 {
+                    s[i].1 += k;
+                } else {
+                    i += 1;
+                    s[i] = (g, k);
+                }
+                *map.entry(g).or_insert(0) += k;
+                j += 1;
+            }
+            s.resize_with(i + 1, || unreachable!());
+
+            (map, s)
+        });
+
+    let stdout = io::stdout();
+    let mut stdout = BufWriter::new(stdout.lock());
+    x.citer()
+        .map(|xx| t.get(&xx).copied().unwrap_or(0))
+        .for_each(|ans| {
+            writeln!(stdout, "{}", ans).unwrap();
+        });
+
+    eprintln!("{}ms", start.elapsed().as_millis());
+}
