@@ -1,55 +1,215 @@
 use super::modulo::{pow_mod, Mod, Mod1811939329, Mod2013265921, Mod469762049, Modulus};
 use itertools::izip;
+use itertools::Itertools;
 use num::complex::Complex64;
 
-// Calculate fft: g[i] = sum[j=0 to n] f[j] * es[i * j]
-// - length must be power of two
-// - es[i] = es[0]^i
-// - es[0]^n == 1
-// esを順次掛け算で計算していくと誤差が大きくなるので（型に応じた方法で）適切に計算して外から渡す
-// 計算量 O(n logn)
-fn fft<
-    T: Copy
-        + std::ops::Add<Output = T>
-        + std::ops::Sub<Output = T>
-        + std::ops::Mul<Output = T>
-        + num::One,
+// in-placeなFFTは以下2種類の方法でできる
+//  - 周波数間引きのバタフライ演算(butterfly) => bit順序反転
+//  - bit順序反転 ⇒ 時間間引きのバタフライ演算(butterfly_inv)
+// 特に畳み込みをするときは、両方を使い分けることでbit反転を省略できる
+
+// 周波数間引きバタフライ演算
+// w_pow[1]^n = 1
+// w_pow[i] = w_pow[1]^i
+#[allow(dead_code)]
+fn butterfly<
+    T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
 >(
-    f: &mut Vec<T>,
-    es: &[T],
+    f: &mut [T],
+    w_pow: &[T],
 ) {
     let n = f.len();
 
-    if n == 1 {
-        return;
+    assert!(n.is_power_of_two());
+
+    let h = n.trailing_zeros() as usize;
+    let w4 = w_pow[n / 4];
+
+    // i回目の演算開始時点で、2^(h-i)で割った余りで等しい要素からなる長さ2^iの列が変換済み
+    // i回目の演算では、2^(h-i-1)離れて隣接する項同士を足し引きして列の長さを2倍にする
+    // (もしくは2回分まとめて4倍にする)
+    for (i, step) in (0..=h + 1)
+        .step_by(2)
+        .map(|i| usize::min(i, h))
+        .tuple_windows()
+        .map(|(i, i2)| (i, i2 - i))
+    {
+        if step == 1 {
+            // 変換済みの列長
+            let b = 1 << i;
+            let c = n >> (i + 1);
+            let d = n >> i; // b * d == n
+
+            for k in 0..b {
+                for j in 0..c {
+                    let p = w_pow[j * b];
+                    let t0 = f[k * d + j];
+                    let t1 = f[k * d + j + c];
+                    f[k * d + j] = t0 + t1;
+                    f[k * d + j + c] = p * (t0 - t1);
+                }
+            }
+        } else {
+            assert!(step == 2);
+
+            // 変換済みの列長
+            let b = 1 << i;
+            let c = n >> (i + 2);
+            let d = n >> i; // b * d == n
+
+            for k in 0..b {
+                for j in 0..c {
+                    let p = w_pow[j * b];
+                    let p2 = p * p;
+                    let p3 = p2 * p;
+                    let t0 = f[k * d + j];
+                    let t1 = f[k * d + j + c];
+                    let t2 = f[k * d + j + 2 * c];
+                    let t3 = f[k * d + j + 3 * c];
+                    f[k * d + j] = t0 + t1 + t2 + t3;
+                    f[k * d + j + c] = p2 * (t0 - t1 + t2 - t3);
+                    f[k * d + j + 2 * c] = p * (t0 + w4 * t1 - t2 - w4 * t3);
+                    f[k * d + j + 3 * c] = p3 * (t0 - w4 * t1 - t2 + w4 * t3);
+                }
+            }
+        }
     }
+}
+
+// 時間間引きバタフライ演算
+// w_pow[1]^n = 1
+// w_pow[i] = w_pow[1]^i
+#[allow(dead_code)]
+fn butterfly_inv<
+    T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
+>(
+    f: &mut [T],
+    w_pow: &[T],
+) {
+    let n = f.len();
 
     assert!(n.is_power_of_two());
 
-    let d = n.trailing_zeros() as usize;
+    let h = n.trailing_zeros() as usize;
+    let w4 = w_pow[n / 4];
+
+    // i回目の演算開始時点で、各長さ2^iのブロックが変換済み
+    // i回目の演算では、隣接するブロックの対応する項同士を足し引きして変換済みのブロック長を2倍にする
+    // (もしくは2回分まとめて4倍にする)
+    for (i, step) in (0..=h + 1)
+        .step_by(2)
+        .map(|i| usize::min(i, h))
+        .tuple_windows()
+        .map(|(i, i2)| (i, i2 - i))
+    {
+        if step == 1 {
+            // 変換済みのブロック長
+            let b = 1 << i;
+            let c = n >> (i + 1); // (2 * b) * c == n
+            let b2 = b * 2;
+
+            for j in 0..c {
+                for k in 0..b {
+                    let p = w_pow[k * c];
+                    let t1 = f[j * b2 + k];
+                    let t2 = p * f[j * b2 + k + b];
+                    f[j * b2 + k] = t1 + t2;
+                    f[j * b2 + k + b] = t1 - t2;
+                }
+            }
+        } else {
+            assert!(step == 2);
+
+            // 変換済みのブロック長
+            let b = 1 << i;
+            let c = n >> (i + 2); // (4 * b) * c == n
+            let b4 = 4 * b;
+
+            for j in 0..c {
+                for k in 0..b {
+                    let p = w_pow[k * c];
+                    let p2 = p * p;
+                    let p3 = p2 * p;
+                    let t0 = f[j * b4 + k];
+                    let t1 = p2 * f[j * b4 + k + b];
+                    let t2 = p * f[j * b4 + k + 2 * b];
+                    let t3 = p3 * f[j * b4 + k + 3 * b];
+                    f[j * b4 + k] = t0 + t1 + t2 + t3;
+                    f[j * b4 + k + b] = t0 - t1 + w4 * t2 - w4 * t3;
+                    f[j * b4 + k + 2 * b] = t0 + t1 - t2 - t3;
+                    f[j * b4 + k + 3 * b] = t0 - t1 - w4 * t2 + w4 * t3;
+                }
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
+fn reverse_bits_order<
+    T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
+>(
+    f: &mut [T],
+) {
+    let n = f.len();
+
+    assert!(n.is_power_of_two());
+
+    let h = n.trailing_zeros() as usize;
 
     for i in 0..n {
-        let j = i.reverse_bits() >> (std::mem::size_of::<usize>() * 8 - d);
+        let j = i.reverse_bits() >> (std::mem::size_of::<usize>() * 8 - h);
 
         if i < j {
             f.swap(i, j);
         }
     }
+}
 
-    for i in 0..d {
-        let b = 1 << i;
-        let c = n >> (i + 1); // b * c == n/2
+// Calculate fft: g[i] = sum[j=0 to n] f[j] * w_pow[i * j]
+// w_pow[0]^n = 1
+// w_pow[i] = w_pow[0]^i
+#[allow(dead_code)]
+fn fft<
+    T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
+>(
+    f: &mut [T],
+    w_pow: &[T],
+) {
+    butterfly(f, w_pow);
 
-        for j in 0..c {
-            for k in 0..b {
-                let p = es[k * c];
-                let t1 = f[j * 2 * b + k];
-                let t2 = f[j * 2 * b + k + b];
-                f[j * 2 * b + k] = t1 + p * t2;
-                f[j * 2 * b + k + b] = t1 - p * t2;
-            }
-        }
+    reverse_bits_order(f);
+}
+
+#[allow(dead_code)]
+fn convolution_impl<
+    T: Copy
+        + std::ops::Add<Output = T>
+        + std::ops::Sub<Output = T>
+        + std::ops::Mul<Output = T>
+        + std::ops::MulAssign
+        + std::ops::DivAssign,
+>(
+    p: &mut [T],
+    q: &mut [T],
+    w_pow: &[T],
+    iw_pow: &[T],
+    n_as_t: T,
+) {
+    let n = p.len();
+
+    assert!(q.len() == n);
+    assert!(n.is_power_of_two());
+
+    butterfly(p, &w_pow);
+    butterfly(q, &w_pow);
+
+    for (x, y) in p.iter_mut().zip(q) {
+        *x *= *y;
     }
+
+    butterfly_inv(p, &iw_pow);
+
+    p.iter_mut().for_each(|x| *x /= n_as_t);
 }
 
 #[allow(dead_code)]
@@ -83,7 +243,10 @@ fn inv_fft_complex(f: &mut Vec<Complex64>) {
 }
 
 #[allow(dead_code)]
-fn convolution<T: Copy + num::ToPrimitive + num::FromPrimitive>(p: &Vec<T>, q: &Vec<T>) -> Vec<T> {
+fn convolution_complex<T: Copy + num::ToPrimitive + num::FromPrimitive>(
+    p: &Vec<T>,
+    q: &Vec<T>,
+) -> Vec<T> {
     let n0 = p.len();
     let n1 = q.len();
 
@@ -103,14 +266,15 @@ fn convolution<T: Copy + num::ToPrimitive + num::FromPrimitive>(p: &Vec<T>, q: &
         .take(n)
         .collect::<Vec<_>>();
 
-    fft_complex(&mut pf);
-    fft_complex(&mut qf);
-
-    for (x, y) in pf.iter_mut().zip(&qf) {
-        *x *= *y;
-    }
-
-    inv_fft_complex(&mut pf);
+    let w_pow = (0..n)
+        .map(|i| Complex64::from_polar(&1.0, &(2.0 * i as f64 * std::f64::consts::PI / (n as f64))))
+        .collect::<Vec<_>>();
+    let iw_pow = (0..n)
+        .map(|i| {
+            Complex64::from_polar(&1.0, &(-2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
+        })
+        .collect::<Vec<_>>();
+    convolution_impl(&mut pf, &mut qf, &w_pow, &iw_pow, Complex64::from(n as f64));
 
     pf.iter()
         .map(|x| T::from_f64(x.re.round()).unwrap())
@@ -225,14 +389,16 @@ pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
         .take(n)
         .collect::<Vec<_>>();
 
-    fft_mod(&mut pf);
-    fft_mod(&mut qf);
-
-    for (x, y) in pf.iter_mut().zip(&qf) {
-        *x *= *y;
-    }
-
-    inv_fft_mod(&mut pf);
+    let g = primitive_root(M::modulus());
+    let c = pow_mod(g, (M::modulus() - 1) / n, M::modulus());
+    let w_pow = (0..n)
+        .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
+        .collect::<Vec<_>>();
+    let cinv = pow_mod(g, (M::modulus() - 1) / n * (n - 1), M::modulus());
+    let iw_pow = (0..n)
+        .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * cinv)))
+        .collect::<Vec<_>>();
+    convolution_impl(&mut pf, &mut qf, &w_pow, &iw_pow, Mod::new(n));
 
     pf.resize(n0 + n1 - 1, Mod::new(0));
     pf
@@ -364,7 +530,7 @@ fn test_convolution() {
     let a: Vec<usize> = vec![1, 3, 5, 2];
     let b: Vec<usize> = vec![2, 9, 4, 10];
 
-    assert_eq!(convolution(&a, &b), vec![2, 15, 41, 71, 68, 58, 20]);
+    assert_eq!(convolution_complex(&a, &b), vec![2, 15, 41, 71, 68, 58, 20]);
 }
 
 #[test]
