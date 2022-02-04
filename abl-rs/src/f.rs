@@ -356,48 +356,170 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-fn fft<
-    T: Copy
-        + std::ops::Add<Output = T>
-        + std::ops::Sub<Output = T>
-        + std::ops::Mul<Output = T>
-        + num::One,
->(
-    f: &mut Vec<T>,
-    es: &[T],
-) {
+// 周波数間引きバタフライ演算
+// w_pow[1]^n = 1
+// w_pow[i] = w_pow[1]^i
+#[allow(dead_code)]
+fn butterfly<M: Modulus>(f: &mut [Mod<M>], w_pow: &[Mod<M>]) {
     let n = f.len();
-
-    if n == 1 {
-        return;
-    }
 
     assert!(n.is_power_of_two());
 
-    let d = n.trailing_zeros() as usize;
+    let h = n.trailing_zeros() as usize;
+    let w4 = w_pow[n / 4];
 
-    for i in 0..n {
-        let j = i.reverse_bits() >> (std::mem::size_of::<usize>() * 8 - d);
+    // i回目の演算開始時点で、2^(h-i)で割った余りで等しい要素からなる長さ2^iの列が変換済み
+    // i回目の演算では、2^(h-i-1)離れて隣接する項同士を足し引きして列の長さを2倍にする
+    // (もしくは2回分まとめて4倍にする)
+    for (i, step) in (0..=h + 1)
+        .step_by(2)
+        .map(|i| usize::min(i, h))
+        .tuple_windows()
+        .map(|(i, i2)| (i, i2 - i))
+    {
+        if step == 1 {
+            // 変換済みの列長
+            let b = 1 << i;
+            let c = n >> (i + 1);
+            let d = n >> i; // b * d == n
 
-        if i < j {
-            f.swap(i, j);
-        }
-    }
-
-    for i in 0..d {
-        let b = 1 << i;
-        let c = n >> (i + 1); // b * c == n/2
-
-        for j in 0..c {
+            let wb = w_pow[b];
             for k in 0..b {
-                let p = es[k * c];
-                let t1 = f[j * 2 * b + k];
-                let t2 = p * f[j * 2 * b + k + b];
-                f[j * 2 * b + k] = t1 + t2;
-                f[j * 2 * b + k + b] = t1 - t2;
+                let mut p = Mod::one();
+                for j in 0..c {
+                    let t0 = f[k * d + j].0;
+                    let t1 = f[k * d + j + c].0;
+                    f[k * d + j] = Mod::new(t0 + t1);
+                    f[k * d + j + c] = Mod::new(p.0 * (M::modulus() + t0 - t1));
+                    p *= wb;
+                }
+            }
+        } else {
+            assert!(step == 2);
+
+            // 変換済みの列長
+            let b = 1 << i;
+            let c = n >> (i + 2);
+            let d = n >> i; // b * d == n
+
+            let wb = w_pow[b];
+            for k in 0..b {
+                let mut p = Mod::one();
+                for j in 0..c {
+                    let p2 = p * p;
+                    let p3 = p2 * p;
+                    let t0 = f[k * d + j].0;
+                    let t1 = f[k * d + j + c].0;
+                    let t2 = f[k * d + j + 2 * c].0;
+                    let t3 = f[k * d + j + 3 * c].0;
+                    f[k * d + j] = Mod::new(t0 + t1 + t2 + t3);
+                    f[k * d + j + c] = Mod::new(p2.0 * (2 * M::modulus() + t0 - t1 + t2 - t3));
+                    f[k * d + j + 2 * c] = p * Mod::new(
+                        2 * M::modulus() * M::modulus() + t0 + w4.0 * t1 - t2 - w4.0 * t3,
+                    );
+                    f[k * d + j + 3 * c] = p3
+                        * Mod::new(
+                            2 * M::modulus() * M::modulus() + t0 - w4.0 * t1 - t2 + w4.0 * t3,
+                        );
+                    p *= wb;
+                }
             }
         }
     }
+}
+
+// 時間間引きバタフライ演算
+// w_pow[1]^n = 1
+// w_pow[i] = w_pow[1]^i
+#[allow(dead_code)]
+fn butterfly_inv<M: Modulus>(f: &mut [Mod<M>], w_pow: &[Mod<M>]) {
+    let n = f.len();
+
+    assert!(n.is_power_of_two());
+
+    let h = n.trailing_zeros() as usize;
+    let w4 = w_pow[n / 4];
+
+    // i回目の演算開始時点で、各長さ2^iのブロックが変換済み
+    // i回目の演算では、隣接するブロックの対応する項同士を足し引きして変換済みのブロック長を2倍にする
+    // (もしくは2回分まとめて4倍にする)
+    for (i, step) in (0..=h + 1)
+        .step_by(2)
+        .map(|i| usize::min(i, h))
+        .tuple_windows()
+        .map(|(i, i2)| (i, i2 - i))
+    {
+        if step == 1 {
+            // 変換済みのブロック長
+            let b = 1 << i;
+            let c = n >> (i + 1); // (2 * b) * c == n
+            let b2 = b * 2;
+
+            let wc = w_pow[c];
+            for j in 0..c {
+                let mut p = Mod::one();
+                for k in 0..b {
+                    let t1 = f[j * b2 + k].0;
+                    let t2 = (p * f[j * b2 + k + b]).0;
+                    f[j * b2 + k] = Mod::new(t1 + t2);
+                    f[j * b2 + k + b] = Mod::new(M::modulus() + t1 - t2);
+                    p *= wc;
+                }
+            }
+        } else {
+            assert!(step == 2);
+
+            // 変換済みのブロック長
+            let b = 1 << i;
+            let c = n >> (i + 2); // (4 * b) * c == n
+            let b4 = 4 * b;
+
+            let wc = w_pow[c];
+            for j in 0..c {
+                let mut p = Mod::one();
+                for k in 0..b {
+                    let p2 = p * p;
+                    let p3 = p2 * p;
+                    let t0 = f[j * b4 + k].0;
+                    let t1 = (p2 * f[j * b4 + k + b]).0;
+                    let t2 = (p * f[j * b4 + k + 2 * b]).0;
+                    let t3 = (p3 * f[j * b4 + k + 3 * b]).0;
+                    f[j * b4 + k] = Mod::new(t0 + t1 + t2 + t3);
+                    f[j * b4 + k + b] =
+                        Mod::new(2 * M::modulus() * M::modulus() + t0 - t1 + w4.0 * t2 - w4.0 * t3);
+                    f[j * b4 + k + 2 * b] = Mod::new(2 * M::modulus() + t0 + t1 - t2 - t3);
+                    f[j * b4 + k + 3 * b] =
+                        Mod::new(2 * M::modulus() * M::modulus() + t0 - t1 - w4.0 * t2 + w4.0 * t3);
+                    p *= wc;
+                }
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
+fn convolution_impl<M: Modulus>(
+    p: &mut [Mod<M>],
+    q: &mut [Mod<M>],
+    w_pow: &[Mod<M>],
+    iw_pow: &[Mod<M>],
+) {
+    let n = p.len();
+
+    assert!(q.len() == n);
+    assert!(n.is_power_of_two());
+
+    butterfly(p, &w_pow);
+    butterfly(q, &w_pow);
+
+    for (x, y) in p.iter_mut().zip(q) {
+        *x *= *y;
+    }
+
+    butterfly_inv(p, &iw_pow);
+
+    let n_mod = Mod::new(n);
+    p.iter_mut().for_each(|x| *x /= n_mod);
 }
 
 #[allow(dead_code)]
@@ -440,41 +562,6 @@ fn primitive_root(m: usize) -> usize {
 }
 
 #[allow(dead_code)]
-fn fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
-    let n = f.len();
-    assert!(n.is_power_of_two());
-    assert!((M::modulus() - 1) % n == 0);
-    let g = primitive_root(M::modulus());
-    let c = pow_mod(g, (M::modulus() - 1) / n, M::modulus());
-    fft(
-        f,
-        &(0..n)
-            .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
-            .collect::<Vec<_>>(),
-    );
-}
-
-#[allow(dead_code)]
-fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
-    let n = f.len();
-    assert!(n.is_power_of_two());
-    assert!((M::modulus() - 1) % n == 0);
-    let g = primitive_root(M::modulus());
-    // let c = pow_mod(g, (modulus() - 1) / n, modulus()).inv();
-    let c = pow_mod(g, (M::modulus() - 1) / n * (n - 1), M::modulus());
-    fft(
-        f,
-        &(0..n)
-            .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
-            .collect::<Vec<_>>(),
-    );
-    let invn = Mod::new(n).inv();
-    for x in f {
-        *x *= invn;
-    }
-}
-
-#[allow(dead_code)]
 pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
     let n0 = p.len();
     let n1 = q.len();
@@ -505,14 +592,16 @@ pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
         .take(n)
         .collect::<Vec<_>>();
 
-    fft_mod(&mut pf);
-    fft_mod(&mut qf);
-
-    for (x, y) in pf.iter_mut().zip(&qf) {
-        *x *= *y;
-    }
-
-    inv_fft_mod(&mut pf);
+    let g = primitive_root(M::modulus());
+    let c = pow_mod(g, (M::modulus() - 1) / n, M::modulus());
+    let w_pow = (0..n)
+        .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
+        .collect::<Vec<_>>();
+    let cinv = pow_mod(g, (M::modulus() - 1) / n * (n - 1), M::modulus());
+    let iw_pow = (0..n)
+        .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * cinv)))
+        .collect::<Vec<_>>();
+    convolution_impl(&mut pf, &mut qf, &w_pow, &iw_pow);
 
     pf.resize(n0 + n1 - 1, Mod::new(0));
     pf
@@ -543,6 +632,7 @@ fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>
 
 fn main() {
     type Mod = Mod998244353;
+
     let n: usize = read();
     let h = read_col::<usize>(2 * n);
 
