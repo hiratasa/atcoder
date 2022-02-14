@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -149,7 +150,44 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(u32, u32);
+    let n = read::<usize>();
+    let s = read_row::<i64>();
 
-    println!("{}", (1900 * m + 100 * (n - m)) * 2u32.pow(m));
+    let b = s
+        .citer()
+        .tuple_windows()
+        .map(|(s0, s1)| s1 - s0)
+        .collect::<Vec<_>>();
+
+    let c = (0..3)
+        .map(|i| {
+            b.citer()
+                .skip(i)
+                .step_by(3)
+                .cumsum::<i64>()
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let d = c
+        .iter()
+        .map(|cc| cc.citer().map(|x| max(0, -x)).max().unwrap_or(0))
+        .collect::<Vec<_>>();
+
+    let e = d.citer().sum::<i64>();
+
+    if e > s[0] {
+        println!("No");
+        return;
+    }
+
+    let f = vec![d[0] + s[0] - e, d[1], d[2]];
+
+    let ans = f
+        .citer()
+        .chain((0..n - 1).map(|i| f[i % 3] + c[i % 3][i / 3]))
+        .collect::<Vec<_>>();
+
+    println!("Yes");
+    println!("{}", ans.citer().join(" "));
 }

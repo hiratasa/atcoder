@@ -1,5 +1,5 @@
 [package]
-name = "tenka1_2015_qualB-rs"
+name = "arc135-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,25 +18,17 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "tenka1_2015_qualB-a"
+name = "arc135-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "tenka1_2015_qualB-b"
+name = "arc135-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "tenka1_2015_qualB-c"
+name = "arc135-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "tenka1_2015_qualB-d"
+name = "arc135-d"
 path = "src/d.rs"
-
-[[bin]]
-name = "tenka1_2015_qualB-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "tenka1_2015_qualB-f"
-path = "src/f.rs"

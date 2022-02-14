@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -149,7 +150,29 @@ where
 }
 
 fn main() {
-    let (n, m) = read_tuple!(u32, u32);
+    let n: usize = read();
+    let a = read_row::<usize>();
 
-    println!("{}", (1900 * m + 100 * (n - m)) * 2u32.pow(m));
+    let b = (0..30)
+        .map(|i| a.citer().filter(|&aa| aa & (1 << i) > 0).count())
+        .collect::<Vec<_>>();
+
+    let ans = a
+        .citer()
+        .map(|aa| {
+            (0..30)
+                .map(|i| {
+                    if aa & (1 << i) > 0 {
+                        (1 << i) * (n - b[i])
+                    } else {
+                        (1 << i) * b[i]
+                    }
+                })
+                .sum::<usize>()
+        })
+        .chain(once(a.citer().sum::<usize>()))
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
 }
