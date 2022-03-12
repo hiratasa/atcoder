@@ -149,24 +149,22 @@ where
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
     let a = read_row::<i64>();
 
-    println!("{}", 2 * n - 1);
+    let i0 = a.citer().position_max_by_key(|&aa| aa.abs()).unwrap();
 
-    let i_max = (0..n).max_by_key(|&i| a[i].abs()).unwrap();
-
-    for i in 1..=n {
-        println!("{} {}", i_max + 1, i);
-    }
-
-    if a[i_max] < 0 {
-        for i in (1..=n - 1).rev() {
-            println!("{} {}", i + 1, i);
-        }
+    println!("{}", 2 * n - 2);
+    (0..n).filter(|&i| i != i0).for_each(|i| {
+        println!("{} {}", i0 + 1, i + 1);
+    });
+    if a[i0] > 0 {
+        (0..n - 1).for_each(|i| {
+            println!("{} {}", i + 1, i + 2);
+        });
     } else {
-        for i in 1..=n - 1 {
-            println!("{} {}", i, i + 1);
-        }
+        (0..n - 1).rev().for_each(|i| {
+            println!("{} {}", i + 2, i + 1);
+        });
     }
 }

@@ -148,4 +148,19 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    let ans = a
+        .citer()
+        .sorted()
+        .group_by(|&aa| aa)
+        .into_iter()
+        .map(|(_, it)| it.count())
+        .sorted_by_key(|&c| Reverse(c))
+        .skip(k)
+        .sum::<usize>();
+
+    println!("{}", ans);
+}
