@@ -138,8 +138,7 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-
+    let n = read::<usize>();
     let a = read_row::<usize>();
 
     let ans = a
@@ -148,7 +147,7 @@ fn main() {
         .group_by(|&aa| aa)
         .into_iter()
         .map(|(aa, it)| (aa, it.count()))
-        .map(|(aa, m)| if m < aa { m } else { m - aa })
+        .map(|(aa, m)| m.checked_sub(aa).unwrap_or(m))
         .sum::<usize>();
 
     println!("{}", ans);

@@ -1,95 +1,209 @@
-use itertools::*;
-use proconio::input;
-use proconio::marker::Chars;
+#[allow(unused_imports)]
+use std::cmp::*;
+#[allow(unused_imports)]
+use std::collections::*;
+#[allow(unused_imports)]
+use std::io;
+#[allow(unused_imports)]
+use std::iter::*;
+#[allow(unused_imports)]
+use std::mem::*;
+#[allow(unused_imports)]
+use std::str::*;
+#[allow(unused_imports)]
+use std::usize;
 
-fn main() {
-    input! {
-        n: usize,
-        l: usize,
-        s: [Chars; n]
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
+
+// vec with some initial value
+#[allow(unused_macros)]
+macro_rules! vvec {
+    ($($x:expr),+; $y:expr; $n:expr) => {{
+        let mut v = vec![$y; $n];
+
+        let mut it = v.iter_mut();
+        $(
+            *it.next().unwrap() = $x;
+        )+
+
+        v
+    }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
     }
+}
 
-    let mut s = s;
-    s.sort();
-    let s = s;
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
 
-    let common = s
-        .iter()
-        .tuple_windows()
-        .map(|(s0, s1)| {
-            izip!(s0.iter().copied(), s1.iter().copied())
-                .take_while(|&(c0, c1)| c0 == c1)
-                .count()
-        })
-        .collect_vec();
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
 
-    let mut current = 0;
-    let mut next_pos = 0;
-    let mut next_c = '0';
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
 
-    let grundy = |d: usize| 1 << (l - d + 1).trailing_zeros();
+#[allow(unused_macros)]
+macro_rules! read_tuple {
+    ($($t:ty),+) => {{
+        let mut line = String::new();
+        io::stdin().read_line(&mut line).unwrap();
 
-    let mut g = 0;
+        let mut it = line.trim()
+            .split_whitespace();
 
-    while current < n {
-        if next_pos == s[current].len() {
-            while next_pos > 0 && s[current][next_pos - 1] == '1' {
-                next_pos -= 1;
-            }
+        ($(
+            it.next().unwrap().parse::<$t>().ok().unwrap()
+        ),+)
+    }}
+}
 
-            if next_pos == 0 {
-                assert!(s[current][0] == '1');
-                assert!(current == n - 1);
-                break;
-            }
+#[allow(dead_code)]
+fn read<T: FromStr>() -> T {
+    let mut line = String::new();
+    io::stdin().read_line(&mut line).unwrap();
+    line.trim().to_string().parse().ok().unwrap()
+}
 
-            assert!(s[current][next_pos - 1] == '0');
-            next_pos -= 1;
-            next_c = '1';
-        } else if next_c < s[current][next_pos] {
-            // s[0..next_pos] + '0' does not exist in the set.
-            g ^= grundy(next_pos + 1);
-            next_c = '1';
-        } else if next_c == s[current][next_pos] {
-            next_pos += 1;
-            next_c = '0';
-        } else if next_c > s[current][next_pos] {
-            if current + 1 < n && next_pos == common[current] {
-                assert!(s[current + 1][next_pos] == '1');
-                current += 1;
-            } else {
-                assert!(current == n - 1 || next_pos > common[current]);
+#[allow(dead_code)]
+fn read_str() -> Vec<char> {
+    read::<String>().chars().collect()
+}
 
-                // s[0..next_pos] + '1' does not exist in the set.
-                g ^= grundy(next_pos + 1);
+#[allow(dead_code)]
+fn read_row<T: FromStr>() -> Vec<T> {
+    let mut line = String::new();
+    io::stdin().read_line(&mut line).unwrap();
 
-                if next_pos == 0 {
-                    break;
-                }
+    line.trim()
+        .split_whitespace()
+        .map(|s| s.parse().ok().unwrap())
+        .collect()
+}
 
-                while next_pos > 0 && s[current][next_pos - 1] == '1' {
-                    next_pos -= 1;
-                }
+#[allow(dead_code)]
+fn read_col<T: FromStr>(n: usize) -> Vec<T> {
+    (0..n).map(|_| read()).collect()
+}
 
-                if next_pos == 0 {
-                    assert!(s[current][0] == '1');
-                    assert!(current == n - 1);
-                    break;
-                }
+#[allow(dead_code)]
+fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
+    (0..n).map(|_| read_row()).collect()
+}
 
-                assert!(s[current][next_pos - 1] == '0');
-                assert!(current == n - 1 || next_pos > common[current]);
-                next_pos -= 1;
-                next_c = '1';
-            }
-        } else {
-            unreachable!();
+#[allow(dead_code)]
+fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
+    (0..n).map(|_| f()).collect()
+}
+
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Trie {
+    depth: usize,
+    children: [Option<usize>; 2],
+}
+
+impl Trie {
+    fn new(depth: usize) -> Trie {
+        Trie {
+            depth,
+            children: [None, None],
         }
     }
 
+    fn insert(buf: &mut Vec<Trie>, idx: usize, s: &[char]) {
+        if s.is_empty() {
+            return;
+        }
+
+        let c = (s[0] == '1') as usize;
+        if buf[idx].children[c].is_none() {
+            buf[idx].children[c] = Some(buf.len());
+            buf.push(Trie::new(buf[idx].depth + 1));
+        }
+
+        Trie::insert(buf, buf[idx].children[c].unwrap(), &s[1..]);
+    }
+}
+
+fn main() {
+    let (n, l) = read_tuple!(usize, usize);
+    let s = read_vec(n, || read_str());
+
+    let mut buf = Vec::with_capacity(100010);
+    buf.push(Trie::new(0));
+
+    for ss in &s {
+        Trie::insert(&mut buf, 0, ss);
+    }
+
+    let grundy = |i: usize| {
+        assert!(i < l);
+
+        1 << (l - i).trailing_zeros()
+    };
+
+    let g = buf
+        .citer()
+        .filter(|t| t.children.citer().flatten().count() == 1)
+        .map(|t| grundy(t.depth))
+        .fold(0, |g, x| g ^ x);
+
     if g == 0 {
-        println!("Bob");
+        println!("Bob")
     } else {
-        println!("Alice");
+        println!("Alice")
     }
 }
