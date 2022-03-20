@@ -137,4 +137,12 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (x, y) = read_tuple!(usize, usize);
+
+    let ans = successors(Some(x), |z| z.checked_mul(2))
+        .take_while(|&z| z <= y)
+        .count();
+
+    println!("{}", ans);
+}

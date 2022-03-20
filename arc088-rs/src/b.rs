@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -139,18 +151,13 @@ where
 
 fn main() {
     let s = read_str();
-    let n = s.len();
 
-    let ans = s
-        .citer()
+    let ans = (0..s.len())
         .tuple_windows()
-        .positions(|(s0, s1)| s0 != s1)
-        .map(|i| {
-            // i + 1 >= k || n - 1 - i >= k
-            max(i + 1, n - 1 - i)
-        })
+        .filter(|&(i0, i1)| s[i0] != s[i1])
+        .map(|(i0, _i1)| max(i0 + 1, s.len() - 1 - i0))
         .min()
-        .unwrap_or(n);
+        .unwrap_or(s.len());
 
     println!("{}", ans);
 }
