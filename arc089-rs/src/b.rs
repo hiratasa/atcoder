@@ -148,4 +148,52 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k) = read_tuple!(usize, usize);
+    let xyc = read_vec(n, || read_tuple!(usize, usize, char));
+
+    let mut t = xyc
+        .citer()
+        .fold(vec![vec![0usize; 4 * k]; 4 * k], |mut t, (x, y, c)| {
+            let x = x % (2 * k);
+            let y = y % (2 * k);
+            let is_black = c == 'B';
+
+            let (x, y) = if is_black {
+                (x, y)
+            } else {
+                ((x + k) % (2 * k), y)
+            };
+
+            for i in 0..4 {
+                for j in 0..4 {
+                    if (i + j) % 2 == 0 {
+                        t[(x + i * k) % (4 * k)][(y + j * k) % (4 * k)] += 1;
+                    }
+                }
+            }
+
+            t
+        });
+
+    for i in 0..4 * k {
+        for j in 1..4 * k {
+            t[i][j] += t[i][j - 1];
+        }
+    }
+
+    for i in 1..4 * k {
+        for j in 0..4 * k {
+            t[i][j] += t[i - 1][j];
+        }
+    }
+
+    let t = t;
+
+    let ans = iproduct!(0..2 * k, 0..2 * k)
+        .map(|(i, j)| t[i + k][j + k] + t[i][j] - t[i][j + k] - t[i + k][j])
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
+}

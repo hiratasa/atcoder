@@ -150,70 +150,74 @@ where
 
 fn main() {
     let (a, b) = read_tuple!(usize, usize);
+    let d = read_mat::<usize>(a);
 
-    let d = read_mat::<i64>(a);
+    let t = iproduct!(0..a, 0..b)
+        .try_fold(vec![vec![(0, 0); b]; a], |mut t, (i, j)| {
+            let (nx, ny) = (0usize..=100)
+                .filter_map(|nx| {
+                    iproduct!(0..a, 0..b)
+                        .try_fold((0i64, 100i64), |(l, u), (ii, jj)| {
+                            let dx = ii as i64 - i as i64;
+                            let dy = jj as i64 - j as i64;
+                            let dd = d[ii][jj] as i64 - d[i][j] as i64;
 
-    let ok = |i: usize, j: usize, kx: usize, ky: usize| {
-        if kx * (i + 1) + ky * (j + 1) > d[i][j] as usize {
-            return false;
-        }
+                            // nx * dx + ny * dy >= dd
+                            if dy > 0 {
+                                Some((max(l, (dd - nx as i64 * dx + dy - 1).div_euclid(dy)), u))
+                            } else if dy < 0 {
+                                Some((l, min(u, (nx as i64 * dx - dd).div_euclid(-dy))))
+                            } else if nx as i64 * dx < dd {
+                                None
+                            } else {
+                                Some((l, u))
+                            }
+                        })
+                        .filter(|&(l, u)| l <= u)
+                        .map(|(l, _u)| (nx, l as usize))
+                })
+                .min_by_key(|&(nx, ny)| nx * (i + 1) + ny * (j + 1))?;
 
-        let kx = kx as i64;
-        let ky = ky as i64;
+            t[i][j] = (nx, ny);
 
-        iproduct!(0..a, 0..b).all(|(ii, jj)| {
-            d[i][j] - kx * i as i64 - ky * j as i64 >= d[ii][jj] - kx * ii as i64 - ky * jj as i64
+            Some(t)
         })
-    };
+        .unwrap_or_else(|| {
+            println!("Impossible");
+            std::process::exit(0)
+        });
 
-    let k = if let Some(k) = (0..a)
-        .map(|i| {
-            (0..b)
-                .map(|j| iproduct!(0..=100, 0..=100).find(|&(kx, ky)| ok(i, j, kx, ky)))
-                .collect::<Option<Vec<_>>>()
+    let c = iproduct!(0..a, 0..b)
+        .try_fold(vec![vec![0; b]; a], |mut c, (i, j)| {
+            c[i][j] = d[i][j].checked_sub((i + 1) * t[i][j].0 + (j + 1) * t[i][j].1)?;
+            Some(c)
         })
-        .collect::<Option<Vec<_>>>()
-    {
-        k
-    } else {
-        println!("Impossible");
-        return;
-    };
+        .unwrap_or_else(|| {
+            println!("Impossible");
+            std::process::exit(0)
+        });
+
+    eprintln!("{:?}", d);
+    eprintln!("{:?}", c);
 
     println!("Possible");
-
-    let x_vert = |kx: usize| 1 + kx;
-    let y_vert = |ky: usize| 202 - ky;
-
-    let edges = k
-        .iter()
-        .enumerate()
-        .flat_map(|(i, k_row)| {
-            let d = &d;
-            k_row.citer().enumerate().map(move |(j, (kx, ky))| {
-                (
-                    x_vert(kx),
-                    y_vert(ky),
-                    d[i][j] - (kx * (i + 1) + ky * (j + 1)) as i64,
-                )
-            })
-        })
+    let edges = iproduct!(0..a, 0..b)
+        .map(|(i, j)| (t[i][j], c[i][j]))
         .sorted()
         .dedup()
         .collect::<Vec<_>>();
-    println!("{} {}", 202, 200 + edges.len());
 
+    println!("{} {}", 201, 200 + edges.len());
     for i in 0..100 {
-        println!("{} {} X", x_vert(i), x_vert(i + 1));
+        println!("{} {} X", i + 1, i + 2);
     }
-
     for i in 0..100 {
-        println!("{} {} Y", y_vert(i + 1), y_vert(i));
+        println!("{} {} Y", i + 101, i + 102);
     }
 
-    for (v, u, c) in edges {
-        println!("{} {} {}", v, u, c);
+    for ((i, j), w) in edges {
+        println!("{} {} {}", i + 1, 201 - j, w);
     }
 
-    println!("1 202");
+    println!("{} {}", 1, 201);
 }

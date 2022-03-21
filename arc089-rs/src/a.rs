@@ -148,4 +148,25 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let txy = read_vec(n, || read_tuple!(i64, i64, i64));
+
+    let ans = once((0, 0, 0))
+        .chain(txy)
+        .tuple_windows()
+        .all(|((t0, x0, y0), (t1, x1, y1))| {
+            assert!(t0 <= t1);
+
+            let dt = t1 - t0;
+            let dist = (y1 - y0).abs() + (x1 - x0).abs();
+
+            dt >= dist && dt % 2 == dist % 2
+        });
+
+    if ans {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
+}
