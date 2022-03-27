@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,93 +149,224 @@ where
 {
 }
 
-trait IteratorExt: Iterator + Sized {
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
     where
-        F: FnMut(Self::Item) -> (usize, T);
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
     where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
-    fn fold_vec3<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
+        }
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
+        }
+    }
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
     where
-        F: FnMut(&Vec<T>, Self::Item) -> T;
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
+    }
 }
-impl<I> IteratorExt for I
-where
-    I: Iterator,
-{
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(item);
-            v[idx] = t;
-            v
-        })
+
+type Graph = detail::WeightedGraph;
+
+fn dfs(g: &Graph, v: usize, dists: &mut [Option<i64>]) -> bool {
+    let d = dists[v].unwrap();
+
+    for &e in &g.out_edges[v] {
+        let u = e.to;
+        let w = e.label as i64;
+
+        match dists[u] {
+            None => {
+                dists[u] = Some(d + w);
+                if !dfs(g, u, dists) {
+                    return false;
+                }
+            }
+            Some(d2) if d2 == d + w => {}
+            Some(_) => {
+                return false;
+            }
+        }
     }
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(&v, item);
-            v[idx] = t;
-            v
-        })
+
+    for &e in &g.in_edges[v] {
+        let u = e.from;
+        let w = -(e.label as i64);
+
+        match dists[u] {
+            None => {
+                dists[u] = Some(d + w);
+                if !dfs(g, u, dists) {
+                    return false;
+                }
+            }
+            Some(d2) if d2 == d + w => {}
+            Some(_) => {
+                return false;
+            }
+        }
     }
-    fn fold_vec3<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> T,
-    {
-        self.fold(init, |mut v, item| {
-            let t = f(&v, item);
-            v.push(t);
-            v
-        })
-    }
+
+    return true;
 }
 
 fn main() {
     let (n, m) = read_tuple!(usize, usize);
+    let lrd = read_vec(m, || read_tuple!(usize, usize, usize));
 
-    let lrd = read_vec(m, || read_tuple!(usize, usize, i64));
+    let g = Graph::from_edges1_directed(n, lrd);
 
-    let mut g = (0..n).map(|i| vec![i]).collect_vec();
-    let mut c = (0..n).collect_vec();
-    let mut x = vec![0i64; n];
-
-    for (l, r, d) in lrd {
-        let l = l - 1;
-        let r = r - 1;
-
-        if c[l] == c[r] {
-            if x[l] + d != x[r] {
+    let mut dists = vec![None; n];
+    for i in 0..n {
+        if dists[i].is_none() {
+            dists[i] = Some(0);
+            if !dfs(&g, i, &mut dists) {
                 println!("No");
                 return;
             }
-        } else {
-            let cl = c[l];
-            let cr = c[r];
-            let diff = x[r] - x[l] - d;
-
-            let (cl, cr, diff) = if g[cl].len() > g[cr].len() {
-                (cr, cl, -diff)
-            } else {
-                (cl, cr, diff)
-            };
-
-            let mut tmp = replace(&mut g[cr], vec![]);
-            for &idx in &g[cl] {
-                tmp.push(idx);
-                x[idx] += diff;
-                c[idx] = cr;
-            }
-
-            g[cr] = tmp;
-            g[cl].clear();
         }
     }
-
     println!("Yes");
 }

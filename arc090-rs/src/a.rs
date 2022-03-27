@@ -137,4 +137,14 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let a = read_mat::<usize>(2);
+
+    let dp = izip!(a[0].citer(), a[1].citer()).fold((0, 0), |(b0, b1), (a0, a1)| {
+        (b0 + a0, max(b0 + a0 + a1, b1 + a1))
+    });
+
+    let ans = dp.1;
+    println!("{}", ans);
+}
