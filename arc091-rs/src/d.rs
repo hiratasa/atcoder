@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,4 +149,30 @@ where
 {
 }
 
-fn main() {}
+fn grundy(a: usize, k: usize) -> usize {
+    if a / k == 0 {
+        0
+    } else if a % k == 0 {
+        a / k
+    } else {
+        let r = a % k;
+        let m = (r + a / k) / (a / k + 1);
+        grundy(a - m * (a / k + 1), k)
+    }
+}
+
+fn main() {
+    let n = read::<usize>();
+    let ak = read_vec(n, || read_tuple!(usize, usize));
+
+    let g = ak
+        .citer()
+        .map(|(a, k)| grundy(a, k))
+        .fold(0, |g, g1| g ^ g1);
+
+    if g == 0 {
+        println!("Aoki");
+    } else {
+        println!("Takahashi");
+    }
+}
