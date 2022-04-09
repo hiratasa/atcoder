@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,4 +149,31 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let ab = read_vec(n, || read_tuple!(usize, usize));
+    let cd = read_vec(n, || read_tuple!(usize, usize));
+
+    let (ans, _) = chain(
+        ab.citer().map(|(a, b)| (a, 1, b)),
+        cd.citer().map(|(a, b)| (a, 0, b)),
+    )
+    .sorted()
+    .enumerate()
+    .fold((0, BTreeSet::new()), |(ans, mut set), (idx, (x, t, y))| {
+        if t == 0 {
+            if let Some(&(y1, idx1)) = set.range(..(y, 0)).next_back() {
+                set.remove(&(y1, idx1));
+
+                (ans + 1, set)
+            } else {
+                (ans, set)
+            }
+        } else {
+            set.insert((y, idx));
+            (ans, set)
+        }
+    });
+
+    println!("{}", ans);
+}

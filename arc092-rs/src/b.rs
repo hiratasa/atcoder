@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,4 +149,34 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let mut a = read_row::<usize>();
+    let mut b = read_row::<usize>();
+
+    let ans = (0..30)
+        .map(|i| {
+            let c1a = a.citer().filter(|&aa| aa & (1 << i) > 0).count();
+            let c1b = b.citer().filter(|&aa| aa & (1 << i) > 0).count();
+
+            let mask = (1 << i) - 1;
+            a.sort_by_key(|&x| x & mask);
+            b.sort_by_key(|&x| x & mask);
+
+            let mut k = n;
+            let mut s = 0;
+            for j in 0..n {
+                while k > 0 && (a[j] & mask) + (b[k - 1] & mask) >= 1 << i {
+                    k -= 1;
+                }
+                s += n - k;
+            }
+
+            let e = (c1a * (n - c1b) + (n - c1a) * c1b + s) % 2;
+
+            e * (1 << i)
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
+}
