@@ -97,10 +97,9 @@ impl MinCostFlowGraph {
 
             let f1 = if let Some(f1) = successors(parents[dst], |(_, p)| parents[*p])
                 .map(|(id, _p)| self.caps[id])
-                .chain(once(limit - f))
                 .min()
             {
-                f1
+                std::cmp::min(limit - f, f1)
             } else {
                 break;
             };
