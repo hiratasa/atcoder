@@ -47,6 +47,27 @@ impl MinCostFlowGraph {
         self.weights.push(-cost);
     }
 
+    // 負辺を含むDAGのときの初回のhを求める用
+    // 頂点がトポロジカルソートされている前提
+    #[allow(dead_code)]
+    fn dp(&self, src: usize) -> Vec<i64> {
+        let n = self.num_vertices();
+
+        let mut costs = vec![std::i64::MAX; n];
+        costs[src] = 0;
+
+        for i in 0..n {
+            for &e in &self.g.out_edges[i] {
+                if self.caps[e.label] > 0 {
+                    costs[e.to] =
+                        std::cmp::min(costs[e.to], costs[i].saturating_add(self.weights[e.label]));
+                }
+            }
+        }
+
+        costs
+    }
+
     fn dijkstra(&self, src: usize, h: &[i64]) -> (Vec<i64>, Vec<Option<(usize, usize)>>) {
         let n = self.num_vertices();
 
