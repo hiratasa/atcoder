@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,73 +149,30 @@ where
 {
 }
 
-trait IteratorExt: Iterator + Sized {
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(Self::Item) -> (usize, T);
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
-    fn fold_vec3<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> T;
-}
-impl<I> IteratorExt for I
-where
-    I: Iterator,
-{
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(item);
-            v[idx] = t;
-            v
-        })
-    }
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(&v, item);
-            v[idx] = t;
-            v
-        })
-    }
-    fn fold_vec3<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> T,
-    {
-        self.fold(init, |mut v, item| {
-            let t = f(&v, item);
-            v.push(t);
-            v
-        })
-    }
-}
-
 fn main() {
     let (n, k) = read_tuple!(usize, usize);
     let a = read_row::<usize>();
 
-    let b = once(0).chain(a.citer()).cumsum::<usize>().collect_vec();
+    let s = once(0)
+        .chain(a.citer())
+        .cumsum::<usize>()
+        .collect::<Vec<_>>();
 
-    let c = b
-        .citer()
-        .enumerate()
-        .flat_map(|(i, bb)| b.citer().skip(i + 1).map(move |bb2| bb2 - bb))
-        .collect_vec();
-    let ans = (0..40)
+    let b = (0..n)
+        .flat_map(|i| (i + 1..=n).map(move |j| (i, j)))
+        .map(|(i, j)| s[j] - s[i])
+        .collect::<Vec<_>>();
+
+    let ans = (0..50)
         .rev()
-        .scan(c, |c, i| {
-            let c2 = c.citer().filter(|cc| cc & (1 << i) > 0).collect_vec();
-            if c2.len() < k {
-                Some(0)
-            } else {
-                *c = c2;
+        .scan(b, |b, i| {
+            let c = b.citer().filter(|&x| x & (1 << i) > 0).collect::<Vec<_>>();
+
+            if c.len() >= k {
+                *b = c;
                 Some(1 << i)
+            } else {
+                Some(0)
             }
         })
         .sum::<usize>();
