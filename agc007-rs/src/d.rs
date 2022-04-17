@@ -137,4 +137,27 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, e, t) = read_tuple!(usize, i64, i64);
+    let x = read_row::<i64>();
+
+    let (dp, _, _) = x.citer().enumerate().skip(1).chain(once((n, e))).fold(
+        (vec![-2 * x[0]], std::i64::MAX, 0),
+        |(dp, m, j), (i, xx)| {
+            let j1 = (j..n).find(|&jj| 2 * (x[i - 1] - x[jj]) <= t).unwrap_or(n);
+
+            let m1 = once(m).chain(dp[j..j1].citer()).min().unwrap();
+
+            let z = min(
+                m1.saturating_add(2 * x[i - 1]),
+                dp.get(j1).map_or(std::i64::MAX, |d| d + 2 * x[j1] + t),
+            );
+
+            (pushed!(dp, z - 2 * xx), m1, j1)
+        },
+    );
+
+    let ans = dp[n] + 3 * e;
+
+    println!("{}", ans);
+}
