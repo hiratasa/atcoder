@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,4 +149,34 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, k, m) = read_tuple!(usize, usize, usize);
+
+    let b = (n + 1) * (n + 1) * k / 2 + 1;
+
+    let dp = (1..=n).fold(vec![vvec![1; 0; b]], |dp, i| {
+        let mut c = vec![0; b];
+        for j in 0..b {
+            c[j] = (j.checked_sub(i).map_or(0, |jj| c[jj]) + dp[i - 1][j]) % m;
+        }
+
+        let next = (0..b)
+            .map(|j| (c[j] + m - j.checked_sub((k + 1) * i).map_or(0, |jj| c[jj])) % m)
+            .collect::<Vec<_>>();
+
+        pushed!(dp, next)
+    });
+
+    (1..=n)
+        .map(|x| {
+            (izip!(dp[x - 1].citer(), dp[n - x].citer())
+                .map(|(y, z)| y * z % m)
+                .fold(0, |s, y| (s + y) % m)
+                * (k + 1)
+                + (m - 1))
+                % m
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
+}
