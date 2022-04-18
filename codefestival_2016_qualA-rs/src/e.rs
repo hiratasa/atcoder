@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,4 +149,45 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let q = read::<usize>();
+    let a = read_row::<usize>();
+
+    let b = a.citer().rev().chain(1..=m).unique().collect::<Vec<_>>();
+
+    let k = m
+        - 1
+        - b.citer()
+            .rev()
+            .tuple_windows()
+            .take_while(|&(b0, b1)| b0 > b1)
+            .count();
+
+    let c = b[..k]
+        .citer()
+        .enumerate()
+        .fold(vec![None; m + 1], |mut c, (i, x)| {
+            c[x] = Some(i);
+            c
+        });
+
+    let t = a.citer().rev().fold(vec![0; k], |mut t, x| {
+        if let Some(idx) = c[x] {
+            t[idx] = min(
+                idx.checked_sub(1).map_or(usize::MAX, |prev| t[prev]),
+                t[idx] + 1,
+            );
+        }
+
+        t
+    });
+
+    let ans = t.citer().all(|l| l >= n);
+
+    if ans {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
+}
