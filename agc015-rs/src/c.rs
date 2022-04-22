@@ -137,4 +137,68 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m, q) = read_tuple!(usize, usize, usize);
+    let s = read_vec(n, || read_str());
+    let query = read_vec(q, || read_tuple!(usize, usize, usize, usize));
+
+    let num_verts = (0..n)
+        .map(|i| {
+            once(0)
+                .chain((0..m).map(|j| (s[i][j] == '1') as usize))
+                .cumsum::<usize>()
+                .collect::<Vec<_>>()
+        })
+        .fold(vec![vec![0; m + 1]], |t, mut row| {
+            izip!(t.last().unwrap().citer(), row.iter_mut()).for_each(|(x, y)| *y += x);
+
+            pushed!(t, row)
+        });
+    let num_yoko = (0..n)
+        .map(|i| {
+            once(0)
+                .chain(
+                    (0..m)
+                        .tuple_windows()
+                        .map(|(j0, j1)| (s[i][j0] == '1' && s[i][j1] == '1') as usize),
+                )
+                .cumsum::<usize>()
+                .collect::<Vec<_>>()
+        })
+        .fold(vec![vec![0; m]], |t, mut row| {
+            izip!(t.last().unwrap().citer(), row.iter_mut()).for_each(|(x, y)| *y += x);
+
+            pushed!(t, row)
+        });
+    let num_tate = (0..n)
+        .tuple_windows()
+        .map(|(i0, i1)| {
+            once(0)
+                .chain((0..m).map(|j| (s[i0][j] == '1' && s[i1][j] == '1') as usize))
+                .cumsum::<usize>()
+                .collect::<Vec<_>>()
+        })
+        .fold(vec![vec![0; m + 1]], |t, mut row| {
+            izip!(t.last().unwrap().citer(), row.iter_mut()).for_each(|(x, y)| *y += x);
+
+            pushed!(t, row)
+        });
+
+    query
+        .citer()
+        .map(|(i0, j0, i1, j1)| {
+            let i0 = i0 - 1;
+            let j0 = j0 - 1;
+
+            let nv = num_verts[i1][j1] + num_verts[i0][j0] - num_verts[i0][j1] - num_verts[i1][j0];
+            let nyoko =
+                num_yoko[i1][j1 - 1] + num_yoko[i0][j0] - num_yoko[i0][j1 - 1] - num_yoko[i1][j0];
+            let ntate =
+                num_tate[i1 - 1][j1] + num_tate[i0][j0] - num_tate[i0][j1] - num_tate[i1 - 1][j0];
+
+            nv - nyoko - ntate
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
+}

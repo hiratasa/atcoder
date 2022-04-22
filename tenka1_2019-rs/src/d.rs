@@ -362,38 +362,36 @@ fn main() {
     type Mod = Mod998244353;
 
     let n = read::<usize>();
-    let s = read_str();
+    let a = read_col::<usize>(n);
 
-    let s = s
-        .into_iter()
-        .map(|c| match c {
-            'R' => 0,
-            'G' => 1,
-            'B' => 2,
-            _ => unreachable!(),
-        })
-        .collect::<Vec<_>>();
+    let inv2 = Mod::new(2).inv();
 
-    let fact = (1..=n).map_into::<Mod>().product::<Mod>();
-    let ans = fact
-        * s.citer()
-            .scan(vec![0; 1 << 3], |t, c| {
-                if t[7 - (1 << c)] > 0 {
-                    let x = t[7 - (1 << c)];
-                    t[7 - (1 << c)] -= 1;
-                    Some(x)
-                } else if let Some(d) = (0..3).find(|&d| d != c && t[1 << d] > 0) {
-                    let x = t[1 << d];
-                    t[1 << d] -= 1;
-                    t[(1 << d) | (1 << c)] += 1;
-                    Some(x)
-                } else {
-                    t[1 << c] += 1;
-                    Some(1)
-                }
-            })
-            .map_into::<Mod>()
-            .product::<Mod>();
+    let s = a.citer().sum::<usize>();
+
+    let dp = a
+        .citer()
+        .fold(vvec![Mod::new(2).pow(n); Mod::zero(); s+1], |mut dp, aa| {
+            for i in (aa..=s).rev() {
+                dp[i] = dp[i] + dp[i - aa] * inv2;
+            }
+
+            dp
+        });
+    let dp2 = a
+        .citer()
+        .fold(vvec![Mod::one(); Mod::zero(); s+1], |mut dp, aa| {
+            for i in (aa..=s).rev() {
+                dp[i] = dp[i] + dp[i - aa];
+            }
+
+            dp
+        });
+
+    let ans = if s % 2 == 0 {
+        Mod::new(3).pow(n) - dp[s / 2..=s].citer().sum::<Mod>() * 3 + dp2[s / 2] * 3
+    } else {
+        Mod::new(3).pow(n) - dp[(s + 1) / 2..=s].citer().sum::<Mod>() * 3
+    };
 
     println!("{}", ans);
 }

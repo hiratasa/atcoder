@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,127 +149,63 @@ where
 {
 }
 
-trait Pick0 {
-    type Output;
-    fn pick0(self) -> Self::Output;
-}
-impl<T, T2> Pick0 for (T, T2) {
-    type Output = T;
-    fn pick0(self) -> Self::Output {
-        self.0
-    }
-}
-impl<T, T2, T3> Pick0 for (T, T2, T3) {
-    type Output = T;
-    fn pick0(self) -> Self::Output {
-        self.0
-    }
-}
-trait IteratorPick0Ext<T>: std::iter::Iterator<Item = T> + std::marker::Sized
-where
-    T: Pick0,
-{
-    fn pick0(self) -> std::iter::Map<Self, fn(T) -> T::Output> {
-        self.map(Pick0::pick0)
-    }
-}
-impl<T, I> IteratorPick0Ext<T> for I
-where
-    I: std::iter::Iterator<Item = T>,
-    T: Pick0,
-{
-}
-trait Pick1 {
-    type Output;
-    fn pick1(self) -> Self::Output;
-}
-impl<T, T2> Pick1 for (T, T2) {
-    type Output = T2;
-    fn pick1(self) -> Self::Output {
-        self.1
-    }
-}
-impl<T, T2, T3> Pick1 for (T, T2, T3) {
-    type Output = T2;
-    fn pick1(self) -> Self::Output {
-        self.1
-    }
-}
-trait IteratorPick1Ext<T>: std::iter::Iterator<Item = T> + std::marker::Sized
-where
-    T: Pick1,
-{
-    fn pick1(self) -> std::iter::Map<Self, fn(T) -> T::Output> {
-        self.map(Pick1::pick1)
-    }
-}
-impl<T, I> IteratorPick1Ext<T> for I
-where
-    I: std::iter::Iterator<Item = T>,
-    T: Pick1,
-{
-}
-
 fn main() {
     let (w, h) = read_tuple!(usize, usize);
-
-    let n: usize = read();
+    let n = read::<usize>();
     let xy = read_vec(n, || read_tuple!(usize, usize));
 
-    let xs = once(0)
-        .chain(xy.citer().pick0())
-        .chain(once(w + 1))
+    let xs = it![0, w + 1]
+        .chain(xy.citer().map(|(x, _)| x))
         .sorted()
-        .collect_vec();
-    let ys = once(0)
-        .chain(xy.citer().pick1())
-        .chain(once(h + 1))
+        .dedup()
+        .collect::<Vec<_>>();
+    let ys = it![0, h + 1]
+        .chain(xy.citer().map(|(_, y)| y))
         .sorted()
-        .collect_vec();
+        .dedup()
+        .collect::<Vec<_>>();
 
-    let zz = xy
-        .citer()
-        .map(|(x, y)| {
-            (
-                xs.citer().find_position(|&xx| xx == x).unwrap().0,
-                ys.citer().find_position(|&yy| yy == y).unwrap().0,
-            )
-        })
-        .collect_vec();
+    let nx = xs.len();
+    let ny = ys.len();
 
-    let ww = xs.len() - 2;
-    let hh = ys.len() - 2;
+    let dp = iproduct!(1..nx, 0..nx, 1..ny, 0..ny)
+        .filter(|&(ww, i, hh, j)| i + ww < nx && j + hh < ny)
+        .fold(
+            vec![vec![vec![vec![0; ny]; ny]; nx]; nx],
+            |mut dp, (ww, i0, hh, j0)| {
+                let i1 = i0 + ww;
+                let j1 = j0 + hh;
 
-    let dp = iproduct!((1..=ww), (1..=hh)).fold(
-        vec![vec![vec![vec![0; hh + 1]; ww + 1]; hh + 1]; ww + 1],
-        |dp, (iww, ihh)| {
-            iproduct!((0..=ww - iww), (0..=hh - ihh)).fold(dp, |mut dp, (cx, cy)| {
-                let dx = cx + iww + 1;
-                let dy = cy + ihh + 1;
+                let x0 = xs[i0];
+                let x1 = xs[i1];
+                let y0 = ys[j0];
+                let y1 = ys[j1];
 
-                let iw = xs[dx] - xs[cx] - 1;
-                let ih = ys[dy] - ys[cy] - 1;
-
-                let t = zz
+                let z = xy
                     .citer()
-                    .filter(|&(x, y)| cx < x && x < dx && cy < y && y < dy)
-                    // .inspect(|(x, y)| eprintln!("{},{},{},{} : {},{}", iww, ihh, cx, cy, x, y))
+                    .filter(|&(x, y)| x0 < x && x < x1 && y0 < y && y < y1)
                     .map(|(x, y)| {
-                        iw + ih - 1
-                            + dp[x - cx - 1][y - cy - 1][cx][cy]
-                            + dp[dx - x - 1][y - cy - 1][x][cy]
-                            + dp[x - cx - 1][dy - y - 1][cx][y]
-                            + dp[dx - x - 1][dy - y - 1][x][y]
+                        let i2 = xs.binary_search(&x).unwrap();
+                        let j2 = ys.binary_search(&y).unwrap();
+
+                        dp[i0][i2][j0][j2]
+                            + dp[i0][i2][j2][j1]
+                            + dp[i2][i1][j0][j2]
+                            + dp[i2][i1][j2][j1]
+                            + (y1 - y0 - 1)
+                            + (x1 - x0 - 1)
+                            - 1
                     })
-                    // .inspect(|tt| eprintln!("{},{},{},{} => {}", iww, ihh, cx, cy, tt))
                     .max()
                     .unwrap_or(0);
-                dp[iww][ihh][cx][cy] = t;
+
+                dp[i0][i1][j0][j1] = z;
+
                 dp
-            })
-        },
-    );
-    let ans = dp[ww][hh][0][0];
+            },
+        );
+
+    let ans = dp[0][nx - 1][0][ny - 1];
 
     println!("{}", ans);
 }

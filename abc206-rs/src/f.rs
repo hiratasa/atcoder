@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -149,36 +150,38 @@ where
 }
 
 fn main() {
-    let t: usize = read();
+    let t = read::<usize>();
 
     for _ in 0..t {
-        let n: usize = read();
+        let n = read::<usize>();
         let lr = read_vec(n, || read_tuple!(usize, usize));
 
-        let mut g = vec![vec![0; 101]; 101];
-        for len in 1..=100 {
-            for i in 0..=100 - len {
-                let j = i + len;
+        let grundy = (1..100).fold(vec![vec![0; 101]; 101], |grundy, w| {
+            (0..100)
+                .take_while(|&i| i + w <= 100)
+                .fold(grundy, |mut grundy, i| {
+                    let i1 = i + w;
 
-                g[i][j] = lr
-                    .citer()
-                    .filter(|&(l, r)| i <= l && r <= j)
-                    .map(|(l, r)| g[i][l] ^ g[r][j])
-                    .sorted()
-                    .dedup()
-                    .chain(once(usize::MAX))
-                    .enumerate()
-                    .find(|&(i, x)| i != x)
-                    .unwrap()
-                    .0;
-                // eprintln!("g[{}][{}] = {}", i, j, g[i][j]);
-            }
-        }
+                    grundy[i][i1] = lr
+                        .citer()
+                        .filter(|&(l, r)| i <= l && r <= i1)
+                        .map(|(l, r)| grundy[i][l] ^ grundy[r][i1])
+                        .sorted()
+                        .dedup()
+                        .chain(once(usize::MAX))
+                        .enumerate()
+                        .find(|&(a, b)| a != b)
+                        .unwrap()
+                        .0;
 
-        if g[0][100] > 0 {
-            println!("Alice");
-        } else {
+                    grundy
+                })
+        });
+
+        if grundy[1][100] == 0 {
             println!("Bob");
+        } else {
+            println!("Alice");
         }
     }
 }

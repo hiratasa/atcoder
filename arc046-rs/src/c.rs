@@ -1,19 +1,28 @@
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
-use std::io::*;
+use std::io;
+#[allow(unused_imports)]
+use std::iter::*;
 #[allow(unused_imports)]
 use std::mem::*;
 #[allow(unused_imports)]
 use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
+
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -31,10 +40,51 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! read_cols {
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! read_tuple {
     ($($t:ty),+) => {{
         let mut line = String::new();
-        stdin().read_line(&mut line).unwrap();
+        io::stdin().read_line(&mut line).unwrap();
 
         let mut it = line.trim()
             .split_whitespace();
@@ -48,7 +98,7 @@ macro_rules! read_cols {
 #[allow(dead_code)]
 fn read<T: FromStr>() -> T {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
     line.trim().to_string().parse().ok().unwrap()
 }
 
@@ -58,9 +108,9 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
-fn read_vec<T: FromStr>() -> Vec<T> {
+fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
 
     line.trim()
         .split_whitespace()
@@ -68,51 +118,62 @@ fn read_vec<T: FromStr>() -> Vec<T> {
         .collect()
 }
 
+#[allow(dead_code)]
+fn read_col<T: FromStr>(n: usize) -> Vec<T> {
+    (0..n).map(|_| read()).collect()
+}
+
+#[allow(dead_code)]
+fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
+    (0..n).map(|_| read_row()).collect()
+}
+
+#[allow(dead_code)]
+fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
+    (0..n).map(|_| f()).collect()
+}
+
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
 fn main() {
-    let (n, m) = read_cols!(usize, usize);
+    let (n, m) = read_tuple!(usize, usize);
+    let ab = read_vec(n, || read_tuple!(usize, usize));
+    let cd = read_vec(m, || read_tuple!(usize, usize));
 
-    let ab = {
-        let mut ab = (0..n).map(|_| read_cols!(usize, usize)).collect::<Vec<_>>();
-        ab.sort_by_key(|&(a, b)| (b, a));
-        ab
-    };
-
-    let cd = {
-        let mut cd = (0..m).map(|_| read_cols!(usize, usize)).collect::<Vec<_>>();
-        cd.sort();
-        cd
-    };
-
-    let ans = ab
-        .iter()
-        .copied()
-        .rev()
-        .fold(
-            (0usize, BTreeMap::new(), cd.iter().copied().rev().peekable()),
-            |(ans, mut map, mut it), (a, b)| {
-                while let Some(&(c, d)) = it.peek() {
-                    if c < b {
-                        break;
-                    }
-
-                    it.next();
-                    *map.entry(d).or_insert(0) += 1;
-                }
-
-                if let Some((&d, &x)) = map.range(0..=a).next_back() {
-                    if x == 1 {
-                        map.remove(&d);
-                    } else {
-                        map.insert(d, x - 1);
-                    }
-
-                    (ans + 1, map, it)
-                } else {
-                    (ans, map, it)
-                }
-            },
-        )
-        .0;
+    let ans = chain(
+        ab.citer().map(|(a, b)| (a, b, true)),
+        cd.citer().map(|(c, d)| (d, c, false)),
+    )
+    .sorted_by_key(|&(x, y, f)| (x, Reverse(y), f))
+    .enumerate()
+    .scan(BTreeSet::new(), |set, (idx, (_y, x, f))| {
+        if f {
+            if let Some(&(x2, idx2)) = set.range((x, 0)..).next() {
+                set.remove(&(x2, idx2));
+                Some(1)
+            } else {
+                Some(0)
+            }
+        } else {
+            set.insert((x, idx));
+            Some(0)
+        }
+    })
+    .sum::<usize>();
 
     println!("{}", ans);
 }
