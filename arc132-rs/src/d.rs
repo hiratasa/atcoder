@@ -148,4 +148,58 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let s = read_str();
+    let t = read_str();
+
+    let nums0 = s
+        .citer()
+        .chain(it!['0', '1'])
+        .fold([vec![], vec![]], |[s0, s1], c| {
+            if c == '0' {
+                [pushed!(s0, s1.len()), s1]
+            } else {
+                let l = s0.len();
+                [s0, pushed!(s1, l)]
+            }
+        });
+    let nums1 = t
+        .citer()
+        .chain(it!['0', '1'])
+        .fold([vec![], vec![]], |[s0, s1], c| {
+            if c == '0' {
+                [pushed!(s0, s1.len()), s1]
+            } else {
+                let l = s0.len();
+                [s0, pushed!(s1, l)]
+            }
+        });
+
+    let ans = it![0usize, 1]
+        .filter(|&c| {
+            s[0].to_digit(10).unwrap() as usize == c || t[0].to_digit(10).unwrap() as usize == c
+        })
+        .map(|c0| {
+            let mut init = [0; 2];
+            init[c0] = 1;
+            (1..n + m)
+                .scan((init, c0), |(num, prev), _| {
+                    let mi = min(nums0[*prev][num[*prev]], nums1[*prev][num[*prev]]);
+                    let ma = max(nums0[*prev][num[*prev]], nums1[*prev][num[*prev]]);
+                    if mi <= num[1 - *prev] && num[1 - *prev] <= ma {
+                        num[*prev] += 1;
+                        Some(1)
+                    } else {
+                        *prev = 1 - *prev;
+                        num[*prev] += 1;
+                        Some(0)
+                    }
+                })
+                .sum::<usize>()
+        })
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
+}
