@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -291,343 +292,96 @@ mod detail {
             self.out_edges[edge.from].push(edge);
             self.in_edges[edge.to].push(edge);
         }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
     }
 }
 
 type Graph = detail::UnweightedGraph;
 
-trait Monoid {
-    type Item: Clone;
-
-    fn id() -> Self::Item;
-    fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
-}
-
-#[derive(Debug)]
-struct SegmentTree<M>
-where
-    M: Monoid,
-{
-    cap: usize,
-    values: Vec<M::Item>,
-}
-
-#[allow(dead_code)]
-impl<M> SegmentTree<M>
-where
-    M: Monoid,
-{
-    fn new(n: usize) -> Self {
-        let cap = n.next_power_of_two();
-        SegmentTree {
-            cap,
-            values: vec![M::id(); 2 * cap - 1],
-        }
-    }
-
-    fn with(vals: &Vec<M::Item>) -> Self {
-        let n = vals.len();
-        let cap = n.next_power_of_two();
-
-        let mut values = Vec::with_capacity(2 * cap - 1);
-        values.resize(cap - 1, M::id());
-        values.extend(vals.iter().cloned());
-        values.resize(2 * cap - 1, M::id());
-
-        let mut st = SegmentTree { cap, values };
-        for idx in (0..cap - 1).rev() {
-            st.fix_value(idx);
-        }
-        st
-    }
-
-    fn fix_value(&mut self, idx: usize) {
-        let left_idx = 2 * (idx + 1) - 1;
-        let right_idx = 2 * (idx + 1);
-        self.values[idx] = M::op(&self.values[left_idx], &self.values[right_idx]);
-    }
-
-    fn get(&self, pos: usize) -> M::Item {
-        self.values[self.cap - 1 + pos].clone()
-    }
-
-    fn set(&mut self, pos: usize, v: M::Item) {
-        let mut idx = self.cap - 1 + pos;
-
-        self.values[idx] = v;
-
-        while idx > 0 {
-            idx = (idx - 1) / 2;
-            self.fix_value(idx);
-        }
-    }
-
-    fn query(&self, a: usize, b: usize) -> M::Item {
-        let mut left = M::id();
-        let mut right = M::id();
-
-        let mut left_idx = a + self.cap - 1;
-        let mut right_idx = b + self.cap - 1;
-
-        let c0 = std::cmp::min(
-            // trailing_ones
-            (!left_idx).trailing_zeros(),
-            (right_idx + 1).trailing_zeros(),
-        );
-        left_idx = left_idx >> c0;
-        right_idx = ((right_idx + 1) >> c0) - 1;
-
-        while left_idx < right_idx {
-            if left_idx % 2 == 0 {
-                left = M::op(&left, &self.values[left_idx]);
-                left_idx += 1;
-            }
-
-            if right_idx % 2 == 0 {
-                right = M::op(&self.values[right_idx - 1], &right);
-                right_idx -= 1;
-            }
-
-            let c = std::cmp::min(
-                // trailing_ones
-                (!left_idx).trailing_zeros(),
-                (right_idx + 1).trailing_zeros(),
-            );
-            left_idx = left_idx >> c;
-            right_idx = ((right_idx + 1) >> c) - 1;
-        }
-
-        M::op(&left, &right)
-    }
-
-    // f(query(a, b)) == false となるbが存在すればその最小のものを返す
-    // (存在しないときにnを返してしまうとquery(a,n)がfalseのときと区別がつかないのでNoneを返す)
-    fn right_partition_point<F>(&self, a: usize, mut f: F) -> Option<usize>
-    where
-        F: FnMut(&M::Item) -> bool,
-    {
-        assert!(a <= self.cap);
-        if !f(&M::id()) {
-            Some(a)
-        } else if a == self.cap {
-            None
-        } else {
-            let mut b = a;
-            // [b, b+2^k) が保持されている最初の箇所に移動
-            let mut idx = ((b + self.cap) >> (b + self.cap).trailing_zeros()) - 1;
-            let mut len = 1 << (b + self.cap).trailing_zeros();
-            let mut val = M::id();
-            let mut val_next = M::op(&val, &self.values[idx]);
-
-            // チェックする範囲を拡大しながらf()がtrueになる限りbを右に伸ばしていく
-            while f(&val_next) {
-                val = val_next;
-                b += len;
-
-                // [b, b+2^k) が保持されている最初の箇所に移動
-                len <<= (idx + 2).trailing_zeros();
-                idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
-
-                // 最後に計算したidxが右端だった場合
-                if idx == 0 {
-                    return None;
-                }
-                val_next = M::op(&val, &self.values[idx]);
-            }
-
-            // 範囲を縮小しながらbを右に伸ばしていく
-            idx = 2 * idx + 1;
-            len >>= 1;
-            while idx < self.values.len() {
-                val_next = M::op(&val, &self.values[idx]);
-                if f(&val_next) {
-                    val = val_next;
-                    b += len;
-                    idx += 1;
-                }
-                len >>= 1;
-                idx = 2 * idx + 1;
-            }
-
-            // [a, b)区間でfがtrue => 求めるbはその次
-            Some(b + 1)
-        }
-    }
-
-    // f(query(a, b)) == false となるaが存在すればその最大のもの+1を返す
-    // 存在しない場合は0を返す
-    fn left_partition_point<F>(&self, b: usize, mut f: F) -> usize
-    where
-        F: FnMut(&M::Item) -> bool,
-    {
-        assert!(b <= self.cap);
-        if !f(&M::id()) {
-            b
-        } else if b == 0 {
-            0
-        } else {
-            let mut a = b;
-            // [a-2^k, a) が保持されている最初の箇所に移動
-            let mut idx = (a + self.cap - 1) >> (!(a + self.cap - 1)).trailing_zeros();
-            let mut len = 1 << (!(a + self.cap - 1)).trailing_zeros();
-            if idx == 0 {
-                // このケースになるのはb=self.capのときだけ
-                len = self.cap;
-            } else {
-                idx -= 1;
-            }
-
-            let mut val = M::id();
-            let mut val_next = M::op(&self.values[idx], &val);
-
-            // チェックする範囲を拡大しながらf()がtrueになる限りaを左に伸ばしていく
-            while f(&val_next) {
-                val = val_next;
-                a -= len;
-
-                // 最後に計算したidxが左端だった場合
-                if idx == 0 || (idx + 1).is_power_of_two() {
-                    return 0;
-                }
-
-                // [a-2^k, a) が保持されている最初の箇所に移動
-                len <<= (!idx).trailing_zeros();
-                idx >>= (!idx).trailing_zeros();
-                idx -= 1;
-
-                val_next = M::op(&self.values[idx], &val);
-            }
-
-            // 範囲を縮小しながらaを左に伸ばしていく
-            idx = 2 * idx + 2;
-            len >>= 1;
-            while idx < self.values.len() {
-                val_next = M::op(&self.values[idx], &val);
-                if f(&val_next) {
-                    val = val_next;
-                    a -= len;
-                    idx -= 1;
-                }
-                len >>= 1;
-                idx = 2 * idx + 2;
-            }
-
-            a
-        }
-    }
-}
-
-macro_rules! define_monoid {
-    ($name: ident, $t: ty, $id: expr, $op: expr) => {
-        #[derive(Clone, Debug)]
-        struct $name;
-
-        impl Monoid for $name {
-            type Item = $t;
-
-            fn id() -> Self::Item {
-                $id
-            }
-
-            fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item {
-                ($op)(*lhs, *rhs)
-            }
-        }
-    };
-}
-
-define_monoid!(Sum, usize, 0, std::ops::Add::add);
-
-type ST = SegmentTree<Sum>;
-
-fn calc_median(
+fn dfs(
     g: &Graph,
+    a: &[usize],
     v: usize,
     p: usize,
-    st: &mut ST,
-    a: &[usize],
-    a_to_idx: &FxHashMap<usize, usize>,
-    idx_to_a: &[usize],
-    medians: &mut [usize],
-) {
-    let aa = a[v];
-    let idx = a_to_idx[&aa];
-    st.set(idx, st.get(idx) + 1);
-
-    // leaf
-    if p < g.size() && g.out_edges[v].len() == 1 {
-        let l = idx_to_a.len();
-        let d = st.query(0, l);
-        if d % 2 == 0 {
-            let idx0 = st.right_partition_point(0, |&k| k < d / 2).unwrap();
-            let idx1 = st.right_partition_point(0, |&k| k <= d / 2).unwrap();
-            medians[v] = (idx_to_a[idx0 - 1] + idx_to_a[idx1 - 1]) / 2;
-        } else {
-            let idx0 = st.right_partition_point(0, |&k| k <= d / 2).unwrap();
-            medians[v] = idx_to_a[idx0 - 1];
-        }
-    }
-
-    for &e in &g.out_edges[v] {
-        if e.to == p {
-            continue;
-        }
-
-        calc_median(&g, e.to, v, st, a, a_to_idx, idx_to_a, medians);
-    }
-
-    st.set(idx, st.get(idx) - 1);
-}
-
-fn dfs(g: &Graph, v: usize, p: usize, depth: usize, medians: &[usize]) -> usize {
-    // leaf
-    if p < g.size() && g.out_edges[v].len() == 1 {
-        return medians[v];
-    }
-
-    if depth % 2 == 0 {
-        g.out_edges[v]
-            .citer()
-            .filter(|&e| e.to != p)
-            .map(|e| dfs(&g, e.to, v, depth + 1, medians))
-            .max()
-            .unwrap()
+    q0: &mut BTreeSet<(usize, usize)>,
+    q1: &mut BTreeSet<(usize, usize)>,
+    maximize: bool,
+) -> usize {
+    if matches!(q1.citer().next(), Some((b, j)) if (b, j) <= (a[v], v)) {
+        q1.insert((a[v], v));
     } else {
-        g.out_edges[v]
-            .citer()
-            .filter(|&e| e.to != p)
-            .map(|e| dfs(&g, e.to, v, depth + 1, medians))
-            .min()
-            .unwrap()
+        q0.insert((a[v], v));
     }
+
+    while q0.len() > q1.len() + 1 {
+        let l = q0.citer().next_back().unwrap();
+        q0.remove(&l);
+        q1.insert(l);
+    }
+    while q0.len() < q1.len() {
+        let l = q1.citer().next().unwrap();
+        q1.remove(&l);
+        q0.insert(l);
+    }
+
+    assert!(q0.len() == q1.len() + 1 || q0.len() == q1.len());
+
+    let med = if q0.len() == q1.len() {
+        (q0.citer().next_back().unwrap().0 + q1.citer().next().unwrap().0) / 2
+    } else {
+        q0.citer().next_back().unwrap().0
+    };
+
+    let ret = g
+        .children(v, p)
+        .map(|u| dfs(g, a, u, v, q0, q1, !maximize))
+        .fold1(|m, k| if maximize { max(m, k) } else { min(m, k) })
+        .unwrap_or(med);
+
+    q0.remove(&(a[v], v));
+    q1.remove(&(a[v], v));
+    while q0.len() > q1.len() + 1 {
+        let l = q0.citer().next_back().unwrap();
+        q0.remove(&l);
+        q1.insert(l);
+    }
+    while q0.len() < q1.len() {
+        let l = q1.citer().next().unwrap();
+        q1.remove(&l);
+        q0.insert(l);
+    }
+
+    ret
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
     let a = read_row::<usize>();
     let uv = read_vec(n - 1, || read_tuple!(usize, usize));
 
     let g = Graph::from_edges1_undirected(n, uv);
 
-    let idx_to_a = a.citer().sorted().dedup().collect::<Vec<_>>();
-    let a_to_idx = idx_to_a
-        .citer()
-        .enumerate()
-        .map(|(i, aa)| (aa, i))
-        .collect::<FxHashMap<_, _>>();
-
-    let mut medians = vec![0; n];
-    calc_median(
+    let ans = dfs(
         &g,
+        &a,
         0,
         n,
-        &mut ST::new(idx_to_a.len()),
-        &a,
-        &a_to_idx,
-        &idx_to_a,
-        &mut medians,
+        &mut BTreeSet::new(),
+        &mut BTreeSet::new(),
+        true,
     );
 
-    let ans = dfs(&g, 0, n, 0, &medians);
     println!("{}", ans);
 }

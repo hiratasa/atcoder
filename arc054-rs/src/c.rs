@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -149,43 +150,39 @@ where
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
+    let s = read_vec(n, || read_str());
 
-    let s = read_vec(n, || {
-        read::<String>()
-            .chars()
-            .map(|c| c.to_digit(10).unwrap() as usize)
-            .collect_vec()
-    });
+    let s = s
+        .into_iter()
+        .map(|row| {
+            row.citer()
+                .map(|x| x.to_digit(10).unwrap())
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
 
-    let t = (0..n).try_fold(s, |mut s, i| {
-        let k = (i..n).find(|&j| s[j][i] > 0)?;
+    let is_odd = (0..n)
+        .try_fold(s, |mut s, i| {
+            let idx = i + s[i..].iter().position(|row| row[i] == 1)?;
 
-        if k != i {
-            s.swap(i, k);
-        }
+            s.swap(idx, i);
 
-        Some(
-            chain(
-                s.iter().take(i + 1).cloned(),
-                s.iter().skip(i + 1).map(|row| {
-                    let a = row[i];
-                    izip!(row, &s[i])
-                        .map(|(c0, c1)| (c0 + a * c1) % 2)
-                        .collect_vec()
-                }),
-            )
-            .collect_vec(),
-        )
-    });
-    let det = if let Some(t) = t {
-        (0..n).map(|i| t[i][i]).product::<usize>()
-    } else {
-        0
-    };
-    if det % 2 == 0 {
-        println!("Even");
-    } else {
+            for j in i + 1..n {
+                if s[j][i] == 1 {
+                    for k in 0..n {
+                        s[j][k] ^= s[i][k];
+                    }
+                }
+            }
+
+            Some(s)
+        })
+        .is_some();
+
+    if is_odd {
         println!("Odd");
+    } else {
+        println!("Even");
     }
 }
