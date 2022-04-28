@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,4 +149,42 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (h, w) = read_tuple!(usize, usize);
+    let c = read_vec(h, || read_str());
+
+    let ans = (0..w)
+        .map(|i| (0..h).map(|j| c[j][i]).collect::<Vec<_>>())
+        .tuple_windows()
+        .map(|(c0, c1)| {
+            let costs =
+                iproduct!(1..=h, 1..=h).fold(vec![vec![0; h + 1]; h + 1], |mut costs, (j0, j1)| {
+                    costs[j0][j1] = costs[j0 - 1][j1 - 1] + (c0[j0 - 1] == c1[j1 - 1]) as usize;
+
+                    costs
+                });
+
+            let dp = iproduct!(0..=h, 0..=h).fold(
+                vec![vec![usize::MAX; h + 1]; h + 1],
+                |mut dp, (j0, j1)| {
+                    if j0 == 0 && j1 == 0 {
+                        dp[j0][j1] = 0;
+                    }
+
+                    if j0 > 0 {
+                        dp[j0][j1] = min(dp[j0][j1], dp[j0 - 1][j1] + costs[j0][j1]);
+                    }
+                    if j1 > 0 {
+                        dp[j0][j1] = min(dp[j0][j1], dp[j0][j1 - 1] + costs[j0][j1]);
+                    }
+
+                    dp
+                },
+            );
+
+            dp[h][h]
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
+}

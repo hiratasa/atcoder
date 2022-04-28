@@ -35,7 +35,7 @@ fn z_algorithm<T: std::cmp::Eq>(s: &[T]) -> Vec<usize> {
 
 // textからpatternの出現箇所を全部検索
 #[allow(dead_code)]
-fn find_all<T: Eq>(text: &Vec<T>, pattern: &Vec<T>) -> Vec<usize> {
+fn find_all<T: Eq>(text: &[T], pattern: &[T]) -> Vec<usize> {
     // pattern + text
     let s = pattern.iter().chain(text.iter()).collect::<Vec<_>>();
 

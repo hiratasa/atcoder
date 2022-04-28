@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -291,6 +292,19 @@ mod detail {
             self.out_edges[edge.from].push(edge);
             self.in_edges[edge.to].push(edge);
         }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
     }
 }
 
@@ -301,54 +315,48 @@ fn main() {
     let uv = read_vec(m, || read_tuple!(usize, usize));
     let x = read_row::<usize>();
 
-    let g = Graph::from_edges1_undirected(n, &uv);
-
-    const B: usize = 630;
-    let is_alpha = (0..n)
-        .map(|i| g.out_edges[i].len() >= B)
-        .collect::<Vec<_>>();
-
-    let g_to_alpha = Graph::from_edges1_directed(
+    let g0 = Graph::from_edges1_undirected(n, &uv);
+    let g1 = Graph::from_edges1_directed(
         n,
-        uv.citer()
-            .flat_map(|(u, v)| it![(u, v), (v, u)])
-            .filter(|&(_u, v)| is_alpha[v - 1]),
-    );
-    let g_from_beta = Graph::from_edges1_directed(
-        n,
-        uv.citer()
-            .flat_map(|(u, v)| it![(u, v), (v, u)])
-            .filter(|&(u, _v)| !is_alpha[u - 1]),
+        uv.citer().map(|(u, v)| {
+            if g0.out_edges[u - 1].len() < g0.out_edges[v - 1].len() {
+                (u, v)
+            } else {
+                (v, u)
+            }
+        }),
     );
 
-    let (nums, send) = x.citer().enumerate().fold(
-        ((1..=n).map(|i| (i, 0)).collect::<Vec<_>>(), vec![None; n]),
-        |(mut nums, mut send), (i, x)| {
-            let x = x - 1;
+    let (values, props) = x.citer().enumerate().fold(
+        ((1..=n).map(|i| (0, i)).collect::<Vec<_>>(), vec![None; n]),
+        |(mut values, mut props), (i, xx)| {
+            let xx = xx - 1;
 
-            let (current_x, _) = once(nums[x])
-                .chain(g_to_alpha.out_edges[x].citer().filter_map(|e| send[e.to]))
-                .max_by_key(|&(_, turn)| turn)
-                .unwrap();
-            send[x] = Some((current_x, i + 1));
-            g_from_beta.out_edges[x].citer().for_each(|e| {
-                nums[e.to] = (current_x, i + 1);
+            let val = once(values[xx])
+                .chain(g1.adjs(xx).filter_map(|u| props[u]))
+                .max()
+                .unwrap()
+                .1;
+
+            props[xx] = Some((i + 1, val));
+
+            g1.adjs(xx).for_each(|u| {
+                values[u] = (i + 1, val);
             });
 
-            (nums, send)
+            (values, props)
         },
     );
 
-    println!(
-        "{}",
-        (0..n)
-            .map(|x| {
-                once(nums[x])
-                    .chain(g_to_alpha.out_edges[x].citer().filter_map(|e| send[e.to]))
-                    .max_by_key(|&(_, turn)| turn)
-                    .unwrap()
-                    .0
-            })
-            .join(" ")
-    );
+    let ans = (0..n)
+        .map(|i| {
+            once(values[i])
+                .chain(g1.adjs(i).filter_map(|u| props[u]))
+                .max()
+                .unwrap()
+                .1
+        })
+        .collect::<Vec<_>>();
+
+    println!("{}", ans.citer().join(" "));
 }

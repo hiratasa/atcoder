@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -291,58 +292,63 @@ mod detail {
             self.out_edges[edge.from].push(edge);
             self.in_edges[edge.to].push(edge);
         }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
     }
 }
 
 type Graph = detail::UnweightedGraph;
 
-fn dfs(g: &Graph, v: usize, p: usize) -> usize {
-    if g.out_edges[v].len() == 4 {
-        return v;
+fn dfs(g: &Graph, v: usize, p: usize, dst: usize, exclude: usize, visited: &mut [bool]) -> bool {
+    if visited[v] {
+        return false;
     }
 
-    let u = g.out_edges[v]
-        .citer()
-        .filter(|&edge| edge.to != p)
-        .next()
-        .unwrap()
-        .to;
-    dfs(g, u, v)
+    if v == exclude {
+        return false;
+    }
+
+    visited[v] = true;
+
+    if g.children(v, p).any(|u| u == dst) {
+        return true;
+    }
+
+    g.children(v, p)
+        .any(|u| dfs(g, u, v, dst, exclude, visited))
 }
 
 fn main() {
     let (n, m) = read_tuple!(usize, usize);
-
     let ab = read_vec(m, || read_tuple!(usize, usize));
 
     let g = Graph::from_edges1_undirected(n, ab);
 
-    if (0..n).any(|i| g.out_edges[i].len() % 2 == 1) {
-        println!("No");
-        return;
-    }
+    let ans = (0..n).all(|i| g.out_edges[i].len() % 2 == 0)
+        && ((0..n).any(|i| g.out_edges[i].len() >= 6)
+            || (0..n).filter(|&i| g.out_edges[i].len() == 4).count() > 2
+            || ((0..n).filter(|&i| g.out_edges[i].len() == 4).count() == 2
+                && dfs(
+                    &g,
+                    (0..n).find(|&i| g.out_edges[i].len() == 4).unwrap(),
+                    n,
+                    (0..n).find(|&i| g.out_edges[i].len() == 4).unwrap(),
+                    (0..n).rfind(|&i| g.out_edges[i].len() == 4).unwrap(),
+                    &mut vec![false; n],
+                )));
 
-    if (0..n).any(|i| g.out_edges[i].len() >= 6) {
-        println!("Yes");
-        return;
-    }
-
-    let v4 = (0..n)
-        .filter(|&i| g.out_edges[i].len() == 4)
-        .collect::<Vec<_>>();
-    if v4.len() >= 3 {
-        println!("Yes");
-        return;
-    }
-
-    if v4.len() <= 1 {
-        println!("No");
-        return;
-    }
-
-    let v = v4[0];
-
-    if g.out_edges[v].citer().any(|edge| dfs(&g, edge.to, v) == v) {
+    if ans {
         println!("Yes");
     } else {
         println!("No");

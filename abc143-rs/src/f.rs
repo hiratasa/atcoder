@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -188,7 +189,7 @@ where
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
     let a = read_row::<usize>();
 
     let s = a
@@ -196,20 +197,22 @@ fn main() {
         .sorted()
         .group_by(|&aa| aa)
         .into_iter()
-        .map(|(aa, it)| (aa, it.count()))
-        .fold(vec![0usize; n + 1], |mut s, (_aa, m)| {
-            for i in 1..=m {
-                s[i] += 1;
-            }
+        .map(|(_, it)| it.count())
+        .fold(vec![0; n + 2], |mut s, c| {
+            s[1] += 1i64;
+            s[c + 1] -= 1;
             s
-        });
-    let b = s.citer().cumsum::<usize>().collect::<Vec<_>>();
-    // eprintln!("{:?}", b);
+        })
+        .into_iter()
+        .cumsum::<i64>()
+        .cumsum::<i64>()
+        .map(|x| x as usize)
+        .collect::<Vec<_>>();
 
     (1..=n)
-        .map(|i| {
-            lower_bound_int(0, n + 1, |j| {
-                if b[j] >= j * i {
+        .map(|k| {
+            lower_bound_int(0, n / k + 1, |x| {
+                if s[x] >= x * k {
                     Ordering::Less
                 } else {
                     Ordering::Greater

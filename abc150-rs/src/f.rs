@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -148,7 +149,6 @@ where
 {
 }
 
-#[allow(dead_code)]
 fn z_algorithm<T: std::cmp::Eq>(s: &[T]) -> Vec<usize> {
     let n = s.len();
 
@@ -178,9 +178,7 @@ fn z_algorithm<T: std::cmp::Eq>(s: &[T]) -> Vec<usize> {
     z
 }
 
-// textからpatternの出現箇所を全部検索
-#[allow(dead_code)]
-fn find_all<T: Eq>(text: &Vec<T>, pattern: &Vec<T>) -> Vec<usize> {
+fn find_all<T: Eq>(text: &[T], pattern: &[T]) -> Vec<usize> {
     // pattern + text
     let s = pattern.iter().chain(text.iter()).collect::<Vec<_>>();
 
@@ -192,26 +190,31 @@ fn find_all<T: Eq>(text: &Vec<T>, pattern: &Vec<T>) -> Vec<usize> {
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
     let a = read_row::<usize>();
     let b = read_row::<usize>();
 
-    let c = a
+    let c2 = a
         .citer()
-        .chain(a.citer())
+        .cycle()
         .tuple_windows()
-        .map(|(x, y)| x ^ y)
-        .take(2 * n - 2)
+        .take(2 * n - 1)
+        .map(|(a0, a1)| a0 ^ a1)
         .collect::<Vec<_>>();
     let d = b
         .citer()
+        .cycle()
         .tuple_windows()
-        .map(|(x, y)| x ^ y)
+        .take(n)
+        .map(|(a0, a1)| a0 ^ a1)
         .collect::<Vec<_>>();
 
-    let pos = find_all(&c, &d);
-
-    pos.into_iter()
+    let ans = find_all(&c2, &d)
+        .into_iter()
         .map(|k| (k, a[k] ^ b[0]))
-        .for_each(|(k, x)| println!("{} {}", k, x));
+        .collect::<Vec<_>>();
+
+    for (k, x) in ans {
+        println!("{} {}", k, x);
+    }
 }
