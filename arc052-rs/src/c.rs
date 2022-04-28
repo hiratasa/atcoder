@@ -14,7 +14,11 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -33,6 +37,47 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -88,133 +133,244 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-#[derive(Clone, Copy, Debug)]
-enum EdgeType {
-    A,
-    B,
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
 }
 
-#[allow(dead_code)]
-#[derive(Clone, Copy, Debug)]
-struct Edge {
-    from: usize,
-    to: usize,
-    edge_type: EdgeType,
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
 }
 
-#[allow(dead_code)]
-impl Edge {
-    fn from_stdin() -> Edge {
-        let (edge_type, from, to) = read_tuple!(usize, usize, usize);
-        Edge {
-            from: from,
-            to: to,
-            edge_type: if edge_type == 0 {
-                EdgeType::A
-            } else {
-                EdgeType::B
-            },
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
+        }
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
         }
     }
-    fn rev(&self) -> Edge {
-        Edge {
-            from: self.to,
-            to: self.from,
-            ..*self
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
         }
     }
 }
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-struct Graph {
-    out_edges: Vec<Vec<Edge>>,
-}
-#[allow(dead_code)]
-impl Graph {
-    fn from_stdin_undirected(n: usize, m: usize) -> Graph {
-        let mut out_edges = vec![vec![]; n];
-        for _ in 0..m {
-            let e = Edge::from_stdin();
-            out_edges[e.from].push(e);
-            out_edges[e.to].push(e.rev());
-        }
-        Graph { out_edges }
-    }
-    fn from_stdin_directed(n: usize, m: usize) -> Graph {
-        let mut out_edges = vec![vec![]; n];
-        for _ in 0..m {
-            let e = Edge::from_stdin();
-            out_edges[e.from].push(e);
-        }
-        Graph { out_edges }
-    }
-}
+
+type Graph = detail::WeightedGraph;
 
 fn main() {
     let (n, m) = read_tuple!(usize, usize);
-    let g = Graph::from_stdin_undirected(n, m);
+    let cab = read_vec(m, || read_tuple!(usize, usize, usize));
 
-    fn calc_next_b(b: usize, edge_type: EdgeType) -> usize {
-        match edge_type {
-            EdgeType::A => b,
-            EdgeType::B => b + 1,
-        }
-    }
-
-    fn calc_next_cost(cost: usize, b: usize, edge_type: EdgeType) -> usize {
-        match edge_type {
-            EdgeType::A => cost + 1,
-            EdgeType::B => cost + b + 1,
-        }
-    }
-
-    let init = once((usize::MAX, usize::MAX)).collect::<BTreeSet<_>>();
+    let g = Graph::from_edges_undirected(n, cab.citer().map(|(c, a, b)| (a, b, c)));
 
     let mut q = BinaryHeap::new();
-    let mut costs = vec![init; n];
+    let mut costs = vec![vec![]; n];
 
     q.push(Reverse((0, 0, 0)));
-    costs[0] = once((0, 0)).collect::<BTreeSet<_>>();
-    while let Some(Reverse((cost, b, v))) = q.pop() {
-        if !costs[v].contains(&(cost, b)) {
+    costs[0].push((0, 0));
+
+    let get_before_cost = |costs: &[Vec<(usize, usize)>], v: usize, k: usize| {
+        // 末尾から2つ以内に存在する前提
+        costs[v]
+            .citer()
+            .rev()
+            .find(|&(kk, _)| kk <= k)
+            .map(|(_, cost)| cost)
+            .unwrap_or(usize::MAX)
+    };
+
+    let set_cost = |costs: &mut [Vec<(usize, usize)>], v: usize, k: usize, cost: usize| {
+        // 末尾から2つ以内に存在する前提
+        if let Some((_, c)) = costs[v].iter_mut().rev().take(2).find(|(kk, _)| *kk == k) {
+            *c = cost;
+        } else if matches!(costs[v].last(), Some(&(kk, _)) if kk > k) {
+            let idx = costs[v].len() - 1;
+            costs[v].insert(idx, (k, cost));
+        } else {
+            costs[v].push((k, cost));
+        }
+
+        if matches!(costs[v].last(), Some(&(_, c)) if c > cost) {
+            costs[v].pop();
+        }
+    };
+
+    while let Some(Reverse((k, cost, v))) = q.pop() {
+        if cost > get_before_cost(&costs, v, k) {
             continue;
         }
 
-        g.out_edges[v]
-            .iter()
-            .map(|e| {
-                (
-                    calc_next_cost(cost, b, e.edge_type),
-                    calc_next_b(b, e.edge_type),
-                    e.to,
-                )
-            })
-            .for_each(|(next_cost, next_b, u)| {
-                use std::ops::Bound::*;
-                if let Some(&(_tmp_cost, tmp_b)) = costs[u]
-                    .range((Unbounded, Included(&(next_cost, next_b))))
-                    .next_back()
-                {
-                    if tmp_b <= next_b {
-                        return;
-                    }
-                }
+        for &e in &g.out_edges[v] {
+            let (next_k, next_cost, u) = if e.label == 0 {
+                (k, cost + 1, e.to)
+            } else {
+                (k + 1, cost + k + 1, e.to)
+            };
 
-                let to_be_removed = costs[u]
-                    .range((Excluded(&(next_cost, next_b)), Unbounded))
-                    .take_while(|&&(_tmp_cost, tmp_b)| tmp_b >= next_b)
-                    .copied()
-                    .collect_vec();
-                for e in to_be_removed {
-                    costs[u].remove(&e);
-                }
+            if next_cost >= get_before_cost(&costs, u, next_k) {
+                continue;
+            }
 
-                costs[u].insert((next_cost, next_b));
-                q.push(Reverse((next_cost, next_b, u)));
-            });
+            set_cost(&mut costs, u, next_k, next_cost);
+            q.push(Reverse((next_k, next_cost, u)));
+        }
     }
 
-    for (cost, _) in costs.iter().map(|c| c.iter().next().unwrap()) {
+    for i in 0..n {
+        let cost = costs[i].last().unwrap().1;
         println!("{}", cost);
     }
 }

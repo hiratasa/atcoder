@@ -1,11 +1,11 @@
 #[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
-use std::collections::HashMap;
+use std::collections::*;
 #[allow(unused_imports)]
-use std::collections::VecDeque;
+use std::io;
 #[allow(unused_imports)]
-use std::io::*;
+use std::iter::*;
 #[allow(unused_imports)]
 use std::mem::*;
 #[allow(unused_imports)]
@@ -13,17 +13,104 @@ use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
 
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
+
+// vec with some initial value
+#[allow(unused_macros)]
+macro_rules! vvec {
+    ($($x:expr),+; $y:expr; $n:expr) => {{
+        let mut v = vec![$y; $n];
+
+        let mut it = v.iter_mut();
+        $(
+            *it.next().unwrap() = $x;
+        )+
+
+        v
+    }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! read_tuple {
+    ($($t:ty),+) => {{
+        let mut line = String::new();
+        io::stdin().read_line(&mut line).unwrap();
+
+        let mut it = line.trim()
+            .split_whitespace();
+
+        ($(
+            it.next().unwrap().parse::<$t>().ok().unwrap()
+        ),+)
+    }}
+}
+
 #[allow(dead_code)]
 fn read<T: FromStr>() -> T {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
     line.trim().to_string().parse().ok().unwrap()
 }
 
 #[allow(dead_code)]
-fn read_cols<T: FromStr>() -> Vec<T> {
+fn read_str() -> Vec<char> {
+    read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
 
     line.trim()
         .split_whitespace()
@@ -31,36 +118,72 @@ fn read_cols<T: FromStr>() -> Vec<T> {
         .collect()
 }
 
+#[allow(dead_code)]
+fn read_col<T: FromStr>(n: usize) -> Vec<T> {
+    (0..n).map(|_| read()).collect()
+}
+
+#[allow(dead_code)]
+fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
+    (0..n).map(|_| read_row()).collect()
+}
+
+#[allow(dead_code)]
+fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
+    (0..n).map(|_| f()).collect()
+}
+
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
 fn main() {
-    let s: Vec<_> = read::<String>().chars().collect();
-    let k: usize = read();
+    let s = read_str();
+    let k = read::<usize>();
+
     let n = s.len();
 
-    let mut dp = vec![vec![vec![0; k + 1]; n + 1]; n];
-    for i in 1..n {
-        for j in (i..n).rev() {
-            for kk in 0..=k {
-                if s[i - 1] == s[j] {
-                    dp[i][j][kk] = dp[i - 1][j + 1][kk] + 1;
-                } else {
-                    dp[i][j][kk] = max(dp[i - 1][j][kk], dp[i][j + 1][kk]);
-                    if kk > 0 {
-                        dp[i][j][kk] = max(dp[i][j][kk], dp[i - 1][j + 1][kk - 1] + 1);
-                    }
+    let dp = iproduct!(1..=n, (0..n).rev())
+        .filter(|&(i, j)| i <= j)
+        .fold(
+            vec![vec![vec![0; k + 1]; n + 1]; n + 1],
+            |mut dp, (i, j)| {
+                for kk in 0..=k {
+                    dp[i][j][kk] = max(
+                        dp[i - 1][j + 1][kk] + (s[i - 1] == s[j]) as usize,
+                        max(dp[i - 1][j][kk], dp[i][j + 1][kk]),
+                    );
                 }
-            }
-        }
-    }
+                for kk in 1..=k {
+                    dp[i][j][kk] = max(dp[i][j][kk], dp[i - 1][j + 1][kk - 1] + 1);
+                }
 
-    let ans = dp
-        .iter()
-        .enumerate()
-        .map(|(i, t)| {
-            let a1 = 2 * t[i].iter().max().unwrap();
-            let a2 = 2 * t[i + 1].iter().max().unwrap() + 1;
-            max(a1, a2)
-        })
-        .max()
-        .unwrap();
+                dp
+            },
+        );
+
+    let ans = max(
+        (1..n)
+            .map(|i| (0..=k).map(|kk| 2 * dp[i][i][kk]).max().unwrap())
+            .max()
+            .unwrap_or(0),
+        (0..n)
+            .map(|i| (0..=k).map(|kk| 2 * dp[i][i + 1][kk] + 1).max().unwrap())
+            .max()
+            .unwrap_or(0),
+    );
+
     println!("{}", ans);
 }

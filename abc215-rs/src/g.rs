@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -152,6 +153,7 @@ use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
     let mut y = 1;
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;
@@ -177,11 +179,14 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
+define_static_mod!(2013265921, Modulus2013265921, Mod2013265921);
+define_static_mod!(1811939329, Modulus1811939329, Mod1811939329);
 define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
 #[allow(dead_code)]
 impl<M: Modulus> Mod<M> {
     pub fn modulus() -> usize {
@@ -353,153 +358,6 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-fn fft<
-    T: Copy
-        + std::ops::Add<Output = T>
-        + std::ops::Sub<Output = T>
-        + std::ops::Mul<Output = T>
-        + num::One,
->(
-    f: &mut Vec<T>,
-    es: &[T],
-) {
-    let n = f.len();
-
-    if n == 1 {
-        return;
-    }
-
-    assert!(n.is_power_of_two());
-
-    let d = n.trailing_zeros() as usize;
-
-    for i in 0..n {
-        let j = i.reverse_bits() >> (std::mem::size_of::<usize>() * 8 - d);
-
-        if i < j {
-            f.swap(i, j);
-        }
-    }
-
-    for i in 0..d {
-        let b = 1 << i;
-        let c = n >> (i + 1); // b * c == n/2
-
-        for j in 0..c {
-            for k in 0..b {
-                let p = es[k * c];
-                let t1 = f[j * 2 * b + k];
-                let t2 = f[j * 2 * b + k + b];
-                f[j * 2 * b + k] = t1 + p * t2;
-                f[j * 2 * b + k + b] = t1 - p * t2;
-            }
-        }
-    }
-}
-
-#[allow(dead_code)]
-fn primitive_root(m: usize) -> usize {
-    match m {
-        2 => return 1,
-        167772161 => return 3,
-        469762049 => return 3,
-        754974721 => return 11,
-        998244353 => return 3,
-        _ => {}
-    };
-
-    // m - 1の素因数分解
-    let primes = (2..)
-        .try_fold((vec![], m - 1), |(mut primes, x), i| {
-            if i * i > x {
-                if x > 1 {
-                    primes.push(x);
-                }
-                Err(primes)
-            } else if x % i > 0 {
-                Ok((primes, x))
-            } else {
-                primes.push(i);
-                let x = itertools::iterate(x, |x| x / i)
-                    .find(|&x| x % i > 0)
-                    .unwrap();
-                Ok((primes, x))
-            }
-        })
-        .unwrap_err();
-
-    (2..)
-        .find(|&g| primes.iter().all(|&p| pow_mod(g, (m - 1) / p, m) != 1))
-        .unwrap()
-}
-
-#[allow(dead_code)]
-fn fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
-    let n = f.len();
-    assert!(n.is_power_of_two());
-    assert!((M::modulus() - 1) % n == 0);
-    let g = primitive_root(M::modulus());
-    let c = pow_mod(g, (M::modulus() - 1) / n, M::modulus());
-    fft(
-        f,
-        &(0..n)
-            .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
-            .collect::<Vec<_>>(),
-    );
-}
-
-#[allow(dead_code)]
-fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
-    let n = f.len();
-    assert!(n.is_power_of_two());
-    assert!((M::modulus() - 1) % n == 0);
-    let g = primitive_root(M::modulus());
-    // let c = pow_mod(g, (modulus() - 1) / n, modulus()).inv();
-    let c = pow_mod(g, (M::modulus() - 1) / n * (n - 1), M::modulus());
-    fft(
-        f,
-        &(0..n)
-            .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
-            .collect::<Vec<_>>(),
-    );
-    for x in f {
-        *x /= n;
-    }
-}
-
-#[allow(dead_code)]
-pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
-    let n0 = p.len();
-    let n1 = q.len();
-
-    let n = (n0 + n1 - 1).next_power_of_two();
-
-    let mut pf = p
-        .iter()
-        .copied()
-        .chain(std::iter::repeat(Mod::new(0)))
-        .take(n)
-        .collect::<Vec<_>>();
-    let mut qf = q
-        .iter()
-        .copied()
-        .chain(std::iter::repeat(Mod::new(0)))
-        .take(n)
-        .collect::<Vec<_>>();
-
-    fft_mod(&mut pf);
-    fft_mod(&mut qf);
-
-    for (x, y) in pf.iter_mut().zip(&qf) {
-        *x *= *y;
-    }
-
-    inv_fft_mod(&mut pf);
-
-    pf.resize(n0 + n1 - 1, Mod::new(0));
-    pf
-}
-
 #[allow(dead_code)]
 fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
     let fact: Vec<_> = std::iter::once(Mod::one())
@@ -526,45 +384,40 @@ fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>
 fn main() {
     type Mod = Mod998244353;
 
-    let n: usize = read();
-
+    let n = read::<usize>();
     let c = read_row::<usize>();
 
     let (fact, _, inv_fact) = generate_fact(n);
 
-    let combi = |x: usize, y: usize| -> Mod { fact[x] * inv_fact[y] * inv_fact[x - y] };
+    let combi = |a: usize, b: usize| {
+        if b > a {
+            Mod::zero()
+        } else {
+            fact[a] * inv_fact[b] * inv_fact[a - b]
+        }
+    };
 
-    let d = c
+    let counts = c
         .citer()
         .sorted()
         .group_by(|&cc| cc)
         .into_iter()
-        .map(|(_cc, it)| it.count())
+        .map(|(_, it)| it.count())
+        .sorted()
+        .group_by(|&m| m)
+        .into_iter()
+        .map(|(m, it)| (m, it.count()))
         .collect::<Vec<_>>();
 
-    let mut q = d
-        .citer()
-        .map(|x| (0..=x).map(|y| combi(x, y)).collect::<Vec<_>>())
-        .map(|v| {
-            let mut v2 = v.clone();
-            v2[0] = Mod::zero();
-            (v, v2)
+    (1..=n)
+        .map(|k| {
+            counts
+                .citer()
+                .map(|(m, w)| (combi(n, k) - combi(n - m, k)) * w)
+                .sum::<Mod>()
+                / combi(n, k)
         })
-        .collect::<VecDeque<_>>();
-    while let Some((v, v2)) = q.pop_front() {
-        if let Some((u, u2)) = q.pop_front() {
-            let t = convolution_mod(&v, &u);
-            let t2_0 = convolution_mod(&v, &u2);
-            let t2_1 = convolution_mod(&v2, &u);
-
-            let t2 = izip!(t2_0, t2_1).map(|(x, y)| x + y).collect::<Vec<_>>();
-
-            q.push_back((t, t2));
-        } else {
-            assert!(v.len() == n + 1);
-            for i in 1..=n {
-                println!("{}", v2[i] / v[i]);
-            }
-        }
-    }
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
 }
