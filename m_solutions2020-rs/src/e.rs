@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -137,4 +149,150 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let xyp = read_vec(n, || read_tuple!(i64, i64, i64));
+
+    let xidxs = (0..n).sorted_by_key(|&i| xyp[i].0).collect::<Vec<_>>();
+    let yidxs = (0..n).sorted_by_key(|&i| xyp[i].1).collect::<Vec<_>>();
+
+    let tx = (0usize..1 << n)
+        .map(|s| {
+            let bs = bitset!(n, s);
+
+            let v0 = xidxs
+                .citer()
+                .scan(-(1 << 20), |xmax, idx| {
+                    let x = xyp[idx].0;
+                    let p = xyp[idx].2;
+
+                    if bs[idx] {
+                        *xmax = x;
+                    }
+
+                    Some(min((*xmax - x).abs(), x.abs()) * p)
+                })
+                .collect::<Vec<_>>();
+
+            let v1 = xidxs
+                .citer()
+                .rev()
+                .scan(1 << 20, |xmin, idx| {
+                    let x = xyp[idx].0;
+                    let p = xyp[idx].2;
+
+                    if bs[idx] {
+                        *xmin = x;
+                    }
+
+                    Some(min((*xmin - x).abs(), x.abs()) * p)
+                })
+                .collect::<Vec<_>>();
+
+            izip!(xidxs.citer(), v0, v1.into_iter().rev())
+                .map(|(idx, a, b)| (idx, min(a, b)))
+                .sorted()
+                .map(|(_, a)| a)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let ty = (0usize..1 << n)
+        .map(|s| {
+            let bs = bitset!(n, s);
+
+            let v0 = yidxs
+                .citer()
+                .scan(-(1 << 20), |xmax, idx| {
+                    let x = xyp[idx].1;
+                    let p = xyp[idx].2;
+
+                    if bs[idx] {
+                        *xmax = x;
+                    }
+
+                    Some(min((*xmax - x).abs(), x.abs()) * p)
+                })
+                .collect::<Vec<_>>();
+
+            let v1 = yidxs
+                .citer()
+                .rev()
+                .scan(1 << 20, |xmin, idx| {
+                    let x = xyp[idx].1;
+                    let p = xyp[idx].2;
+
+                    if bs[idx] {
+                        *xmin = x;
+                    }
+
+                    Some(min((*xmin - x).abs(), x.abs()) * p)
+                })
+                .collect::<Vec<_>>();
+
+            izip!(yidxs.citer(), v0, v1.into_iter().rev())
+                .map(|(idx, a, b)| (idx, min(a, b)))
+                .sorted()
+                .map(|(_, a)| a)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let ans = (0usize..1 << n)
+        .map(|s| {
+            let bs = bitset!(n, s);
+
+            let vx = successors(Some(s), |&t| t.checked_sub(1).map(|t| t & s)).fold(
+                vec![std::i64::MAX; bs.count_ones() as usize + 1],
+                |mut vx, t| {
+                    let v = tx[t]
+                        .citer()
+                        .enumerate()
+                        .filter(|&(i, _)| bs[i])
+                        .map(|(_, w)| w)
+                        .sum::<i64>();
+
+                    let m = t.count_ones() as usize;
+                    vx[m] = min(vx[m], v);
+
+                    vx
+                },
+            );
+
+            let s2 = (!s) & ((1 << n) - 1);
+            let vy = successors(Some(s2), |&t| t.checked_sub(1).map(|t| t & s2)).fold(
+                vec![std::i64::MAX; (n - bs.count_ones() as usize) + 1],
+                |mut vx, t| {
+                    let v = ty[t]
+                        .citer()
+                        .enumerate()
+                        .filter(|&(i, _)| !bs[i])
+                        .map(|(_, w)| w)
+                        .sum::<i64>();
+
+                    let m = t.count_ones() as usize;
+                    vx[m] = min(vx[m], v);
+
+                    vx
+                },
+            );
+
+            iproduct!(vx.citer().enumerate(), vy.citer().enumerate())
+                .filter(|&((i, _), (j, _))| i + j <= n)
+                .fold(vec![std::i64::MAX; n + 1], |mut t, ((i, v), (j, v2))| {
+                    t[i + j] = min(t[i + j], v + v2);
+                    t
+                })
+        })
+        .fold(vec![std::i64::MAX; n + 1], |mut ans, t| {
+            izip!(ans.iter_mut(), t.citer()).for_each(|(a, b)| {
+                *a = min(*a, b);
+            });
+
+            ans
+        });
+
+    for v in ans {
+        println!("{}", v);
+    }
+}

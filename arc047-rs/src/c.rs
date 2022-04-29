@@ -1,10 +1,4 @@
 #[allow(unused_imports)]
-use itertools::*;
-#[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
@@ -19,7 +13,16 @@ use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
 
-use std::result::Result;
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -34,6 +37,47 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -89,6 +133,22 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
 trait Monoid {
     type Item: Clone;
 
@@ -96,6 +156,7 @@ trait Monoid {
     fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
 }
 
+#[derive(Debug)]
 struct SegmentTree<M>
 where
     M: Monoid,
@@ -117,13 +178,13 @@ where
         }
     }
 
-    fn with(mut vals: Vec<M::Item>) -> Self {
+    fn with(vals: &Vec<M::Item>) -> Self {
         let n = vals.len();
         let cap = n.next_power_of_two();
 
         let mut values = Vec::with_capacity(2 * cap - 1);
         values.resize(cap - 1, M::id());
-        values.append(&mut vals);
+        values.extend(vals.iter().cloned());
         values.resize(2 * cap - 1, M::id());
 
         let mut st = SegmentTree { cap, values };
@@ -155,29 +216,45 @@ where
     }
 
     fn query(&self, a: usize, b: usize) -> M::Item {
-        self.query_impl(a, b, 0, 0, self.cap)
-    }
+        let mut left = M::id();
+        let mut right = M::id();
 
-    fn query_impl(&self, a: usize, b: usize, idx: usize, l: usize, r: usize) -> M::Item {
-        if a >= r || b <= l {
-            // no overlap
-            return M::id();
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        let c0 = std::cmp::min(
+            // trailing_ones
+            (!left_idx).trailing_zeros(),
+            (right_idx + 1).trailing_zeros(),
+        );
+        left_idx = left_idx >> c0;
+        right_idx = ((right_idx + 1) >> c0) - 1;
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                left = M::op(&left, &self.values[left_idx]);
+                left_idx += 1;
+            }
+
+            if right_idx % 2 == 0 {
+                right = M::op(&self.values[right_idx - 1], &right);
+                right_idx -= 1;
+            }
+
+            let c = std::cmp::min(
+                // trailing_ones
+                (!left_idx).trailing_zeros(),
+                (right_idx + 1).trailing_zeros(),
+            );
+            left_idx = left_idx >> c;
+            right_idx = ((right_idx + 1) >> c) - 1;
         }
 
-        if a <= l && r <= b {
-            return self.values[idx].clone();
-        }
-
-        let left_idx = 2 * (idx + 1) - 1;
-        let right_idx = 2 * (idx + 1);
-
-        let left_v = self.query_impl(a, b, left_idx, l, (l + r) / 2);
-        let right_v = self.query_impl(a, b, right_idx, (l + r) / 2, r);
-
-        M::op(&left_v, &right_v)
+        M::op(&left, &right)
     }
 
-    // f(query(a, b)) != false となるbが存在すればその最小のものを返す
+    // f(query(a, b)) == false となるbが存在すればその最小のものを返す
+    // (存在しないときにnを返してしまうとquery(a,n)がfalseのときと区別がつかないのでNoneを返す)
     fn right_partition_point<F>(&self, a: usize, mut f: F) -> Option<usize>
     where
         F: FnMut(&M::Item) -> bool,
@@ -188,68 +265,114 @@ where
         } else if a == self.cap {
             None
         } else {
-            self.right_partition_point_impl(a, &mut f, 0, 0, self.cap, &M::id())
-                .ok()
+            let mut b = a;
+            // [b, b+2^k) が保持されている最初の箇所に移動
+            let mut idx = ((b + self.cap) >> (b + self.cap).trailing_zeros()) - 1;
+            let mut len = 1 << (b + self.cap).trailing_zeros();
+            let mut val = M::id();
+            let mut val_next = M::op(&val, &self.values[idx]);
+
+            // チェックする範囲を拡大しながらf()がtrueになる限りbを右に伸ばしていく
+            while f(&val_next) {
+                val = val_next;
+                b += len;
+
+                // [b, b+2^k) が保持されている最初の箇所に移動
+                len <<= (idx + 2).trailing_zeros();
+                idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
+
+                // 最後に計算したidxが右端だった場合
+                if idx == 0 {
+                    return None;
+                }
+                val_next = M::op(&val, &self.values[idx]);
+            }
+
+            // 範囲を縮小しながらbを右に伸ばしていく
+            idx = 2 * idx + 1;
+            len >>= 1;
+            while idx < self.values.len() {
+                val_next = M::op(&val, &self.values[idx]);
+                if f(&val_next) {
+                    val = val_next;
+                    b += len;
+                    idx += 1;
+                }
+                len >>= 1;
+                idx = 2 * idx + 1;
+            }
+
+            // [a, b)区間でfがtrue => 求めるbはその次
+            Some(b + 1)
         }
     }
 
-    fn right_partition_point_impl<F>(
-        &self,
-        a: usize,
-        f: &mut F,
-        idx: usize,
-        l: usize,
-        r: usize,
-        carry: &M::Item,
-    ) -> Result<usize, M::Item>
+    // f(query(a, b)) == false となるaが存在すればその最大のもの+1を返す
+    // 存在しない場合は0を返す
+    fn left_partition_point<F>(&self, b: usize, mut f: F) -> usize
     where
         F: FnMut(&M::Item) -> bool,
     {
-        // precondition
-        assert!(a < r);
-        assert!(f(carry));
-        // assert!(l < a || carry == query(a, l))
-
-        // postcondition
-        // when return Ok, f(query(a, ok_value - 1)) && !f(query(a, ok_value))
-        // when return Err, err_value == query(a, r) && f(err_value)
-
-        let left_idx = 2 * (idx + 1) - 1;
-        let right_idx = 2 * (idx + 1);
-        let mid = (l + r) / 2;
-
-        if a <= l {
-            let v = M::op(carry, &self.values[idx]);
-            if f(&v) {
-                Err(v.clone())
-            } else {
-                if l + 1 == r {
-                    // leaf
-                    Ok(r)
-                } else {
-                    match self.right_partition_point_impl(a, f, left_idx, l, mid, carry) {
-                        Ok(found) => Ok(found),
-                        // In this branch, expected to be always return Ok
-                        Err(q) => self.right_partition_point_impl(a, f, right_idx, mid, r, &q),
-                    }
-                }
-            }
-        } else if a < mid {
-            match self.right_partition_point_impl(a, f, left_idx, l, mid, &M::id()) {
-                Ok(found) => Ok(found),
-                Err(q) => self.right_partition_point_impl(a, f, right_idx, mid, r, &q),
-            }
-        } else if a < r {
-            self.right_partition_point_impl(a, f, right_idx, mid, r, &M::id())
+        assert!(b <= self.cap);
+        if !f(&M::id()) {
+            b
+        } else if b == 0 {
+            0
         } else {
-            unreachable!()
+            let mut a = b;
+            // [a-2^k, a) が保持されている最初の箇所に移動
+            let mut idx = (a + self.cap - 1) >> (!(a + self.cap - 1)).trailing_zeros();
+            let mut len = 1 << (!(a + self.cap - 1)).trailing_zeros();
+            if idx == 0 {
+                // このケースになるのはb=self.capのときだけ
+                len = self.cap;
+            } else {
+                idx -= 1;
+            }
+
+            let mut val = M::id();
+            let mut val_next = M::op(&self.values[idx], &val);
+
+            // チェックする範囲を拡大しながらf()がtrueになる限りaを左に伸ばしていく
+            while f(&val_next) {
+                val = val_next;
+                a -= len;
+
+                // 最後に計算したidxが左端だった場合
+                if idx == 0 || (idx + 1).is_power_of_two() {
+                    return 0;
+                }
+
+                // [a-2^k, a) が保持されている最初の箇所に移動
+                len <<= (!idx).trailing_zeros();
+                idx >>= (!idx).trailing_zeros();
+                idx -= 1;
+
+                val_next = M::op(&self.values[idx], &val);
+            }
+
+            // 範囲を縮小しながらaを左に伸ばしていく
+            idx = 2 * idx + 2;
+            len >>= 1;
+            while idx < self.values.len() {
+                val_next = M::op(&self.values[idx], &val);
+                if f(&val_next) {
+                    val = val_next;
+                    a -= len;
+                    idx -= 1;
+                }
+                len >>= 1;
+                idx = 2 * idx + 2;
+            }
+
+            a
         }
     }
 }
 
 macro_rules! define_monoid {
     ($name: ident, $t: ty, $id: expr, $op: expr) => {
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         struct $name;
 
         impl Monoid for $name {
@@ -268,27 +391,30 @@ macro_rules! define_monoid {
 
 define_monoid!(Sum, usize, 0, std::ops::Add::add);
 
-type ST = SegmentTree<Sum>;
-
 fn main() {
     let (n, k) = read_tuple!(usize, usize);
 
-    (1..=n)
+    let ans = (1..=n)
         .rev()
-        .scan(n, |r, i| {
-            let d = (*r - 1) / k;
-            *r -= d * k;
-            *r *= i - 1;
-            Some(d)
+        .scan(1, |r, i| {
+            let x = (*r * i + k - 1) / k;
+
+            *r = *r * i % k;
+            if *r == 0 {
+                *r = k;
+            }
+
+            Some(x)
         })
-        .scan(ST::with(vec![1; n]), |st, idx| {
-            let a = st
-                .right_partition_point(0, |&unused_below| unused_below <= idx)
-                .unwrap();
-            st.set(a - 1, 0);
-            Some(a)
+        .scan(SegmentTree::<Sum>::with(&vvec![0; 1; n + 1]), |st, x| {
+            let y = st.right_partition_point(0, |&s| s < x).unwrap() - 1;
+            st.set(y, 0);
+
+            Some(y)
         })
-        .for_each(|a| {
-            println!("{}", a);
-        });
+        .collect::<Vec<_>>();
+
+    for a in ans {
+        println!("{}", a);
+    }
 }

@@ -26,6 +26,10 @@ name = "agc020-b.bk"
 path = "src/b.bk.rs"
 
 [[bin]]
+name = "agc020-c"
+path = "src/c.rs"
+
+[[bin]]
 name = "agc020-c2"
 path = "src/c2.rs"
 

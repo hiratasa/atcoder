@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -152,6 +153,7 @@ use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
     let mut y = 1;
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;
@@ -177,11 +179,15 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
-
-define_static_mod!(1_000_003, Modulus1000003, Mod1000003);
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+define_static_mod!(2013265921, Modulus2013265921, Mod2013265921);
+define_static_mod!(1811939329, Modulus1811939329, Mod1811939329);
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
+define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
+define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
+define_static_mod!(1000003, Modulus1000003, Mod1000003);
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
 #[allow(dead_code)]
 impl<M: Modulus> Mod<M> {
     pub fn modulus() -> usize {
@@ -222,12 +228,18 @@ impl<M> std::fmt::Display for Mod<M> {
         write!(f, "{}", self.0)
     }
 }
+impl<M> std::fmt::Debug for Mod<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::From<T>,
+    usize: std::convert::TryFrom<T>,
 {
     fn from(v: T) -> Self {
-        Mod::new(usize::from(v))
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
 impl<M: Modulus> std::str::FromStr for Mod<M> {
@@ -373,25 +385,29 @@ fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>
 fn main() {
     type Mod = Mod1000003;
 
-    let q: usize = read();
+    let q = read::<usize>();
     let query = read_vec(q, || read_tuple!(usize, usize, usize));
 
-    let (fact, _inv, inv_fact) = generate_fact::<Modulus1000003>(Mod::modulus());
+    let (fact, _, inv_fact) = generate_fact(Mod::modulus() - 1);
 
-    for (x, d, n) in query {
-        if d == 0 {
-            println!("{}", Mod::new(x).pow(n));
-            continue;
-        }
+    query
+        .citer()
+        .map(|(x, d, n)| {
+            if x == 0 {
+                Mod::zero()
+            } else if d == 0 {
+                Mod::new(x).pow(n)
+            } else {
+                let y = Mod::new(x) / d;
 
-        let y = Mod::new(x) / d;
-        if y.0 == 0 || y.0 + n - 1 >= Mod::modulus() {
-            println!("0");
-        } else {
-            println!(
-                "{}",
-                Mod::new(d).pow(n) * fact[y.0 + n - 1] * inv_fact[y.0 - 1]
-            );
-        }
-    }
+                if y.0 + n - 1 >= Mod::modulus() {
+                    Mod::zero()
+                } else {
+                    Mod::new(d).pow(n) * fact[y.0 + n - 1] * inv_fact[y.0 - 1]
+                }
+            }
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
 }

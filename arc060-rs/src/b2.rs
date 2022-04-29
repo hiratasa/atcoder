@@ -151,16 +151,38 @@ where
 
 fn main() {
     let n = read::<usize>();
-    let a = read_row::<usize>();
+    let s = read::<usize>();
 
-    let s = a.citer().sum::<usize>();
+    if n < s {
+        println!("-1");
+        return;
+    }
 
-    let dp = a.citer().fold(bitset!(s / 2 + 1, 1), |mut dp, aa| {
-        dp.shl_or(aa);
+    if n == s {
+        println!("{}", n + 1);
+        return;
+    }
 
-        dp
-    });
+    if let Some(ans) = (2..).take_while(|&b| b * b <= n).find(|&b| {
+        iterate(n, |&m| m / b)
+            .take_while(|&m| m > 0)
+            .map(|m| m % b)
+            .sum::<usize>()
+            == s
+    }) {
+        println!("{}", ans);
+        return;
+    }
 
-    let ans = (0..=s / 2).rfind(|&i| dp[i]).map(|i| s - i).unwrap();
-    println!("{}", ans);
+    if let Some(ans) = (1..)
+        .take_while(|&x| x * x < n)
+        .filter(|&x| n % x == s % x && x < (n - s) / x + 1 && s < x + (n - s) / x + 1 && s >= x)
+        .map(|x| (n - s) / x + 1)
+        .last()
+    {
+        println!("{}", ans);
+        return;
+    }
+
+    println!("-1");
 }
