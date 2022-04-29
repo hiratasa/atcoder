@@ -1,13 +1,11 @@
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
-use std::collections::VecDeque;
+use std::collections::*;
 #[allow(unused_imports)]
-use std::io::*;
+use std::io;
+#[allow(unused_imports)]
+use std::iter::*;
 #[allow(unused_imports)]
 use std::mem::*;
 #[allow(unused_imports)]
@@ -15,13 +13,78 @@ use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
 
-use permutohedron::heap_recursive;
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
+
+// vec with some initial value
+#[allow(unused_macros)]
+macro_rules! vvec {
+    ($($x:expr),+; $y:expr; $n:expr) => {{
+        let mut v = vec![$y; $n];
+
+        let mut it = v.iter_mut();
+        $(
+            *it.next().unwrap() = $x;
+        )+
+
+        v
+    }}
+}
 
 #[allow(unused_macros)]
-macro_rules! read_cols {
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! read_tuple {
     ($($t:ty),+) => {{
         let mut line = String::new();
-        stdin().read_line(&mut line).unwrap();
+        io::stdin().read_line(&mut line).unwrap();
 
         let mut it = line.trim()
             .split_whitespace();
@@ -35,7 +98,7 @@ macro_rules! read_cols {
 #[allow(dead_code)]
 fn read<T: FromStr>() -> T {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
     line.trim().to_string().parse().ok().unwrap()
 }
 
@@ -45,9 +108,9 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
-fn read_vec<T: FromStr>() -> Vec<T> {
+fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
 
     line.trim()
         .split_whitespace()
@@ -55,55 +118,84 @@ fn read_vec<T: FromStr>() -> Vec<T> {
         .collect()
 }
 
+#[allow(dead_code)]
+fn read_col<T: FromStr>(n: usize) -> Vec<T> {
+    (0..n).map(|_| read()).collect()
+}
+
+#[allow(dead_code)]
+fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
+    (0..n).map(|_| read_row()).collect()
+}
+
+#[allow(dead_code)]
+fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
+    (0..n).map(|_| f()).collect()
+}
+
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
 fn main() {
-    let (n, m) = read_cols!(usize, usize);
+    let (n, m) = read_tuple!(usize, usize);
+    let w = read_row::<usize>();
+    let lv = read_vec(m, || read_tuple!(usize, usize));
 
-    let mut weights = read_vec::<usize>();
-    weights.sort();
+    let wmax = w.citer().max().unwrap();
+    let vmin = lv.citer().map(|(_, v)| v).min().unwrap();
 
-    let bridges = {
-        let mut bridges = (0..m)
-            .map(|_| read_cols!(usize, usize))
-            .map(|(l, v)| (v, l))
-            .collect::<Vec<_>>();
-        bridges.sort();
-        bridges
-    };
-
-    if weights[n - 1] > bridges[0].0 {
+    if wmax > vmin {
         println!("-1");
         return;
     }
 
-    let max_bridges = std::iter::once((0, 0)).chain(bridges.iter().copied()).scan((0, 0), |state, (v, l)| {
-        state.0 = v;
-        state.1 = max(state.1, l);
+    let t = once((0, 0))
+        .chain(lv.citer().sorted_by_key(|&(_, v)| v))
+        .scan(0, |lmax, (l, v)| {
+            *lmax = max(l, *lmax);
+            Some((v, *lmax))
+        })
+        .collect::<Vec<_>>();
 
-        Some(*state)
-    }).collect::<Vec<_>>();
+    let ans = (0..n)
+        .permutations(n)
+        .map(|perm| {
+            let s = once(0)
+                .chain(perm.citer().map(|i| w[i]))
+                .cumsum::<usize>()
+                .collect::<Vec<_>>();
 
-    let mut ans = usize::MAX;
-    heap_recursive(&mut weights, |weights| {
-        let cum_weights = std::iter::once(0)
-            .chain(weights.iter().copied())
-            .scan(0, |cum, w| {
-                *cum += w;
-                Some(*cum)
-            })
-            .collect::<Vec<_>>();
+            let pos = (0..n).fold(vec![0; n], |mut pos, i| {
+                for j in i + 1..n {
+                    let ww = s[j + 1] - s[i];
 
-        let mut dist = vec![0; n];
-        for i in 0..n {
-            for j in i + 1..n {
-                let w = cum_weights[j + 1] - cum_weights[i];
+                    let idx = t
+                        .binary_search_by(|&(v, _l)| v.cmp(&ww).then(Ordering::Greater))
+                        .unwrap_err();
+                    assert!(idx > 0);
 
-                let idx = max_bridges.binary_search(&(w, 0)).unwrap_err() - 1;
-                dist[j] = max(dist[j], dist[i] + max_bridges[idx].1);
-            }
-        }
+                    pos[j] = max(pos[j], pos[i] + t[idx - 1].1);
+                }
+                pos
+            });
 
-        ans = min(ans, dist[n - 1] - dist[0]);
-    });
+            pos[n - 1]
+        })
+        .min()
+        .unwrap();
 
     println!("{}", ans);
 }
