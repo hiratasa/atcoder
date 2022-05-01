@@ -108,14 +108,6 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
-fn read_digits() -> Vec<usize> {
-    read::<String>()
-        .chars()
-        .map(|c| c.to_digit(10).unwrap() as usize)
-        .collect()
-}
-
-#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -157,97 +149,103 @@ where
 {
 }
 
-fn invmod(a: usize, m: usize) -> Option<usize> {
-    let (_zero, g, _u, v) =
-        std::iter::successors(Some((a as i64, m as i64, 1, 0)), |&(a, b, u, v)| {
-            if a == 0 {
-                None
-            } else {
-                Some((b % a, a, -u * (b / a) + v, u))
-            }
-        })
-        .last()
-        .unwrap();
-
-    if g == 1 {
-        // |v| < m が保障される
-        if v < 0 {
-            Some((v + m as i64) as usize)
-        } else {
-            Some(v as usize)
-        }
-    } else {
-        None
-    }
-}
-
-pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
-    let mut y = 1;
-
-    x = x % m;
-    while p > 0 {
-        if p & 1 > 0 {
-            y = y * x % m;
-        }
-
-        x = x * x % m;
-        p >>= 1;
-    }
-
-    y
-}
-
-// x^i = y mod p となる最小のi>=0を求める
-fn log(x: usize, y: usize, p: usize) -> Option<usize> {
-    // baby-step giant-step
-    // https://tjkendev.github.io/procon-library/python/math/baby-step-giant-step.html
-    let m = (p as f64).sqrt() as usize;
-
-    let pows = (0..=m)
-        .scan(1, |z, _| Some(replace(z, (*z * x) % p)))
-        .collect::<Vec<_>>();
-
-    let pows_map = pows
-        .citer()
-        .enumerate()
-        .map(|(i, z)| (z, i))
-        .collect::<FxHashMap<_, _>>();
-
-    let r = invmod(pows[m], p).unwrap();
-
-    (0..)
-        .take_while(|&i| i * m < p - 1)
-        .scan(1, |z, i| Some((i, replace(z, (*z * r) % p))))
-        .find_map(|(i, z)| pows_map.get(&((y * z) % p)).map(|&j| i * m + j))
-}
-
 fn main() {
-    let (x, p, a, b) = read_tuple!(usize, usize, usize, usize);
+    let (n, q) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+    let lr = read_vec(q, || read_tuple!(usize, usize));
 
-    if (a + p - 2) / (p - 1) * (p - 1) <= b {
-        // a <= i <= b を満たす p-1 の倍数が存在
-        println!("1");
-        return;
-    }
+    const M: usize = 1000000;
 
-    const W: usize = 2000000;
+    let (t, num_primes) = (2..=M).fold(
+        (vec![None; M + 1], 0),
+        |(mut t, idx): (Vec<Option<(usize, usize)>>, usize), i| {
+            if t[i].is_none() {
+                t[i] = Some((i, idx));
+                (
+                    (2..)
+                        .map(|j| i * j)
+                        .take_while(|&j| j <= M)
+                        .fold(t, |mut t, j| {
+                            t[j] = t[j].or(Some((i, idx)));
+                            t
+                        }),
+                    idx + 1,
+                )
+            } else {
+                (t, idx)
+            }
+        },
+    );
 
-    let ans = if b - a <= W {
-        (a..=b).map(|i| pow_mod(x, i, p)).min().unwrap()
-    } else {
-        // x^-a
-        let inv_xa = invmod(pow_mod(x, a, p), p).unwrap();
-
-        (1..)
-            .find(|&i| {
-                if let Some(l) = log(x, (i * inv_xa) % p, p) {
-                    l <= b - a
-                } else {
-                    false
-                }
-            })
-            .unwrap()
+    let prime_factors = a
+        .citer()
+        .map(|aa| {
+            successors(Some(aa), |&b| t[b].map(|(p, _)| b / p))
+                .filter_map(|x| t[x])
+                .sorted()
+                .group_by(|&p| p)
+                .into_iter()
+                .map(|((_p, idx), it)| (idx, it.count()))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let add = |v: &mut [usize], s: &mut usize, i: usize| {
+        prime_factors[i].citer().for_each(|(idx, m)| {
+            let old = v[idx];
+            v[idx] += m;
+            v[idx] %= 3;
+            let new = v[idx];
+            *s = *s - old + new;
+        });
+    };
+    let remove = |v: &mut [usize], s: &mut usize, i: usize| {
+        prime_factors[i].citer().for_each(|(idx, m)| {
+            let old = v[idx];
+            v[idx] += 3 - m % 3;
+            v[idx] %= 3;
+            let new = v[idx];
+            *s = *s - old + new;
+        });
     };
 
-    println!("{}", ans);
+    let b = (n as f64).sqrt() as usize;
+    let ans = lr
+        .citer()
+        .map(|(l, r)| (l - 1, r))
+        .enumerate()
+        .sorted_by_key(|&(_, (l, r))| (l / b, r))
+        .fold(
+            (vec![false; q], vec![0; num_primes], 0, 0, 0),
+            |(mut ans, mut v, mut s, mut l0, mut r0), (i_query, (l, r))| {
+                while l < l0 {
+                    add(&mut v, &mut s, l0 - 1);
+                    l0 -= 1;
+                }
+                while r0 < r {
+                    add(&mut v, &mut s, r0);
+                    r0 += 1;
+                }
+                while l0 < l {
+                    remove(&mut v, &mut s, l0);
+                    l0 += 1;
+                }
+                while r < r0 {
+                    remove(&mut v, &mut s, r0 - 1);
+                    r0 -= 1;
+                }
+
+                ans[i_query] = s == 0;
+
+                (ans, v, s, l0, r0)
+            },
+        )
+        .0;
+
+    for a in ans {
+        if a {
+            println!("Yes");
+        } else {
+            println!("No");
+        }
+    }
 }

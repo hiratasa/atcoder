@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +105,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -150,34 +159,35 @@ where
 
 fn main() {
     let (n, k) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
+    let mut a = read_row::<usize>();
 
-    let b = once(0).chain(a.citer().sorted()).collect::<Vec<_>>();
+    a.sort_by_key(|&aa| Reverse(aa));
 
-    const M: usize = 30;
-    let mut costs = vec![vec![usize::MAX; M + 1]; n + 1];
-    costs[n][0] = 0;
-    let costs = (1..=n).rev().fold(costs, |mut costs, i| {
-        let idx = b
-            .binary_search_by(|&bb| (2 * bb).cmp(&b[i]).then(Ordering::Less))
-            .unwrap_err()
-            - 1;
+    a.push(0);
 
-        for j in 0..M {
-            costs[idx][j + 1] = min(costs[idx][j + 1], costs[i][j]);
-        }
+    let b = a
+        .citer()
+        .map(|x| {
+            a.binary_search_by(|&y| (x).cmp(&(2 * y)).then(Ordering::Greater))
+                .unwrap_err()
+        })
+        .collect::<Vec<_>>();
 
-        for j in 0..=M {
-            costs[i - 1][j] = min(costs[i - 1][j], costs[i][j].saturating_add(1));
-        }
+    let mut init = vec![usize::MAX; n + 1];
+    init[0] = 0;
+    let (_, v) = (0..=30).fold((init, vec![]), |(dp, v), _| {
+        let (next, c) = (0..=n).fold((vec![usize::MAX; n + 1], usize::MAX), |(mut next, c), j| {
+            let c = min(c.saturating_add(1), dp[j]);
 
-        costs
+            next[b[j]] = min(next[b[j]], c);
+
+            (next, c)
+        });
+
+        (next, pushed!(v, c))
     });
 
-    let ans = costs[0]
-        .citer()
-        .enumerate()
-        .find(|&(_i, kk)| kk <= k)
-        .unwrap();
+    let ans = v.citer().enumerate().find(|&(_, x)| x <= k).unwrap();
+
     println!("{} {}", ans.0, ans.1);
 }

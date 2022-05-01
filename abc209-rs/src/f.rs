@@ -64,8 +64,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -152,6 +153,7 @@ use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
     let mut y = 1;
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;
@@ -177,11 +179,14 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
+define_static_mod!(2013265921, Modulus2013265921, Mod2013265921);
+define_static_mod!(1811939329, Modulus1811939329, Mod1811939329);
 define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
 #[allow(dead_code)]
 impl<M: Modulus> Mod<M> {
     pub fn modulus() -> usize {
@@ -353,46 +358,40 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-fn solve(
-    h: &[usize],
-    l: usize,
-    r: usize,
-    combi: &[Vec<Mod1000000007>],
-    memo: &mut Vec<Vec<Mod1000000007>>,
-) -> Mod1000000007 {
-    if l == r {
-        return Mod::one();
-    }
-
-    if memo[l][r].is_zero() {
-        memo[l][r] = (l..r)
-            .filter(|&i| (i == l || h[i - 1] <= h[i]) && (i == r - 1 || h[i] >= h[i + 1]))
-            .map(|i| {
-                let x = solve(h, l, i, combi, memo);
-                let y = solve(h, i + 1, r, combi, memo);
-
-                x * y * combi[r - l - 1][i - l]
-            })
-            .sum::<Mod<_>>();
-    }
-
-    memo[l][r]
-}
-
 fn main() {
-    let n: usize = read();
+    type Mod = Mod1000000007;
+
+    let n = read::<usize>();
     let h = read_row::<usize>();
 
-    let combi = iterate(vec![Mod::one()], |prev| {
-        once(Mod::one())
-            .chain(prev.citer().tuple_windows().map(|(x, y)| x + y))
-            .chain(once(Mod::one()))
-            .collect()
-    })
-    .take(n + 1)
-    .collect::<Vec<_>>();
+    let dp = h
+        .citer()
+        .tuple_windows()
+        .fold(vec![Mod::one()], |prev, (h0, h1)| {
+            match h0.cmp(&h1) {
+                Ordering::Less => {
+                    // select h1 first
+                    once(Mod::zero())
+                        .chain(prev.citer().rev().cumsum::<Mod>())
+                        .collect::<Vec<_>>()
+                        .into_iter()
+                        .rev()
+                        .collect()
+                }
+                Ordering::Equal => {
+                    let s = prev.citer().sum::<Mod>();
+                    vec![s; prev.len() + 1]
+                }
+                Ordering::Greater => {
+                    // select h0 first
+                    once(Mod::zero())
+                        .chain(prev.citer().cumsum::<Mod>())
+                        .collect()
+                }
+            }
+        });
 
-    let ans = solve(&h, 0, n, &combi, &mut vec![vec![Mod::zero(); n + 1]; n + 1]);
+    let ans = dp.citer().sum::<Mod>();
 
     println!("{}", ans);
 }
