@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -93,6 +105,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -137,4 +157,17 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+
+    if let Some((a, b)) = iproduct!(1..=50, 1..=50).find(|&(a, b)| {
+        3usize
+            .saturating_pow(a)
+            .saturating_add(5usize.saturating_pow(b))
+            == n
+    }) {
+        println!("{} {}", a, b);
+    } else {
+        println!("-1");
+    }
+}

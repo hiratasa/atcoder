@@ -14,6 +14,8 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
 use itertools::{chain, iproduct, iterate, izip, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
@@ -51,10 +53,20 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -93,6 +105,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -137,4 +157,92 @@ where
 {
 }
 
-fn main() {}
+#[derive(Clone, Copy, Debug)]
+enum UnionFindNode {
+    Root { size: usize },
+    Child { parent: usize },
+}
+struct UnionFind {
+    g: Vec<UnionFindNode>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        use UnionFindNode::*;
+        UnionFind {
+            g: (0..n).map(|_| Root { size: 1 }).collect(),
+        }
+    }
+    fn root(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let p = match self.g[v] {
+            Root { size: _ } => return v,
+            Child { parent: p } => p,
+        };
+        let r = self.root(p);
+        self.g[v] = Child { parent: r };
+        r
+    }
+    fn unite(&mut self, v: usize, u: usize) -> bool {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        let ru = self.root(u);
+        if rv == ru {
+            return false;
+        }
+        let size_rv = self.size(rv);
+        let size_ru = self.size(ru);
+        let (rsmall, rlarge) = if size_rv < size_ru {
+            (rv, ru)
+        } else {
+            (ru, rv)
+        };
+        self.g[rsmall] = Child { parent: rlarge };
+        self.g[rlarge] = Root {
+            size: size_rv + size_ru,
+        };
+        true
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+    fn size(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        match self.g[rv] {
+            Root { size } => size,
+            Child { parent: _ } => unreachable!(),
+        }
+    }
+}
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let a = read_row::<i64>();
+    let b = read_row::<i64>();
+    let cd = read_vec(m, || read_tuple!(usize, usize));
+
+    let mut uf = cd.citer().fold(UnionFind::new(n), |mut uf, (c, d)| {
+        let c = c - 1;
+        let d = d - 1;
+
+        uf.unite(c, d);
+
+        uf
+    });
+
+    let sums0 = (0..n).fold(vec![0; n], |mut sums, i| {
+        sums[uf.root(i)] += a[i];
+        sums
+    });
+    let sums1 = (0..n).fold(vec![0; n], |mut sums, i| {
+        sums[uf.root(i)] += b[i];
+        sums
+    });
+
+    if sums0 == sums1 {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
+}
