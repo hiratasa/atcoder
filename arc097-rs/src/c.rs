@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -148,4 +159,63 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let ca = read_vec(2 * n, || read_tuple!(char, usize));
+
+    let poss = ca
+        .citer()
+        .enumerate()
+        .fold(vec![vec![0; n]; 2], |mut poss, (i, (c, a))| {
+            poss[(c == 'B') as usize][a - 1] = i;
+            poss
+        });
+
+    let invs = (0..2)
+        .map(|i| {
+            // type iのボール小さいほうからk個に、lより右のものが何個あるか
+            (0..=n)
+                .map(|k| {
+                    let mut t = ca
+                        .citer()
+                        .rev()
+                        .scan(0, |m, (c, a)| {
+                            let x = *m;
+                            if (c == 'B') as usize == i && a - 1 < k {
+                                *m += 1;
+                            }
+                            Some(x)
+                        })
+                        .collect::<Vec<_>>();
+                    t.reverse();
+                    t
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let dp = iproduct!(0..=n, 0..=n).skip(1).fold(
+        vvec![vvec![0; usize::MAX; n + 1]; vec![usize::MAX; n + 1]; n + 1],
+        |mut dp, (i, j)| {
+            let x = if i > 0 {
+                dp[i - 1][j] + invs[0][i - 1][poss[0][i - 1]] + invs[1][j][poss[0][i - 1]]
+            } else {
+                usize::MAX
+            };
+
+            let y = if j > 0 {
+                dp[i][j - 1] + invs[0][i][poss[1][j - 1]] + invs[1][j - 1][poss[1][j - 1]]
+            } else {
+                usize::MAX
+            };
+
+            dp[i][j] = min(x, y);
+
+            dp
+        },
+    );
+
+    let ans = dp[n][n];
+
+    println!("{}", ans);
+}

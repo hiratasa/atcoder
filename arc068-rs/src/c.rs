@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -244,65 +255,44 @@ fn main() {
     let (n, m) = read_tuple!(usize, usize);
     let lr = read_vec(n, || read_tuple!(usize, usize));
 
-    let ans0 = lr
-        .citer()
-        .fold(vec![0; m + 2], |mut v, (l, r)| {
-            let k = r - l + 1;
-
-            v[1] += 1i64;
-            v[k + 1] += -1i64;
-
-            v
-        })
-        .into_iter()
-        .cumsum::<i64>()
-        .take(m + 1)
-        .collect::<Vec<_>>();
-
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     enum Item {
-        Souvenir(usize, usize),
         Train(usize),
+        Interval(usize, usize),
     }
 
     use Item::*;
 
-    let (ans1, _) = lr
-        .citer()
-        .map(|(l, r)| Souvenir(l, r))
-        .chain((1..=m).map(|i| Train(i)))
-        .sorted_by_key(|&item| match item {
-            Souvenir(l, r) => (r - l + 1, 1),
-            Train(d) => (d, 0),
-        })
-        .fold(
-            (vec![0; m + 1], BIT::<Sum>::new(m + 2)),
-            |(mut v, mut bit), item| {
-                match item {
-                    Souvenir(l, r) => {
-                        bit.add(l, 1);
-                        bit.add(r + 1, -1);
-                    }
-                    Train(d) => {
-                        v[d] = (1..)
-                            .map(|i| i * d)
-                            .take_while(|&i| i <= m)
-                            .map(|i| bit.sum(i + 1))
-                            .sum::<i64>();
-                    }
-                }
+    chain(
+        (1..=m).map(|i| Train(i)),
+        lr.citer().map(|(l, r)| Interval(r - l + 1, l)),
+    )
+    .sorted_by_key(|&item| match item {
+        Train(d) => (d, item),
+        Interval(d, _) => (d, item),
+    })
+    .scan((BIT::<Sum>::new(m + 2), n), |(bit, k), item| match item {
+        Train(d) => {
+            let ans = (0..)
+                .map(|i| i * d)
+                .take_while(|&i| i <= m)
+                .map(|i| bit.sum(i + 1))
+                .sum::<i64>()
+                + *k as i64;
 
-                (v, bit)
-            },
-        );
+            Some(Some(ans))
+        }
+        Interval(d, l) => {
+            bit.add(l, 1);
+            bit.add(l + d, -1);
 
-    // eprintln!("{:?}", ans0);
-    // eprintln!("{:?}", ans1);
+            *k -= 1;
 
-    izip!(ans0, ans1)
-        .skip(1)
-        .map(|(a0, a1)| a0 + a1)
-        .for_each(|a| {
-            println!("{}", a);
-        });
+            Some(None)
+        }
+    })
+    .flatten()
+    .for_each(|ans| {
+        println!("{}", ans);
+    });
 }

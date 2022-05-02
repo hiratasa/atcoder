@@ -1,5 +1,5 @@
 [package]
-name = "arc044-rs"
+name = "panasonic2020-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,25 +18,21 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "arc044-a"
+name = "panasonic2020-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "arc044-b"
+name = "panasonic2020-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "arc044-c"
+name = "panasonic2020-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "arc044-d"
+name = "panasonic2020-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "arc044-e"
+name = "panasonic2020-e"
 path = "src/e.rs"
-
-[[bin]]
-name = "arc044-f"
-path = "src/f.rs"

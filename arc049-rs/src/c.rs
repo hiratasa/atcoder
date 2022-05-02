@@ -14,7 +14,11 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, unfold, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -33,6 +37,49 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -63,6 +110,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -88,85 +143,228 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-fn process(
-    adjs: &Vec<Vec<usize>>,
-    radjs: &Vec<Vec<usize>>,
-    adjs2: &Vec<Vec<usize>>,
-    radjs2: &Vec<Vec<usize>>,
-    unavailable: &Vec<bool>,
-) -> usize {
-    let n = adjs.len();
-    let mut nums = vec![0; n];
-
-    let zeros = (0..n)
-        .filter(|&i| radjs[i].is_empty() && radjs2[i].is_empty())
-        .collect_vec();
-
-    unfold(zeros, |zeros| {
-        if let Some(z) = zeros.pop() {
-            let aa = chain(&adjs[z], &adjs2[z]);
-            aa.clone().copied().for_each(|u| {
-                nums[u] += 1;
-                if nums[u] == radjs[u].len() + radjs2[u].len() && !unavailable[u] {
-                    zeros.push(u);
-                }
-            });
-            Some(())
-        } else {
-            None
-        }
-    })
-    .count()
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
 }
 
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
+        }
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
+        }
+    }
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
+    }
+}
+
+type Graph = detail::UnweightedGraph;
+
 fn main() {
-    let n: usize = read();
-
-    let a: usize = read();
-
-    let (adjs, radjs) = (0..a).fold(
-        (vec![vec![]; n], vec![vec![]; n]),
-        |(mut adjs, mut radjs), _| {
-            let (x, y) = read_tuple!(usize, usize);
-            adjs[y - 1].push(x - 1);
-            radjs[x - 1].push(y - 1);
-            (adjs, radjs)
-        },
-    );
-
-    let b: usize = read();
-    let uv = read_vec(b, || read_tuple!(usize, usize))
-        .into_iter()
-        .map(|(u, v)| (u - 1, v - 1))
-        .collect_vec();
+    let n = read::<usize>();
+    let a = read::<usize>();
+    let xy = read_vec(a, || read_tuple!(usize, usize));
+    let b = read::<usize>();
+    let uv = read_vec(b, || read_tuple!(usize, usize));
 
     let ans = (0..1 << b)
-        .map(|bs| {
-            let available_edges = uv
-                .iter()
-                .enumerate()
-                .filter(|(i, _)| (bs & (1 << i)) > 0)
-                .map(|(_, uv)| *uv)
-                .collect_vec();
-            let unavailable_u = uv
-                .iter()
-                .copied()
-                .enumerate()
-                .filter(|(i, _)| (bs & (1 << i)) == 0)
-                .fold(vec![false; n], |mut unavailable_u, (_i, (u, _v))| {
-                    unavailable_u[u] = true;
-                    unavailable_u
-                });
+        .map(|s| {
+            let bs = bitset!(b, s);
 
-            let (adjs2, radjs2) = available_edges.iter().copied().fold(
-                (vec![vec![]; n], vec![vec![]; n]),
-                |(mut adjs, mut radjs), (u, v)| {
-                    adjs[u].push(v);
-                    radjs[v].push(u);
-                    (adjs, radjs)
-                },
+            let banned = (0..b)
+                .filter(|&i| bs[i])
+                .map(|i| uv[i].0 - 1)
+                .collect::<FxHashSet<_>>();
+
+            let g = Graph::from_edges1_directed(
+                n,
+                chain(
+                    xy.citer().map(|(x, y)| (y, x)),
+                    (0..b).filter(|&i| !bs[i]).map(|i| uv[i]),
+                ),
             );
-            process(&adjs, &radjs, &adjs2, &radjs2, &unavailable_u)
+
+            let mut zeros = (0..n)
+                .filter(|&i| g.in_edges[i].is_empty())
+                .collect::<Vec<_>>();
+            let mut degs = (0..n).map(|i| g.in_edges[i].len()).collect::<Vec<_>>();
+            let mut k = 0;
+            while let Some(v) = zeros.pop() {
+                if banned.contains(&v) {
+                    continue;
+                }
+
+                k += 1;
+
+                for u in g.adjs(v) {
+                    degs[u] -= 1;
+                    if degs[u] == 0 {
+                        zeros.push(u);
+                    }
+                }
+            }
+
+            k
         })
         .max()
         .unwrap();

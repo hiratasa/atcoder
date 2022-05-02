@@ -56,9 +56,7 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        if $n > 0 {
-            bs.buffer_mut()[0] = $x as u64;
-        }
+        bs.buffer_mut()[0] = $x as u64;
         bs
     }};
 }
@@ -159,4 +157,49 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_vec(3, || read_str());
+
+    let calc_pos = |s0: &[char], s1: &[char]| {
+        (-(s1.len() as i64)..=s0.len() as i64)
+            .filter(|&l| {
+                s0.citer().enumerate().all(|(i, c0)| {
+                    let c1 = if i as i64 - l < 0 {
+                        '?'
+                    } else {
+                        s1.get((i as i64 - l) as usize).copied().unwrap_or('?')
+                    };
+
+                    c0 == c1 || c0 == '?' || c1 == '?'
+                })
+            })
+            .collect::<FxHashSet<_>>()
+    };
+
+    let pos01 = calc_pos(&s[0], &s[1]);
+    let pos02 = calc_pos(&s[0], &s[2]);
+    let pos12 = calc_pos(&s[1], &s[2]);
+
+    let ans = iproduct!(-4000..=4000, -4000..=4000)
+        .filter(|&(p01, p02)| {
+            let p12 = p02 - p01;
+
+            let check = |p: i64, pos: &FxHashSet<_>, s0: &[char], s1: &[char]| {
+                p <= -(s1.len() as i64) || p >= s0.len() as i64 || pos.contains(&p)
+            };
+
+            check(p01, &pos01, &s[0], &s[1])
+                && check(p02, &pos02, &s[0], &s[2])
+                && check(p12, &pos12, &s[1], &s[2])
+        })
+        .map(|(p01, p02)| {
+            max(
+                s[0].len() as i64,
+                max(s[1].len() as i64 + p01, s[2].len() as i64 + p02),
+            ) - min(0, min(p01, p02))
+        })
+        .min()
+        .unwrap();
+
+    println!("{}", ans);
+}

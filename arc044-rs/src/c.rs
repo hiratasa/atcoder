@@ -14,7 +14,11 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -33,6 +37,47 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        bs.buffer_mut()[0] = $x as u64;
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -63,6 +108,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -88,43 +141,93 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
 fn main() {
     let (w, h, q) = read_tuple!(usize, usize, usize);
+    let query = read_vec(q, || read_tuple!(usize, usize, usize));
 
-    let tdx = read_vec(q, || read_tuple!(usize, usize, usize));
-
-    let dims = [w, h];
-    let ans = tdx
-        .iter()
-        .copied()
-        .sorted_by_key(|&(t, d, x)| (d, t, x))
-        .group_by(|(_t, d, _x)| *d)
+    // 横
+    let costs0 = query
+        .citer()
+        .filter(|&(_, d, _)| d == 0)
+        .map(|(t, _d, x)| (t, x))
+        .sorted()
+        .group_by(|&(t, _)| t)
         .into_iter()
-        .map(|(d, it)| {
-            it.map(|(t, _, x)| (t, x - 1))
-                .group_by(|(t, _x)| *t)
-                .into_iter()
-                .fold(vec![0usize; dims[d]], |mut dp, (_t, it2)| {
-                    let xs = it2.map(|(_t, x)| x).collect_vec();
-                    xs.iter()
-                        .copied()
-                        .filter(|&x| x < dims[d] - 1)
-                        .for_each(|x| {
-                            dp[x + 1] = min(dp[x + 1], dp[x].saturating_add(1));
-                        });
-                    xs.iter().copied().rev().filter(|&x| x > 0).for_each(|x| {
-                        dp[x - 1] = min(dp[x - 1], dp[x].saturating_add(1));
-                    });
-                    xs.iter().copied().for_each(|x| dp[x] = usize::MAX);
+        .map(|(_, it)| it.map(|(_, x)| x).sorted().collect::<Vec<_>>())
+        .fold(vvec![1<<60; 0i64; w + 1], |mut costs, beams| {
+            // 右に逃げる
+            beams.citer().for_each(|x| {
+                if x < w {
+                    costs[x + 1] = min(costs[x] + 1, costs[x + 1]);
+                }
+            });
 
-                    dp
-                })
-                .into_iter()
-                .min()
-                .unwrap()
-        })
-        .fold(0usize, |acc, s| acc.saturating_add(s));
-    if ans == usize::MAX {
+            // 左に逃げる
+            beams.citer().rev().for_each(|x| {
+                if x > 1 {
+                    costs[x - 1] = min(costs[x] + 1, costs[x - 1]);
+                }
+            });
+
+            // 焼きつくす
+            beams.citer().for_each(|x| {
+                costs[x] = 1 << 60;
+            });
+
+            costs
+        });
+
+    // 縦
+    let costs1 = query
+        .citer()
+        .filter(|&(_, d, _)| d == 1)
+        .map(|(t, _d, x)| (t, x))
+        .sorted()
+        .group_by(|&(t, _)| t)
+        .into_iter()
+        .map(|(_, it)| it.map(|(_, x)| x).sorted().collect::<Vec<_>>())
+        .fold(vvec![1<<60; 0i64; h + 1], |mut costs, beams| {
+            // 右に逃げる
+            beams.citer().for_each(|x| {
+                if x < h {
+                    costs[x + 1] = min(costs[x] + 1, costs[x + 1]);
+                }
+            });
+
+            // 左に逃げる
+            beams.citer().rev().for_each(|x| {
+                if x > 1 {
+                    costs[x - 1] = min(costs[x] + 1, costs[x - 1]);
+                }
+            });
+
+            // 焼きつくす
+            beams.citer().for_each(|x| {
+                costs[x] = 1 << 60;
+            });
+
+            costs
+        });
+
+    let ans = costs0.citer().min().unwrap() + costs1.citer().min().unwrap();
+
+    if ans > 1 << 50 {
         println!("-1");
     } else {
         println!("{}", ans);
