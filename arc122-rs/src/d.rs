@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -148,69 +159,73 @@ where
 {
 }
 
-fn find_smallest_combi(a: &[usize], idxs0: &[usize], idxs1: &[usize], bit_idx: usize) -> usize {
-    assert!(!idxs0.is_empty());
-    assert!(!idxs1.is_empty());
+fn min_pair(a: &[usize], b: &[usize], idx: u32) -> usize {
+    if idx == 0 {
+        return 0;
+    }
 
-    if bit_idx == 0 {
-        0
+    if a.is_empty() || b.is_empty() {
+        return usize::MAX;
+    }
+
+    let a0 = a
+        .citer()
+        .filter(|&x| x & (1 << (idx - 1)) == 0)
+        .collect::<Vec<_>>();
+    let a1 = a
+        .citer()
+        .filter(|&x| x & (1 << (idx - 1)) > 0)
+        .collect::<Vec<_>>();
+    let b0 = b
+        .citer()
+        .filter(|&x| x & (1 << (idx - 1)) == 0)
+        .collect::<Vec<_>>();
+    let b1 = b
+        .citer()
+        .filter(|&x| x & (1 << (idx - 1)) > 0)
+        .collect::<Vec<_>>();
+
+    if (!a0.is_empty() && !b0.is_empty()) || (!a1.is_empty() && !b1.is_empty()) {
+        min(min_pair(&a0, &b0, idx - 1), min_pair(&a1, &b1, idx - 1))
     } else {
-        let b = bit_idx - 1;
-        let (idxs00, idxs01): (Vec<_>, Vec<_>) = idxs0.citer().partition(|&i| (a[i] >> b) & 1 == 0);
-        let (idxs10, idxs11): (Vec<_>, Vec<_>) = idxs1.citer().partition(|&i| (a[i] >> b) & 1 == 0);
-
-        let c = iproduct!(
-            [&idxs00, &idxs01]
-                .citer()
-                .enumerate()
-                .filter(|&(_, idxs)| !idxs.is_empty()),
-            [&idxs10, &idxs11]
-                .citer()
-                .enumerate()
-                .filter(|&(_, idxs)| !idxs.is_empty())
-        )
-        .map(|((x0, _), (x1, _))| x0 ^ x1)
-        .min()
-        .unwrap();
-
-        iproduct!(
-            [&idxs00, &idxs01]
-                .citer()
-                .enumerate()
-                .filter(|&(_, idxs)| !idxs.is_empty()),
-            [&idxs10, &idxs11]
-                .citer()
-                .enumerate()
-                .filter(|&(_, idxs)| !idxs.is_empty())
-        )
-        .filter(|&((x0, _), (x1, _))| x0 ^ x1 == c)
-        .map(|((_, t), (_, u))| find_smallest_combi(&a, t, u, b) | (c << b))
-        .min()
-        .unwrap()
+        min(min_pair(&a0, &b1, idx - 1), min_pair(&a1, &b0, idx - 1)) + (1 << (idx - 1))
     }
 }
 
-fn solve(a: &[usize], idxs: &[usize], bit_idx: usize) -> usize {
-    if bit_idx == 0 {
-        0
+fn solve(a: &[usize], mask: usize) -> usize {
+    if a.is_empty() {
+        return 0;
+    }
+
+    let ma = a.citer().map(|x| x & mask).max().unwrap();
+
+    if ma == 0 {
+        return 0;
+    }
+
+    let idx = (ma + 1).next_power_of_two().trailing_zeros() - 1;
+
+    let a0 = a
+        .citer()
+        .filter(|&x| x & (1 << idx) == 0)
+        .collect::<Vec<_>>();
+    let a1 = a
+        .citer()
+        .filter(|&x| x & (1 << idx) > 0)
+        .collect::<Vec<_>>();
+
+    if a1.len() % 2 == 0 {
+        max(solve(&a0, (1 << idx) - 1), solve(&a1, (1 << idx) - 1))
     } else {
-        let b = bit_idx - 1;
-        let (idxs0, idxs1): (Vec<_>, Vec<_>) =
-            idxs.citer().partition(|&idx| (a[idx] >> b) & 1 == 0);
-        if idxs0.is_empty() || idxs1.is_empty() {
-            solve(&a, &idxs, b)
-        } else if idxs1.len() % 2 == 0 {
-            max(solve(&a, &idxs0, b), solve(&a, &idxs1, b))
-        } else {
-            find_smallest_combi(&a, &idxs0, &idxs1, b) | (1 << b)
-        }
+        min_pair(&a0, &a1, idx) + (1 << idx)
     }
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
     let a = read_row::<usize>();
 
-    let ans = solve(&a, &(0..2 * n).collect::<Vec<_>>(), 30);
+    let ans = solve(&a, (1 << 30) - 1);
+
     println!("{}", ans);
 }

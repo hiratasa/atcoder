@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -150,87 +161,80 @@ where
 
 fn main() {
     let (n, m, q) = read_tuple!(usize, usize, usize);
+    let trains = read_vec(m, || read_tuple!(usize, usize, usize, usize));
+    let query = read_vec(q, || read_tuple!(usize, usize, usize));
 
-    let abst = read_vec(m, || read_tuple!(usize, usize, usize, usize));
-
-    let dep_times = abst.citer().enumerate().fold(
-        vec![BTreeSet::new(); n],
-        |mut dep_times, (i, (a, _b, s, _t))| {
-            dep_times[a - 1].insert((s, i));
-            dep_times
+    let mut timetable = trains.citer().sorted_by_key(|&(_, _, s, _)| s).fold(
+        vec![vec![]; n],
+        |mut timetable, (a, b, s, t)| {
+            timetable[a - 1].push((b - 1, s, t));
+            timetable
         },
     );
+    // sentinel
+    for i in 0..n {
+        timetable[i].push((i, usize::MAX, usize::MAX));
+    }
 
-    let mut adjs = vec![vec![0; 2 * m]; 20];
-    adjs[0] = abst
-        .citer()
-        .enumerate()
-        .flat_map(|(i, (_a, b, _s, t))| {
-            let next_v = dep_times[b - 1]
-                .range((t, 0)..)
-                .next()
-                .map_or(2 * i + 1, |(_, j)| 2 * j);
-            it![2 * i + 1, next_v]
+    let mut nexts = timetable
+        .iter()
+        .map(|row| {
+            row.citer()
+                .map(|(b, _s, t)| {
+                    let idx = timetable[b]
+                        .binary_search_by(|&(_, ss, _)| ss.cmp(&t).then(Ordering::Greater))
+                        .unwrap_err();
+
+                    vec![(b, idx)]
+                })
+                .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
 
-    for i in 1..20 {
-        for v in 0..2 * m {
-            adjs[i][v] = adjs[i - 1][adjs[i - 1][v]];
+    for i in 0..20 {
+        for j in 0..n {
+            for k in 0..timetable[j].len() {
+                let z = nexts[nexts[j][k][i].0][nexts[j][k][i].1][i];
+                nexts[j][k].push(z);
+            }
         }
     }
 
-    #[derive(Clone, Copy, Debug)]
-    enum Ans {
-        City(usize),
-        Bus(usize),
-    }
-
-    let time = |idx: usize| {
-        if idx % 2 == 0 {
-            abst[idx / 2].2
-        } else {
-            abst[idx / 2].3
-        }
-    };
-
-    use Ans::*;
-
-    (0..q)
-        .map(|_| read_tuple!(usize, usize, usize))
+    query
+        .citer()
         .map(|(x, y, z)| {
             let y = y - 1;
 
-            let v0 = if let Some((_, idx)) = dep_times[y].range((x, 0)..).next() {
-                2 * *idx
+            let start = timetable[y]
+                .binary_search_by(|&(_, s, _)| s.cmp(&x).then(Ordering::Greater))
+                .unwrap_err();
+
+            if z <= timetable[y][start].1 {
+                Err(y)
             } else {
-                return City(y);
-            };
+                let (q, idx) = (0..20).rev().fold((y, start), |(p, t), i| {
+                    let (q, idx) = nexts[p][t][i];
 
-            // eprintln!("{} {} {} {}", x, y, z, v0);
+                    if z <= timetable[q][idx].1 {
+                        (p, t)
+                    } else {
+                        (q, idx)
+                    }
+                });
 
-            if time(v0) >= z {
-                return City(y);
-            }
-
-            let v = (0..20)
-                .rev()
-                .fold(v0, |v, i| if time(adjs[i][v]) < z { adjs[i][v] } else { v });
-
-            assert!(time(v) < z);
-
-            if v % 2 == 0 {
-                Bus(v / 2)
-            } else {
-                City(abst[v / 2].1 - 1)
+                if z <= timetable[q][idx].2 {
+                    Ok((q, timetable[q][idx].0))
+                } else {
+                    Err(timetable[q][idx].0)
+                }
             }
         })
         .for_each(|ans| match ans {
-            City(i) => {
-                println!("{}", i + 1);
+            Ok((a, b)) => {
+                println!("{} {}", a + 1, b + 1);
             }
-            Bus(i) => {
-                println!("{} {}", abst[i].0, abst[i].1);
+            Err(a) => {
+                println!("{}", a + 1);
             }
         });
 }

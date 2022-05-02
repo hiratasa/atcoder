@@ -1,23 +1,28 @@
 #[allow(unused_imports)]
-use bitset_fixed::BitSet;
-#[allow(unused_imports)]
-use itertools::*;
-#[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
-use std::io::*;
+use std::io;
+#[allow(unused_imports)]
+use std::iter::*;
 #[allow(unused_imports)]
 use std::mem::*;
 #[allow(unused_imports)]
 use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
+
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -35,10 +40,53 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! read_tuple {
     ($($t:ty),+) => {{
         let mut line = String::new();
-        stdin().read_line(&mut line).unwrap();
+        io::stdin().read_line(&mut line).unwrap();
 
         let mut it = line.trim()
             .split_whitespace();
@@ -52,7 +100,7 @@ macro_rules! read_tuple {
 #[allow(dead_code)]
 fn read<T: FromStr>() -> T {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
     line.trim().to_string().parse().ok().unwrap()
 }
 
@@ -62,9 +110,17 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
 
     line.trim()
         .split_whitespace()
@@ -87,141 +143,72 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-trait IteratorDpExt: Iterator + Sized {
-    fn dp<T, F: FnMut(&Vec<T>, Self::Item) -> T>(self, init: Vec<T>, mut f: F) -> Vec<T> {
-        self.fold(init, |mut dp, item| {
-            let next = f(&dp, item);
-            dp.push(next);
-            dp
-        })
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
     }
 }
 
-impl<I> IteratorDpExt for I where I: Iterator + Sized {}
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
 
 fn main() {
     let (h, w) = read_tuple!(usize, usize);
-
     let b = read_mat::<i64>(h);
 
-    let c = chain(
-        std::iter::once(vec![0; w]),
-        b.iter().scan(vec![0; w], |prev, r| {
-            zip(prev.iter_mut(), r.iter()).for_each(|(p, bb)| *p += bb);
+    let calc = |h: usize, w: usize, b: &[Vec<i64>]| {
+        (0..h)
+            .scan(vec![std::i64::MIN; h], |bybottom, i| {
+                let z = (i..h)
+                    .scan(vec![0; w], |row, j| {
+                        izip!(row.iter_mut(), b[j].citer()).for_each(|(x, y)| *x += y);
 
-            Some(prev.clone())
-        }),
-    )
-    .collect_vec();
+                        Some((j, row.clone()))
+                    })
+                    .map(|(j, row)| {
+                        let crow = row.citer().cumsum::<i64>().collect::<Vec<_>>();
+                        let z = (0..w)
+                            .scan(0i64, |mi, k| Some((k, replace(mi, min(*mi, crow[k])))))
+                            .map(|(k, mi)| crow[k] - mi)
+                            .max()
+                            .unwrap();
 
-    let from_topleft: Vec<Vec<i64>> = (0..h)
-        .map(|u| {
-            (0..=u)
-                .map(|l| {
-                    (0..w)
-                        .scan((0i64, 0i64), |(cum, minimum), x| {
-                            *cum += c[u + 1][x] - c[l][x];
+                        (j, z)
+                    })
+                    .inspect(|&(j, z)| {
+                        bybottom[j] = max(bybottom[j], z);
+                    })
+                    .map(|(_, z)| z)
+                    .max()
+                    .unwrap();
 
-                            let tmp = *minimum;
-                            *minimum = std::cmp::min(*minimum, *cum);
+                if i == 0 {
+                    Some(std::i64::MIN)
+                } else {
+                    Some(z + bybottom[0..i].citer().max().unwrap())
+                }
+            })
+            .max()
+            .unwrap()
+    };
 
-                            Some(*cum - tmp)
-                        })
-                        .collect_vec()
-                })
-                .fold1(|mut maximum_row, row| {
-                    zip(&mut maximum_row, &row)
-                        .for_each(|(mm, mm2)| *mm = std::cmp::max(*mm, *mm2));
-                    maximum_row
-                })
-                .unwrap()
-        })
-        .collect_vec();
+    let ans0 = calc(h, w, &b);
 
-    let from_bottomright: Vec<Vec<i64>> = (0..h)
-        .map(|l| {
-            (l..h)
-                .map(|u| {
-                    (0..w)
-                        .rev()
-                        .scan((0i64, 0i64), |(cum, minimum), x| {
-                            *cum += c[u + 1][x] - c[l][x];
+    // transpose
+    let b = (0..w)
+        .map(|i| (0..h).map(|j| b[j][i]).collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+    let (h, w) = (w, h);
+    let ans1 = calc(h, w, &b);
 
-                            let tmp = *minimum;
-                            *minimum = std::cmp::min(*minimum, *cum);
-
-                            Some(*cum - tmp)
-                        })
-                        .collect_vec()
-                })
-                .update(|row| row.reverse())
-                .fold1(|mut maximum_row, row| {
-                    zip(&mut maximum_row, &row)
-                        .for_each(|(mm, mm2)| *mm = std::cmp::max(*mm, *mm2));
-                    maximum_row
-                })
-                .unwrap()
-        })
-        .collect_vec();
-
-    let from_left = from_topleft
-        .iter()
-        .fold(vec![std::i64::MIN; w], |mut maximum_row, row| {
-            zip(maximum_row.iter_mut(), row.iter())
-                .for_each(|(mm, mm2)| *mm = std::cmp::max(*mm, *mm2));
-            maximum_row
-        })
-        .into_iter()
-        .scan(std::i64::MIN, |maximum, aa| {
-            *maximum = std::cmp::max(*maximum, aa);
-            Some(*maximum)
-        })
-        .collect_vec();
-
-    let from_right = from_bottomright
-        .iter()
-        .fold(vec![std::i64::MIN; w], |mut maximum_row, row| {
-            zip(maximum_row.iter_mut(), row.iter())
-                .for_each(|(mm, mm2)| *mm = std::cmp::max(*mm, *mm2));
-            maximum_row
-        })
-        .into_iter()
-        .rev()
-        .scan(std::i64::MIN, |maximum, aa| {
-            *maximum = std::cmp::max(*maximum, aa);
-            Some(*maximum)
-        })
-        .collect_vec();
-
-    let from_top = from_topleft
-        .iter()
-        .map(|row| row.iter().copied().max().unwrap())
-        .scan(std::i64::MIN, |maximum, aa| {
-            *maximum = std::cmp::max(*maximum, aa);
-            Some(*maximum)
-        })
-        .collect_vec();
-
-    let from_bottom = from_bottomright
-        .iter()
-        .map(|row| row.iter().copied().max().unwrap())
-        .rev()
-        .scan(std::i64::MIN, |maximum, aa| {
-            *maximum = std::cmp::max(*maximum, aa);
-            Some(*maximum)
-        })
-        .collect_vec();
-
-    let ans_leftright = (0..w - 1)
-        .map(|i| from_left[i] + from_right[w - 2 - i])
-        .max()
-        .unwrap();
-    let ans_topbottom = (0..h - 1)
-        .map(|i| from_top[i] + from_bottom[h - 2 - i])
-        .max()
-        .unwrap();
-
-    let ans = std::cmp::max(ans_leftright, ans_topbottom);
+    let ans = max(ans0, ans1);
 
     println!("{}", ans);
 }

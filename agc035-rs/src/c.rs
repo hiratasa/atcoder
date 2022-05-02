@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -148,4 +159,74 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+
+    if n.is_power_of_two() {
+        println!("No");
+        return;
+    }
+
+    let mut edges = vec![];
+
+    edges.push((1, 2));
+    edges.push((2, 3));
+    edges.push((3, 1 + n));
+    edges.push((1 + n, 2 + n));
+    edges.push((2 + n, 3 + n));
+
+    let add01 = |edges: &mut Vec<(usize, usize)>, i: usize| {
+        assert!(i % 4 == 0);
+
+        edges.push((i, i + 1));
+        edges.push((i + 1, 1 + n));
+        edges.push((1 + n, i + n));
+        edges.push((i + n, i + 1 + n));
+    };
+
+    let add2 = |edges: &mut Vec<(usize, usize)>, i: usize| {
+        assert!(i % 4 == 0);
+
+        edges.push((i + 2, 3));
+        edges.push((i + n, i + 2 + n));
+    };
+
+    let add3 = |edges: &mut Vec<(usize, usize)>, i: usize| {
+        assert!(i % 4 == 0);
+
+        edges.push((i + 3, 2 + n));
+        edges.push((i + n, i + 3 + n));
+    };
+
+    for i in (1..).map(|i| 4 * i).take_while(|&i| i + 3 < n) {
+        add01(&mut edges, i);
+        add2(&mut edges, i);
+        add3(&mut edges, i);
+    }
+
+    if n == 3 {
+        // NOP
+    } else if n % 4 == 0 {
+        let idx = n.trailing_zeros();
+
+        let m0 = 1 << idx;
+        let m1 = n ^ m0;
+
+        edges.push((n, m0 + 1));
+        edges.push((m1 + n, n + n));
+    } else if n % 4 == 1 {
+        add01(&mut edges, n / 4 * 4);
+    } else if n % 4 == 2 {
+        add01(&mut edges, n / 4 * 4);
+        add2(&mut edges, n / 4 * 4);
+    } else {
+        add01(&mut edges, n / 4 * 4);
+        add2(&mut edges, n / 4 * 4);
+        add3(&mut edges, n / 4 * 4);
+    }
+
+    println!("Yes");
+    for (x, y) in edges {
+        println!("{} {}", x, y);
+    }
+}
