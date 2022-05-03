@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -152,6 +163,7 @@ use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
     let mut y = 1;
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;
@@ -177,10 +189,14 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
+define_static_mod!(2013265921, Modulus2013265921, Mod2013265921);
+define_static_mod!(1811939329, Modulus1811939329, Mod1811939329);
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
 #[allow(dead_code)]
 impl<M: Modulus> Mod<M> {
     pub fn modulus() -> usize {
@@ -228,10 +244,11 @@ impl<M> std::fmt::Debug for Mod<M> {
 }
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::From<T>,
+    usize: std::convert::TryFrom<T>,
 {
     fn from(v: T) -> Self {
-        Mod::new(usize::from(v))
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
 impl<M: Modulus> std::str::FromStr for Mod<M> {
@@ -351,273 +368,43 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-trait Monoid {
-    type Item: Clone;
-
-    fn id() -> Self::Item;
-    fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
-}
-
-#[derive(Debug)]
-struct SegmentTree<M>
-where
-    M: Monoid,
-{
-    cap: usize,
-    values: Vec<M::Item>,
-}
-
-#[allow(dead_code)]
-impl<M> SegmentTree<M>
-where
-    M: Monoid,
-{
-    fn new(n: usize) -> Self {
-        let cap = n.next_power_of_two();
-        SegmentTree {
-            cap,
-            values: vec![M::id(); 2 * cap - 1],
-        }
-    }
-
-    fn with(vals: &Vec<M::Item>) -> Self {
-        let n = vals.len();
-        let cap = n.next_power_of_two();
-
-        let mut values = Vec::with_capacity(2 * cap - 1);
-        values.resize(cap - 1, M::id());
-        values.extend(vals.iter().cloned());
-        values.resize(2 * cap - 1, M::id());
-
-        let mut st = SegmentTree { cap, values };
-        for idx in (0..cap - 1).rev() {
-            st.fix_value(idx);
-        }
-        st
-    }
-
-    fn fix_value(&mut self, idx: usize) {
-        let left_idx = 2 * (idx + 1) - 1;
-        let right_idx = 2 * (idx + 1);
-        self.values[idx] = M::op(&self.values[left_idx], &self.values[right_idx]);
-    }
-
-    fn get(&self, pos: usize) -> M::Item {
-        self.values[self.cap - 1 + pos].clone()
-    }
-
-    fn set(&mut self, pos: usize, v: M::Item) {
-        let mut idx = self.cap - 1 + pos;
-
-        self.values[idx] = v;
-
-        while idx > 0 {
-            idx = (idx - 1) / 2;
-            self.fix_value(idx);
-        }
-    }
-
-    fn query(&self, a: usize, b: usize) -> M::Item {
-        let mut left = M::id();
-        let mut right = M::id();
-
-        let mut left_idx = a + self.cap - 1;
-        let mut right_idx = b + self.cap - 1;
-
-        let c0 = std::cmp::min(
-            // trailing_ones
-            (!left_idx).trailing_zeros(),
-            (right_idx + 1).trailing_zeros(),
-        );
-        left_idx = left_idx >> c0;
-        right_idx = ((right_idx + 1) >> c0) - 1;
-
-        while left_idx < right_idx {
-            if left_idx % 2 == 0 {
-                left = M::op(&left, &self.values[left_idx]);
-                left_idx += 1;
-            }
-
-            if right_idx % 2 == 0 {
-                right = M::op(&self.values[right_idx - 1], &right);
-                right_idx -= 1;
-            }
-
-            let c = std::cmp::min(
-                // trailing_ones
-                (!left_idx).trailing_zeros(),
-                (right_idx + 1).trailing_zeros(),
-            );
-            left_idx = left_idx >> c;
-            right_idx = ((right_idx + 1) >> c) - 1;
-        }
-
-        M::op(&left, &right)
-    }
-
-    // f(query(a, b)) == false となるbが存在すればその最小のものを返す
-    fn right_partition_point<F>(&self, a: usize, mut f: F) -> Option<usize>
-    where
-        F: FnMut(&M::Item) -> bool,
-    {
-        assert!(a <= self.cap);
-        if !f(&M::id()) {
-            Some(a)
-        } else if a == self.cap {
-            None
-        } else {
-            let mut b = a;
-            let mut idx = ((b + self.cap) >> (b + self.cap).trailing_zeros()) - 1;
-            let mut len = 1 << (b + self.cap).trailing_zeros();
-            let mut val = M::id();
-            let mut val_next = M::op(&val, &self.values[idx]);
-
-            while f(&val_next) {
-                val = val_next;
-                b += len;
-                len <<= (idx + 2).trailing_zeros();
-                idx = ((idx + 2) >> (idx + 2).trailing_zeros()) - 1;
-
-                // 最後に計算したidxが右端だった場合
-                if idx == 0 {
-                    return None;
-                }
-                val_next = M::op(&val, &self.values[idx]);
-            }
-
-            idx = 2 * idx + 1;
-            len >>= 1;
-            while idx < self.values.len() {
-                val_next = M::op(&val, &self.values[idx]);
-                if f(&val_next) {
-                    val = val_next;
-                    b += len;
-                    idx += 1;
-                }
-                len >>= 1;
-                idx = 2 * idx + 1;
-            }
-
-            // [a, b)区間でfがtrue => 求めるbはその次
-            Some(b + 1)
-        }
-    }
-}
-
-macro_rules! define_monoid {
-    ($name: ident, $t: ty, $id: expr, $op: expr) => {
-        #[derive(Clone, Debug)]
-        struct $name;
-
-        impl Monoid for $name {
-            type Item = $t;
-
-            fn id() -> Self::Item {
-                $id
-            }
-
-            fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item {
-                ($op)(*lhs, *rhs)
-            }
-        }
-    };
-}
-
-define_monoid!(Maximum, Option<usize>, None, std::cmp::max);
-
-type ST = SegmentTree<Maximum>;
-
 fn main() {
     type Mod = Mod998244353;
 
-    let n: usize = read();
+    let n = read::<usize>();
     let a = read_row::<usize>();
 
-    let b = a
-        .citer()
-        .sorted()
-        .unique()
-        .enumerate()
-        .map(|(i, aa)| (aa, i))
-        .collect::<FxHashMap<_, _>>();
-
-    let (dp, dp_even, dp_odd, _) = (0..n).fold(
+    let (dp, _, _, _) = a.citer().fold(
         (
             vec![Mod::one()],
             vec![Mod::zero()],
-            vec![Mod::one()],
-            ST::new(n),
+            vec![Mod::zero()],
+            vec![],
         ),
-        |(mut dp, mut dp_even, mut dp_odd, mut st): (Vec<Mod>, Vec<Mod>, Vec<Mod>, _), i| {
-            let aa = a[i];
-            if let Some(j) = st.query(0, b[&aa]) {
-                let s = if (i - j) % 2 == 0 {
-                    Mod::one()
-                } else {
-                    -Mod::one()
-                };
+        |(mut dp, mut csum, mut pcsum, mut asc): (Vec<Mod>, Vec<Mod>, Vec<Mod>, Vec<usize>), x| {
+            let idx = asc
+                .binary_search_by(|&y| y.cmp(&x).then(Ordering::Greater))
+                .unwrap_err();
 
-                let x = dp[j + 1] * s;
-                if i % 2 == 0 {
-                    // 長さ奇数
-                    let y = (dp_odd[i] - dp_odd[j]) * aa;
-                    // 長さ偶数
-                    let z = -(dp_even[i] - dp_even[j]) * aa;
+            let c = csum[csum.len() - 1] - csum[idx] + dp[dp.len() - 1];
 
-                    dp.push(x + y + z);
+            csum.resize_with(idx + 1, || unreachable!());
+            csum.push(c);
+            csum[idx + 1] = csum[csum.len() - 1] + csum[csum.len() - 2];
+            pcsum.resize_with(idx + 1, || unreachable!());
+            pcsum.push(c * x);
+            pcsum[idx + 1] = pcsum[pcsum.len() - 1] + pcsum[pcsum.len() - 2];
+            asc.resize_with(idx, || unreachable!());
+            asc.push(x);
 
-                    let t = dp_even[i];
-                    dp_even.push(t + dp[i + 1]);
-                    let t2 = dp_odd[i];
-                    dp_odd.push(t2);
-                } else {
-                    // 長さ奇数
-                    let y = (dp_even[i] - dp_even[j]) * aa;
-                    // 長さ偶数
-                    let z = -(dp_odd[i] - dp_odd[j]) * aa;
+            let z = pcsum[csum.len() - 1] * -Mod::one();
+            dp.push(z);
 
-                    dp.push(x + y + z);
-
-                    let t = dp_even[i];
-                    dp_even.push(t);
-                    let t2 = dp_odd[i];
-                    dp_odd.push(t2 + dp[i + 1]);
-                }
-            } else {
-                if i % 2 == 0 {
-                    // 長さ奇数
-                    let y = dp_odd[i] * aa;
-                    // 長さ偶数
-                    let z = -dp_even[i] * aa;
-
-                    dp.push(y + z);
-
-                    let t = dp_even[i];
-                    dp_even.push(t + dp[i + 1]);
-                    let t2 = dp_odd[i];
-                    dp_odd.push(t2);
-                } else {
-                    // 長さ奇数
-                    let y = dp_even[i] * aa;
-                    // 長さ偶数
-                    let z = -dp_odd[i] * aa;
-
-                    dp.push(y + z);
-
-                    let t = dp_even[i];
-                    dp_even.push(t);
-                    let t2 = dp_odd[i];
-                    dp_odd.push(t2 + dp[i + 1]);
-                }
-            }
-
-            st.set(b[&aa], Some(i));
-            (dp, dp_even, dp_odd, st)
+            (dp, csum, pcsum, asc)
         },
     );
 
-    // eprintln!("{:?}", dp);
+    let ans = if n % 2 == 0 { dp[n] } else { -dp[n] };
 
-    let ans = *dp.last().unwrap();
     println!("{}", ans);
 }

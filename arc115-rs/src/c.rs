@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -149,49 +160,27 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-
-    const B: usize = 1000;
-    let primes = (2..=B)
-        .scan(vec![true; B + 1], |table, i| {
-            if table[i] {
-                (2..)
-                    .map(|j| j * i)
-                    .take_while(|&j| j <= B)
-                    .for_each(|j| table[j] = false);
-                Some(Some(i))
-            } else {
-                Some(None)
-            }
-        })
-        .flatten()
-        .collect::<Vec<_>>();
+    let n = read::<usize>();
 
     let ans = (1..=n)
-        .map(|i| {
-            primes
+        .scan(vec![vec![]; n + 1], |t: &mut Vec<Vec<usize>>, i| {
+            let x = t[i]
                 .citer()
-                .scan(i, |x, p| {
-                    if *x < p * p {
-                        if *x == 1 {
-                            None
-                        } else {
-                            *x = 1;
-                            Some(1)
-                        }
-                    } else {
-                        let (m, y) = iterate(*x, |&y| y / p)
-                            .enumerate()
-                            .skip_while(|(_, y)| y % p == 0)
-                            .next()
-                            .unwrap();
-                        *x = y;
-                        Some(m)
-                    }
-                })
-                .sum::<usize>()
-                + 1
+                .sorted()
+                .dedup()
+                .chain(once(usize::MAX))
+                .enumerate()
+                .find(|&(i, j)| i + 1 != j)
+                .unwrap()
+                .0
+                + 1;
+            (2..).map(|j| i * j).take_while(|&j| j <= n).for_each(|j| {
+                t[j].push(x);
+            });
+
+            Some(x)
         })
-        .collect_vec();
+        .collect::<Vec<_>>();
+
     println!("{}", ans.citer().join(" "));
 }

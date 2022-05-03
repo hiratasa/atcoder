@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -150,20 +161,15 @@ where
 
 fn main() {
     let (n, m) = read_tuple!(usize, usize);
+    let s = read_vec(n, || read_digits());
 
-    let s = read_vec(n, || read_str());
-
-    // (i, j) (i<j) で s_i と s_j の異なる箇所が奇数個であるものを求める
-    // => 1の個数の差が奇数個のものを求める
-
-    let a = s
+    let n0 = s
         .iter()
-        .map(|ss| ss.citer().filter(|c| *c == '1').count() % 2)
-        .fold([0usize, 0usize], |mut a, k| {
-            a[k] += 1;
-            a
-        });
+        .filter(|&row| row.citer().filter(|&d| d == 1).count() % 2 == 0)
+        .count();
+    let n1 = n - n0;
 
-    let ans = a[0] * a[1];
+    let ans = n0 * n1;
+
     println!("{}", ans);
 }

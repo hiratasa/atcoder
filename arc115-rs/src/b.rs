@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -149,31 +160,26 @@ where
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
+    let c = read_mat::<usize>(n);
 
-    let c = read_mat::<i64>(n);
+    let b = c.iter().min_by_key(|row| row[0]).unwrap();
 
-    let a = (0..n).map(|i| c[i][0] - c[0][0]).collect_vec();
-    let am = a.citer().min().unwrap();
-    let a = a.citer().map(|x| x - am).collect_vec();
-
-    let b = (0..n).map(|i| c[0][i] - a[0]).collect_vec();
-
-    if b.citer().min().unwrap() < 0 {
-        println!("No");
-        return;
-    }
-
-    if !c
+    if let Some(a) = c
         .iter()
-        .enumerate()
-        .all(|(i, row)| row.citer().enumerate().all(|(j, cc)| cc == a[i] + b[j]))
+        .map(|row| row[0].checked_sub(b[0]))
+        .collect::<Option<Vec<_>>>()
     {
-        println!("No");
-        return;
-    }
+        let ok = iproduct!(0..n, 0..n).all(|(i, j)| a[i] + b[j] == c[i][j]);
 
-    println!("Yes");
-    println!("{}", a.citer().join(" "));
-    println!("{}", b.citer().join(" "));
+        if ok {
+            println!("Yes");
+            println!("{}", a.citer().join(" "));
+            println!("{}", b.citer().join(" "));
+        } else {
+            println!("No");
+        }
+    } else {
+        println!("No");
+    }
 }
