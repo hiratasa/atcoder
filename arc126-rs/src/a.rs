@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -149,34 +160,26 @@ where
 }
 
 fn main() {
-    let t: usize = read();
-    let query = read_vec(t, || read_tuple!(usize, usize, usize));
+    let t = read::<usize>();
+    let query = read_vec(t, || read_row::<usize>());
 
     query
-        .citer()
-        .map(|(n2, n3, n4)| {
-            let n6 = n3 / 2;
+        .iter()
+        .map(|ns| {
+            it![[0, 2, 1], [2, 2, 0], [1, 0, 2], [3, 0, 1], [5, 0, 0]]
+                .scan(ns.clone(), |ns, ms| {
+                    let k = izip!(ns.citer(), ms.citer())
+                        .filter_map(|(nn, mm)| nn.checked_div(mm))
+                        .min()
+                        .unwrap();
 
-            let m1 = min(n6, n4);
-            let n4 = n4 - m1;
-            let n6 = n6 - m1;
+                    *ns = izip!(ns.citer(), ms.citer())
+                        .map(|(nn, mm)| nn - k * mm)
+                        .collect();
 
-            if n4 > 0 {
-                assert!(n6 == 0);
-                let m2 = min(n4 / 2, n2);
-                let n4 = n4 - 2 * m2;
-                let n2 = n2 - m2;
-
-                let m3 = min(n4, n2 / 3);
-                let n2 = n2 - 3 * m3;
-
-                m1 + m2 + m3 + n2 / 5
-            } else {
-                let m2 = min(n6, n2 / 2);
-                let n2 = n2 - m2 * 2;
-
-                m1 + m2 + n2 / 5
-            }
+                    Some(k)
+                })
+                .sum::<usize>()
         })
         .for_each(|ans| {
             println!("{}", ans);

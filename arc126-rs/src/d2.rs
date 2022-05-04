@@ -159,46 +159,105 @@ where
 {
 }
 
+#[allow(dead_code)]
+fn solve0(n: usize, k: usize, a: &[usize]) -> usize {
+    let idxs = a
+        .citer()
+        .enumerate()
+        .fold(vec![vec![]; k], |mut idxs, (i, x)| {
+            idxs[x - 1].push(i);
+            idxs
+        });
+
+    idxs.iter()
+        .multi_cartesian_product()
+        .map(|vs: Vec<&usize>| {
+            let remains = (0..n).filter(|&i| !vs.contains(&&i)).collect::<Vec<_>>();
+
+            (0..=remains.len())
+                .map(|i| {
+                    let seq = remains[..i]
+                        .citer()
+                        .chain(vs.iter().copied().copied())
+                        .chain(remains[i..].citer())
+                        .collect::<Vec<_>>();
+
+                    assert!(seq.len() == n);
+
+                    (0..n)
+                        .map(|j| seq[0..j].citer().filter(|&idx| idx > seq[j]).count())
+                        .sum::<usize>()
+                })
+                .min()
+                .unwrap()
+        })
+        .min()
+        .unwrap()
+}
+
 fn main() {
     let (n, k) = read_tuple!(usize, usize);
     let a = read_row::<usize>();
 
-    let s = a.citer().sum::<usize>();
-    let b = (s + k) / n;
+    let dpl = once(vvec![0; usize::MAX; 1<<k])
+        .chain(a.citer().scan(vvec![0; usize::MAX; 1<<k], |dp, x| {
+            let x = x - 1;
 
-    if a.citer().all(|x| x <= b) {
-        println!("{}", b);
-        return;
-    }
+            let mut next = vec![usize::MAX; 1 << k];
 
-    let ma = a.citer().max().unwrap();
+            for s in 0..1 << k {
+                // xを使わない
+                next[s] = min(next[s], dp[s].saturating_add(s.count_ones() as usize));
 
-    let freq = a.citer().fold(vec![0; ma + 1], |mut freq, x| {
-        freq[x] += 1;
-        freq
-    });
+                // xを使う
+                if s & (1 << x) == 0 {
+                    let cost = (s & (!0 - ((1 << x) - 1))).count_ones() as usize;
+                    next[s ^ (1 << x)] = min(next[s ^ (1 << x)], dp[s].saturating_add(cost));
+                }
+            }
 
-    let csum = freq.citer().cumsum::<usize>().collect::<Vec<_>>();
-    let pcsum = freq
-        .citer()
-        .enumerate()
-        .map(|(i, x)| i * x)
-        .cumsum::<usize>()
+            *dp = next;
+
+            Some(dp.clone())
+        }))
         .collect::<Vec<_>>();
 
-    let ans = (1..=ma)
-        .rev()
-        .find(|&d| {
-            (0..)
-                .map(|i| i * d)
-                .take_while(|&i| i <= ma)
-                .map(|i| {
-                    (i + d) * (csum.get(i + d).copied().unwrap_or(*csum.last().unwrap()) - csum[i])
-                        - (pcsum.get(i + d).copied().unwrap_or(*pcsum.last().unwrap()) - pcsum[i])
-                })
-                .sum::<usize>()
-                <= k
+    let dpr = once(vvec![0; usize::MAX; 1<<k])
+        .chain(a.citer().rev().scan(vvec![0; usize::MAX; 1<<k], |dp, x| {
+            let x = x - 1;
+
+            let mut next = vec![usize::MAX; 1 << k];
+
+            for s in 0..1 << k {
+                // xを使わない
+                next[s] = min(next[s], dp[s].saturating_add(s.count_ones() as usize));
+
+                // xを使う
+                if s & (1 << x) == 0 {
+                    let cost = (s & ((1 << x) - 1)).count_ones() as usize;
+                    next[s ^ (1 << x)] = min(next[s ^ (1 << x)], dp[s].saturating_add(cost));
+                }
+            }
+
+            *dp = next;
+
+            Some(dp.clone())
+        }))
+        .collect::<Vec<_>>();
+
+    let ans = (0usize..1 << k)
+        .filter_map(|s| {
+            let t = (1 << k) - 1 - s;
+            let add = (0..k)
+                .filter(|&i| s & (1 << i) > 0)
+                .map(|i| (t & ((1 << i) - 1)).count_ones() as usize)
+                .sum::<usize>();
+
+            (0..=n)
+                .map(|i| dpl[i][s].saturating_add(dpr[n - i][t]).saturating_add(add))
+                .min()
         })
+        .min()
         .unwrap();
 
     println!("{}", ans);
