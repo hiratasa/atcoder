@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -148,4 +159,269 @@ where
 {
 }
 
-fn main() {}
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
+        }
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
+        }
+    }
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
+    }
+}
+
+type Graph = detail::WeightedGraph;
+
+fn dfs(
+    g: &Graph,
+    d: &[usize],
+    v: usize,
+    visited: &mut [bool],
+    colors: &mut [bool],
+    weights: &mut [usize],
+) {
+    visited[v] = true;
+
+    for &edge in &g.out_edges[v] {
+        if visited[edge.to] {
+            continue;
+        }
+
+        colors[edge.to] = !colors[v];
+        weights[edge.label] = d[edge.to];
+
+        dfs(g, d, edge.to, visited, colors, weights);
+    }
+}
+
+#[allow(dead_code)]
+fn check(d: &[usize], uv: &[(usize, usize)], colors: &[bool], weights: &[usize]) -> bool {
+    let n = d.len();
+
+    let g = Graph::from_edges1_undirected(
+        n,
+        uv.citer().enumerate().map(|(i, (u, v))| (u, v, weights[i])),
+    );
+
+    let mut t = vec![usize::MAX; n];
+
+    it![false, true].for_each(|src| {
+        let mut costs = vec![usize::MAX; n];
+        let mut q = BinaryHeap::new();
+        for i in 0..n {
+            if colors[i] == src {
+                costs[i] = 0;
+                q.push((Reverse(0), i));
+            }
+        }
+
+        while let Some((Reverse(cost), v)) = q.pop() {
+            if cost > costs[v] {
+                continue;
+            }
+
+            g.out_edges[v].citer().for_each(|e| {
+                let next_cost = cost + e.label;
+                if next_cost < costs[e.to] {
+                    costs[e.to] = next_cost;
+                    q.push((Reverse(next_cost), e.to));
+                }
+            });
+        }
+
+        for i in 0..n {
+            if colors[i] != src {
+                t[i] = costs[i];
+            }
+        }
+    });
+
+    t == d
+}
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let d = read_row::<usize>();
+    let uv = read_vec(m, || read_tuple!(usize, usize));
+
+    let g = Graph::from_edges_directed(
+        n,
+        uv.citer()
+            .enumerate()
+            .map(|(i, (u, v))| (u - 1, v - 1, i))
+            .flat_map(|(u, v, i)| it![(u, v, i), (v, u, i)])
+            .filter(|&(u, v, _)| d[u] <= d[v]),
+    );
+
+    let mut visited = vec![false; n];
+    let mut colors = vec![false; n];
+    let mut weights = vec![1000000000; m];
+    for i in (0..n).sorted_by_key(|&i| d[i]) {
+        if visited[i] {
+            continue;
+        }
+
+        if g.in_edges[i].is_empty() {
+            println!("-1");
+            return;
+        }
+
+        dfs(&g, &d, i, &mut visited, &mut colors, &mut weights);
+    }
+
+    println!(
+        "{}",
+        colors.citer().map(|x| if x { 'B' } else { 'W' }).join("")
+    );
+    for w in weights {
+        println!("{}", w);
+    }
+}

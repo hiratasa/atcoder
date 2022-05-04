@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -148,118 +159,154 @@ where
 {
 }
 
-fn print0(mat: &Vec<Vec<Option<u32>>>) {
-    for row in mat {
-        println!(
-            "{}",
-            row.citer()
-                .map(|x| x.map_or('.', |x| (b'a' + x as u8) as char))
-                .join("")
-        );
-    }
-}
-
-#[allow(dead_code)]
-fn solve0(
-    n: usize,
-    m: usize,
-    m_current: usize,
-    i: usize,
-    j: usize,
-    c: u32,
-    mat: &mut Vec<Vec<Option<u32>>>,
-) -> bool {
-    if j == n {
-        if m_current != m {
-            return false;
-        }
-        return solve0(n, m, 0, i + 1, 0, c, mat);
-    }
-
+fn dfs(n: usize, grid: &mut [Vec<char>], i: usize, j: usize, limit: Option<usize>) -> bool {
     if i == n {
-        if (0..n).all(|i| (0..n).filter_map(|j| mat[j][i]).dedup().count() == m) {
-            print0(mat);
-            return true;
-        } else {
+        assert!(limit.is_some());
+        return (0..n).all(|jj| {
+            (0..n)
+                .map(|ii| grid[ii][jj])
+                .dedup()
+                .filter(|c| c.is_ascii_alphabetic())
+                .count()
+                == limit.unwrap()
+        });
+    }
+
+    if j == n {
+        let m = grid[i]
+            .citer()
+            .dedup()
+            .filter(|c| c.is_ascii_alphabetic())
+            .count();
+
+        if m == 0 {
             return false;
         }
-    }
 
-    if m_current + (n - j) < m {
-        return false;
-    }
-
-    if solve0(
-        n,
-        m,
-        m_current + mat[i][j].is_some() as usize,
-        i,
-        j + 1,
-        c,
-        mat,
-    ) {
-        return true;
-    }
-
-    if mat[i][j].is_none() {
-        mat[i][j] = Some(c);
-
-        if j + 1 < n && mat[i][j + 1].is_none() {
-            mat[i][j + 1] = Some(c);
-            if solve0(n, m, m_current + 1, i, j + 2, c + 1, mat) {
-                return true;
-            }
-            mat[i][j + 1] = None;
+        if matches!(limit, Some(limit) if limit != m) {
+            return false;
         }
 
-        if i + 1 < n {
-            assert!(mat[i + 1][j].is_none());
-            mat[i + 1][j] = Some(c);
-            if solve0(n, m, m_current + 1, i, j + 1, c + 1, mat) {
-                return true;
-            }
-            mat[i + 1][j] = None;
+        return dfs(n, grid, i + 1, 0, Some(m));
+    }
+
+    // 列のカウントをチェック(既に(i,j)に置かれている分も含む)
+    let m = (0..=i)
+        .map(|ii| grid[ii][j])
+        .dedup()
+        .filter(|c| c.is_ascii_alphabetic())
+        .count();
+
+    if grid[i][j] != '.' {
+        if dfs(n, grid, i, j + 1, limit) {
+            return true;
+        }
+    } else {
+        if dfs(n, grid, i, j + 1, limit) {
+            return true;
         }
 
-        mat[i][j] = None;
+        if limit.is_none() || m < limit.unwrap() {
+            // 使う文字
+            let t = iproduct!(-1i64..=2i64, -1i64..=2i64)
+                .map(|(di, dj)| ((i as i64 + di, j as i64 + dj)))
+                .filter(|&(ni, nj)| 0 <= ni && ni < n as i64 && 0 <= nj && nj < n as i64)
+                .map(|(ni, nj)| (ni as usize, nj as usize))
+                .map(|(ni, nj)| grid[ni][nj])
+                .filter(|&c| c.is_ascii_alphabetic())
+                .sorted()
+                .dedup()
+                .chain(once('#'))
+                .enumerate()
+                .find(|&(idx, c)| idx + 'a' as usize != c as usize)
+                .map(|(idx, _)| (idx + 'a' as usize) as u8 as char)
+                .unwrap();
+
+            // 縦
+            if i < n - 1 {
+                grid[i][j] = t;
+                grid[i + 1][j] = t;
+                if dfs(n, grid, i, j + 1, limit) {
+                    return true;
+                }
+                grid[i + 1][j] = '.';
+                grid[i][j] = '.';
+            }
+
+            // 横
+            if j < n - 1 && grid[i][j + 1] == '.' {
+                grid[i][j] = t;
+                grid[i][j + 1] = t;
+                if dfs(n, grid, i, j + 1, limit) {
+                    return true;
+                }
+                grid[i][j + 1] = '.';
+                grid[i][j] = '.';
+            }
+        }
     }
 
     false
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
 
-    if n == 2 {
+    if n <= 2 {
         println!("-1");
         return;
     }
 
-    if n == 3 {
-        println!("aa.");
-        println!("..b");
-        println!("..b");
-        return;
-    }
+    let ans = if n == 3 {
+        let mut ans = vec![vec!['.'; n]; n];
+        let ok = dfs(n, &mut ans, 0, 0, None);
+        assert!(ok);
+        ans
+    } else {
+        let mut ans4 = vec![vec!['.'; 4]; 4];
+        let ok = dfs(4, &mut ans4, 0, 0, Some(3));
+        assert!(ok);
+        let ans4 = &ans4;
 
-    let r = vec![
-        vec!["aabc", "ddbc", "efgg", "efhh"],
-        vec!["..abc", "..abc", "ddeef", "ggh.f", "iihjj"],
-        vec!["...abc", "...abc", "ddee.f", "..gghf", "iij.h.", "kkj.ll"],
-        vec![
-            "....abc", "....abc", "....def", "....def", "gghh..i", "jjkk..i", "llmmnn.",
-        ],
-    ];
+        if n % 4 == 0 {
+            (0..n / 4)
+                .flat_map(|i| {
+                    (0..4).map(move |j| {
+                        repeat_n('.', i * 4)
+                            .chain(ans4[j].citer())
+                            .chain(repeat_n('.', n - i * 4 - 4))
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect::<Vec<_>>()
+        } else {
+            let r = n % 4 + 4;
+            let mut ansr = vec![vec!['.'; r]; r];
+            let ok = dfs(r, &mut ansr, 0, 0, Some(3));
+            assert!(ok);
 
-    for i in 0..n / 4 - 1 {
-        for j in 0..4 {
-            print!("{}", repeat(".").take(i * 4).join(""));
-            print!("{}", r[0][j]);
-            println!("{}", repeat(".").take(n - (i + 1) * 4).join(""));
+            (0..n / 4 - 1)
+                .flat_map(|i| {
+                    (0..4).map(move |j| {
+                        repeat_n('.', i * 4)
+                            .chain(ans4[j].citer())
+                            .chain(repeat('.'))
+                            .take(n)
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .chain((0..r).map(|i| {
+                    repeat_n('.', 4 * (n / 4 - 1))
+                        .chain(ansr[i].citer())
+                        .chain(repeat('.'))
+                        .take(n)
+                        .collect::<Vec<_>>()
+                }))
+                .collect::<Vec<_>>()
         }
-    }
-    for row in &r[n % 4] {
-        print!("{}", repeat(".").take(4 * (n / 4 - 1)).join(""));
-        println!("{}", row);
+    };
+
+    for row in ans {
+        println!("{}", row.citer().join(""));
     }
 }
