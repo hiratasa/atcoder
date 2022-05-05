@@ -368,22 +368,75 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
+#[allow(dead_code)]
+fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
+    let fact: Vec<_> = std::iter::once(Mod::one())
+        .chain((1..=n).scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        }))
+        .collect();
+    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
+        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
+        inv
+    });
+    let inv_fact: Vec<_> = inv
+        .iter()
+        .copied()
+        .scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        })
+        .collect();
+    (fact, inv, inv_fact)
+}
+
 fn main() {
     type Mod = Mod998244353;
 
-    let n = read::<usize>();
-    let a = read_row::<usize>();
+    let (n, m) = read_tuple!(usize, usize);
 
-    let ans = a
-        .citer()
-        .sorted()
-        .scan(Mod::zero(), |t, x| {
-            let z = (*t + x) * x;
-            *t = *t * 2 + x;
+    if n == 1 {
+        println!("{}", m);
+        return;
+    }
 
-            Some(z)
-        })
-        .sum::<Mod>();
+    let (fact, _, inv_fact) = generate_fact(n + 100);
+
+    let combi = |a: usize, b: usize| {
+        if a < b {
+            Mod::zero()
+        } else {
+            fact[a] * inv_fact[b] * inv_fact[a - b]
+        }
+    };
+
+    let prime_factors = (2..=m).fold(vec![None; m + 1], |mut f, x| {
+        if f[x].is_none() {
+            (1..).map(|i| i * x).take_while(|&i| i <= m).for_each(|i| {
+                f[i] = Some(x);
+            });
+        }
+
+        f
+    });
+
+    let t = once(Mod::zero())
+        .chain((1..=m).map(|i| {
+            successors(prime_factors[i].map(|p| (i, p)), |&(x, p)| {
+                prime_factors[x / p].map(|q| (x / p, q))
+            })
+            .map(|(_, p)| p)
+            .group_by(|&p| p)
+            .into_iter()
+            .map(|(p, it)| (p, it.count()))
+            .map(|(_p, k)| combi(n + k - 2, n - 2))
+            .product::<Mod>()
+        }))
+        .cumsum::<Mod>()
+        .collect::<Vec<_>>();
+
+    let ans = (1..=m).map(|i| t[m / i]).sum::<Mod>();
 
     println!("{}", ans);
 }

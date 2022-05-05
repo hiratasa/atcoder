@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -152,6 +163,7 @@ use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
     let mut y = 1;
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;
@@ -177,10 +189,14 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
+define_static_mod!(2013265921, Modulus2013265921, Mod2013265921);
+define_static_mod!(1811939329, Modulus1811939329, Mod1811939329);
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
 #[allow(dead_code)]
 impl<M: Modulus> Mod<M> {
     pub fn modulus() -> usize {
@@ -228,10 +244,11 @@ impl<M> std::fmt::Debug for Mod<M> {
 }
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::From<T>,
+    usize: std::convert::TryFrom<T>,
 {
     fn from(v: T) -> Self {
-        Mod::new(usize::from(v))
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
 impl<M: Modulus> std::str::FromStr for Mod<M> {
@@ -374,32 +391,44 @@ fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>
     (fact, inv, inv_fact)
 }
 
-fn main() {
-    type Mod = Mod998244353;
-    const B: usize = 12;
+fn solve(
+    n: usize,
+    m: usize,
+    fact: &[Mod998244353],
+    inv_fact: &[Mod998244353],
+    memo: &mut FxHashMap<usize, Mod998244353>,
+) -> Mod998244353 {
+    if let Some(&r) = memo.get(&m) {
+        return r;
+    }
 
-    let (n, m) = read_tuple!(usize, usize);
+    if m == 0 {
+        return Mod::one();
+    }
 
     if m % 2 > 0 {
-        println!("0");
-        return;
+        return Mod::zero();
     }
+
+    let r = (0..=n)
+        .step_by(2)
+        .take_while(|&i| i <= m)
+        .map(|i| {
+            fact[n] * inv_fact[i] * inv_fact[n - i] * solve(n, (m - i) / 2, fact, inv_fact, memo)
+        })
+        .sum();
+
+    memo.insert(m, r);
+
+    r
+}
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
 
     let (fact, _, inv_fact) = generate_fact(n);
 
-    let ans = (0..=B).fold(vvec![Mod::one(); Mod::zero(); m/2 + 1], |prev, i| {
-        (0..=m / 2)
-            .map(|j| {
-                (0..)
-                    .map(|k| 2 * k)
-                    .take_while(|&k| k <= n)
-                    .map(|k| (k, k * (1 << i)))
-                    .take_while(|&(_k, l)| l / 2 <= j)
-                    .map(|(k, l)| prev[j - l / 2] * fact[n] * inv_fact[k] * inv_fact[n - k])
-                    .sum::<Mod>()
-            })
-            .collect::<Vec<_>>()
-    })[m / 2];
+    let ans = solve(n, m, &fact, &inv_fact, &mut FxHashMap::default());
 
     println!("{}", ans);
 }

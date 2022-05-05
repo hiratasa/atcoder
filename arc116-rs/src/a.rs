@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -149,17 +160,21 @@ where
 }
 
 fn main() {
-    let t: usize = read();
+    let t = read::<usize>();
+    let query = read_col::<usize>(t);
 
-    let c = read_vec(t, || read::<usize>());
-
-    for cc in c {
-        if cc % 4 == 0 {
-            println!("Even");
-        } else if cc % 2 == 0 {
-            println!("Same");
-        } else {
-            println!("Odd");
-        }
-    }
+    query
+        .citer()
+        .map(|n| {
+            if n % 4 == 0 {
+                "Even"
+            } else if n % 2 == 0 {
+                "Same"
+            } else {
+                "Odd"
+            }
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
 }
