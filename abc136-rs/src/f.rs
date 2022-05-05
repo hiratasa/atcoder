@@ -14,7 +14,11 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -33,6 +37,49 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -63,6 +110,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -88,97 +143,199 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-const M: usize = 998244353;
-
-#[derive(Clone, Copy, Debug)]
-struct Mod(usize);
-#[allow(dead_code)]
-impl Mod {
-    fn new(n: usize) -> Self {
-        Mod(n % M)
-    }
-    fn zero() -> Self {
-        Mod::new(0)
-    }
-    fn one() -> Self {
-        Mod::new(1)
-    }
-    fn pow(self, p: usize) -> Self {
-        if p == 0 {
-            Mod::new(1)
-        } else if p == 1 {
-            self
-        } else {
-            let r = self.pow(p / 2);
-            if p % 2 == 0 {
-                r * r
-            } else {
-                r * r * self
-            }
-        }
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
     }
 }
-impl std::fmt::Display for Mod {
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+use num::{One, Zero};
+#[allow(dead_code)]
+pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
+    let mut y = 1;
+    x = x % m;
+    while p > 0 {
+        if p & 1 > 0 {
+            y = y * x % m;
+        }
+        x = x * x % m;
+        p >>= 1;
+    }
+    y
+}
+pub trait Modulus: Copy + Eq {
+    fn modulus() -> usize;
+}
+macro_rules! define_static_mod {
+    ($ m : expr , $ modulus : ident , $ mod : ident ) => {
+        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        pub struct $modulus();
+        impl Modulus for $modulus {
+            fn modulus() -> usize {
+                $m
+            }
+        }
+        #[allow(dead_code)]
+        pub type $mod = Mod<$modulus>;
+    };
+}
+define_static_mod!(2013265921, Modulus2013265921, Mod2013265921);
+define_static_mod!(1811939329, Modulus1811939329, Mod1811939329);
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
+define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
+define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
+#[allow(dead_code)]
+impl<M: Modulus> Mod<M> {
+    pub fn modulus() -> usize {
+        M::modulus()
+    }
+    pub fn new(n: usize) -> Self {
+        Mod(n % M::modulus(), std::marker::PhantomData)
+    }
+    pub fn pow(self, p: usize) -> Self {
+        Mod::new(pow_mod(self.0, p, M::modulus()))
+    }
+    pub fn inv(self) -> Self {
+        let (_zero, g, _u, v) = std::iter::successors(
+            Some((self.0 as i64, M::modulus() as i64, 1, 0)),
+            |&(a, b, u, v)| {
+                if a == 0 {
+                    None
+                } else {
+                    Some((b % a, a, -u * (b / a) + v, u))
+                }
+            },
+        )
+        .last()
+        .unwrap();
+        assert_eq!(
+            g,
+            1,
+            "gcd({}, {}) must be 1 but {}.",
+            self.0,
+            M::modulus(),
+            g
+        );
+        Mod::new((v + M::modulus() as i64) as usize)
+    }
+}
+impl<M> std::fmt::Display for Mod<M> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
-impl std::str::FromStr for Mod {
+impl<M> std::fmt::Debug for Mod<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+impl<T, M: Modulus> std::convert::From<T> for Mod<M>
+where
+    usize: std::convert::TryFrom<T>,
+{
+    fn from(v: T) -> Self {
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
+    }
+}
+impl<M: Modulus> std::str::FromStr for Mod<M> {
     type Err = <usize as std::str::FromStr>::Err;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         usize::from_str(s).map(|n| Mod::new(n))
     }
 }
-impl std::ops::Add for Mod {
+impl<M: Modulus> std::ops::Neg for Mod<M> {
     type Output = Self;
-    fn add(self, rhs: Mod) -> Self {
-        Mod::new(self.0 + rhs.0)
+    fn neg(self) -> Self {
+        Mod::new(M::modulus() - self.0)
     }
 }
-impl std::ops::AddAssign for Mod {
-    fn add_assign(&mut self, rhs: Mod) {
+impl<T, M: Modulus> std::ops::Add<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    type Output = Self;
+    fn add(self, rhs: T) -> Self {
+        Mod::new(self.0 + rhs.into().0)
+    }
+}
+impl<T, M: Modulus> std::ops::AddAssign<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    fn add_assign(&mut self, rhs: T) {
         *self = *self + rhs;
     }
 }
-impl std::ops::Sub for Mod {
+impl<T, M: Modulus> std::ops::Sub<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
     type Output = Self;
-    fn sub(self, rhs: Mod) -> Self {
-        Mod::new(self.0 + M - rhs.0)
+    fn sub(self, rhs: T) -> Self {
+        Mod::new(self.0 + M::modulus() - rhs.into().0)
     }
 }
-impl std::ops::SubAssign for Mod {
-    fn sub_assign(&mut self, rhs: Mod) {
+impl<T, M: Modulus> std::ops::SubAssign<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    fn sub_assign(&mut self, rhs: T) {
         *self = *self - rhs;
     }
 }
-impl std::ops::Mul for Mod {
+impl<T, M: Modulus> std::ops::Mul<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
     type Output = Self;
-    fn mul(self, rhs: Mod) -> Self {
-        Mod::new(self.0 * rhs.0)
+    fn mul(self, rhs: T) -> Self {
+        Mod::new(self.0 * rhs.into().0)
     }
 }
-impl std::ops::MulAssign for Mod {
-    fn mul_assign(&mut self, rhs: Mod) {
+impl<T, M: Modulus> std::ops::MulAssign<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    fn mul_assign(&mut self, rhs: T) {
         *self = *self * rhs;
     }
 }
-impl std::ops::Div for Mod {
+impl<T, M: Modulus> std::ops::Div<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
     type Output = Self;
-    fn div(self, rhs: Mod) -> Self {
+    fn div(self, rhs: T) -> Self {
         if self.0 == 0 {
             self
         } else {
-            assert!(rhs.0 != 0);
-            self * rhs.pow(M - 2)
+            self * rhs.into().inv()
         }
     }
 }
-impl std::ops::DivAssign for Mod {
-    fn div_assign(&mut self, rhs: Mod) {
+impl<T, M: Modulus> std::ops::DivAssign<T> for Mod<M>
+where
+    T: std::convert::Into<Mod<M>>,
+{
+    fn div_assign(&mut self, rhs: T) {
         *self = *self / rhs;
     }
 }
-impl std::iter::Product for Mod {
+impl<M: Modulus> std::iter::Product for Mod<M> {
     fn product<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -186,7 +343,7 @@ impl std::iter::Product for Mod {
         iter.fold(Mod::one(), |p, a| p * a)
     }
 }
-impl std::iter::Sum for Mod {
+impl<M: Modulus> std::iter::Sum for Mod<M> {
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -194,53 +351,86 @@ impl std::iter::Sum for Mod {
         iter.fold(Mod::zero(), |p, a| p + a)
     }
 }
+impl<M: Modulus> num::Zero for Mod<M> {
+    fn zero() -> Self {
+        Mod::new(0)
+    }
+    fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+}
+impl<M: Modulus> num::One for Mod<M> {
+    fn one() -> Self {
+        Mod::new(1)
+    }
+    fn is_one(&self) -> bool {
+        self.0 == 1
+    }
+}
 
-struct BIT<T> {
+trait Monoid {
+    type Item: Clone;
+
+    fn id() -> Self::Item;
+    fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
+}
+
+//  1-indexedで、
+//    iの最後に立っているビットをB（=i&-i)として、
+//    values_iは [i - (i&-i) + 1, i] の区間の和を保持
+//    (といいつつ0-indexにアクセスする箇所で直してる)
+// M must be commutative.
+struct BIT<M>
+where
+    M: Monoid,
+{
     len: usize,
-    values: Vec<T>,
+    values: Vec<M::Item>,
 }
 
 #[allow(dead_code)]
-impl<T> BIT<T>
+impl<M> BIT<M>
 where
-    T: std::default::Default
-        + std::clone::Clone
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>,
+    M: Monoid,
 {
-    fn new(len: usize) -> BIT<T> {
+    fn new(len: usize) -> BIT<M> {
         BIT {
             len,
-            values: vec![T::default(); len],
+            values: vec![M::id(); len],
         }
     }
 
+    fn with(vals: &Vec<M::Item>) -> Self {
+        let mut bit = Self::new(vals.len());
+
+        for (i, v) in vals.iter().enumerate() {
+            bit.add(i, v.clone());
+        }
+
+        bit
+    }
+
     // [0, i)の和
-    fn sum(&self, i: usize) -> T {
-        let mut s = T::default();
+    fn sum(&self, i: usize) -> M::Item {
+        let mut s = M::id();
         let mut idx = i as i64;
 
         // values[1] ~ values[i] の和
         // (bは1-indexedなのでこれでOK)
         while idx > 0 {
-            s = s + self.values[(idx - 1) as usize].clone();
+            s = M::op(&s, &self.values[(idx - 1) as usize]);
             idx -= idx & -idx;
         }
 
         return s;
     }
 
-    // [i, j) の和
-    fn sum_between(&self, i: usize, j: usize) -> T {
-        self.sum(j) - self.sum(i)
-    }
-
-    fn add(&mut self, i: usize, a: T) {
+    fn add(&mut self, i: usize, a: M::Item) {
         // 1-indexedに直す
         let mut idx = i as i64 + 1;
 
         while idx as usize <= self.len {
-            self.values[(idx - 1) as usize] = self.values[(idx - 1) as usize].clone() + a.clone();
+            self.values[(idx - 1) as usize] = M::op(&self.values[(idx - 1) as usize], &a);
             idx += idx & -idx;
         }
     }
@@ -250,52 +440,95 @@ where
     }
 }
 
-fn main() {
-    let n: usize = read();
+// 可換群
+trait Group: Monoid {
+    fn inv(value: &Self::Item) -> Self::Item;
+}
 
+#[allow(dead_code)]
+impl<M> BIT<M>
+where
+    M: Group,
+{
+    // [i, j) の和
+    fn sum_between(&self, i: usize, j: usize) -> M::Item {
+        M::op(&self.sum(j), &M::inv(&self.sum(i)))
+    }
+}
+
+macro_rules! define_monoid {
+    ($name: ident, $t: ty, $id: expr, $op: expr) => {
+        struct $name;
+
+        impl Monoid for $name {
+            type Item = $t;
+
+            fn id() -> Self::Item {
+                $id
+            }
+
+            fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item {
+                ($op)(*lhs, *rhs)
+            }
+        }
+    };
+}
+
+define_monoid!(Sum, usize, 0, std::ops::Add::add);
+
+fn main() {
+    type Mod = Mod998244353;
+
+    let n = read::<usize>();
     let xy = read_vec(n, || read_tuple!(i64, i64));
 
-    let xs = (0..n).sorted_by_key(|&i| xy[i].0).collect_vec();
-    let xidxs = xs
-        .iter()
-        .copied()
-        .enumerate()
-        .fold(vec![0; n], |mut xidxs, (xidx, i)| {
-            xidxs[i] = xidx;
-            xidxs
-        });
-    let ys = (0..n).sorted_by_key(|&i| xy[i].1).collect_vec();
-    let yidxs = ys
-        .iter()
-        .copied()
-        .enumerate()
-        .fold(vec![0; n], |mut yidxs, (yidx, i)| {
-            yidxs[i] = yidx;
-            yidxs
-        });
-    let two = Mod::new(2);
-    let ans = ys
-        .iter()
-        .copied()
-        .scan(BIT::new(n), |bit, i| {
-            bit.add(xidxs[i], 1usize);
-            let k = bit.sum(xidxs[i]);
+    let xs = xy.citer().map(|(x, _)| x).sorted().collect::<Vec<_>>();
+    let ys = xy.citer().map(|(_, y)| y).sorted().collect::<Vec<_>>();
 
-            // subset including i
-            let p0 = two.pow(n - 1);
-            // subset not including i, but whose bounding box including i
-            let p1 = two.pow(n - 1)
-                - two.pow(xidxs[i])
-                - two.pow(n - xidxs[i] - 1)
-                - two.pow(yidxs[i])
-                - two.pow(n - yidxs[i] - 1)
-                + two.pow(k)
-                + two.pow(yidxs[i] - k)
-                + two.pow(xidxs[i] - k)
-                + two.pow(n + k - xidxs[i] - yidxs[i] - 1)
-                - Mod::one();
-            Some(p0 + p1)
+    let xidxs = xs
+        .citer()
+        .enumerate()
+        .map(|(i, x)| (x, i))
+        .collect::<FxHashMap<_, _>>();
+    let yidxs = ys
+        .citer()
+        .enumerate()
+        .map(|(i, x)| (x, i))
+        .collect::<FxHashMap<_, _>>();
+
+    let ans = xy
+        .citer()
+        .sorted()
+        .scan(BIT::<Sum>::new(n), |st, (x, y)| {
+            let xidx = xidxs[&x];
+            let yidx = yidxs[&y];
+
+            let lower = yidx;
+            let upper = n - yidx - 1;
+            let left = xidx;
+            let right = n - xidx - 1;
+
+            let lowerleft = st.sum(yidx);
+            let lowerright = lower - lowerleft;
+            let upperleft = left - lowerleft;
+            let upperright = upper - upperleft;
+
+            st.add(yidx, 1);
+
+            Some(
+                Mod::new(2).pow(n)
+        - Mod::new(2).pow(lower)
+        - Mod::new(2).pow(upper)
+        - Mod::new(2).pow(left)
+        - Mod::new(2).pow(right)
+        + Mod::new(2).pow(lowerleft)
+        + Mod::new(2).pow(lowerright)
+        + Mod::new(2).pow(upperleft)
+        + Mod::new(2).pow(upperright)
+        - /* empty */ Mod::one(),
+            )
         })
         .sum::<Mod>();
+
     println!("{}", ans);
 }

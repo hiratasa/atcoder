@@ -37,3 +37,7 @@ path = "src/e.rs"
 [[bin]]
 name = "caddi2018-f"
 path = "src/f.rs"
+
+[[bin]]
+name = "caddi2018-c2"
+path = "src/c2.rs"

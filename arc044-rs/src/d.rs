@@ -14,7 +14,11 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -33,6 +37,49 @@ macro_rules! vvec {
 
         v
     }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
 }
 
 #[allow(unused_macros)]
@@ -63,6 +110,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -88,84 +143,55 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-trait IteratorExt: Iterator + Sized {
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(Self::Item) -> (usize, T);
-
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T);
-}
-
-impl<I> IteratorExt for I
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
-    I: Iterator,
+    T: 'a + Copy,
 {
-    fn fold_vec<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(item);
-            v[idx] = t;
-            v
-        })
-    }
-
-    fn fold_vec2<T, F>(self: Self, init: Vec<T>, mut f: F) -> Vec<T>
-    where
-        F: FnMut(&Vec<T>, Self::Item) -> (usize, T),
-    {
-        self.fold(init, |mut v, item| {
-            let (idx, t) = f(&v, item);
-            v[idx] = t;
-            v
-        })
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
     }
 }
 
-trait IteratorCharExt: Iterator + Sized {
-    fn to_string(self: Self) -> String;
-}
-
-impl<I, T> IteratorCharExt for I
+impl<'a, T, I> IterCopyExt<'a, T> for I
 where
-    I: Iterator<Item = T>,
-    T: std::convert::TryInto<u8>,
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
 {
-    fn to_string(self: Self) -> String {
-        self.map(|t| t.try_into().ok().unwrap() as char).collect()
-    }
 }
 
 fn main() {
-    let n: usize = read();
-
+    let n = read::<usize>();
     let a = read_row::<usize>();
 
-    let r = a
-        .iter()
-        .copied()
+    let rank = a
+        .citer()
         .enumerate()
-        .fold_vec(vec![0; n + 1], |(i, aa)| (aa - 1, i + 1));
-
-    let ans = a
-        .iter()
-        .copied()
-        .map(|aa| aa - 1)
-        .tuple_windows()
-        .fold_vec2(vec![0; n], |v, (prev, aa)| {
-            if r[prev + 1] < r[aa + 1] {
-                (aa, v[prev])
-            } else {
-                (aa, v[prev] + 1)
-            }
+        .fold(vec![0; n + 2], |mut rank, (i, x)| {
+            rank[x - 1] = i + 1;
+            rank
         });
-    if ans[a.last().unwrap() - 1] >= 26 {
-        println!("-1");
+
+    if let Some(ans) = once(n)
+        .chain(a.citer().map(|x| x - 1))
+        .tuple_windows()
+        .scan(0, |c, (x, y)| {
+            if rank[x + 1] > rank[y + 1] {
+                *c += 1;
+            }
+
+            Some((y, *c))
+        })
+        .try_fold(vec!['#'; n], |mut ans, (idx, c)| {
+            if c + 'A' as usize <= 'Z' as usize {
+                ans[idx] = (c + 'A' as usize) as u8 as char;
+                Some(ans)
+            } else {
+                None
+            }
+        })
+    {
+        println!("{}", ans.citer().join(""));
     } else {
-        let s = ans.iter().copied().map(|aa| aa + b'A' as usize).to_string();
-        println!("{}", s);
+        println!("-1");
     }
 }

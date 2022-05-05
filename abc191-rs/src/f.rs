@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -148,52 +159,57 @@ where
 {
 }
 
-fn gcd(a: usize, b: usize) -> usize {
-    if a == 0 {
-        b
+fn gcd(x: usize, y: usize) -> usize {
+    if x == 0 {
+        y
     } else {
-        gcd(b % a, a)
+        gcd(y % x, x)
     }
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
     let a = read_row::<usize>();
+    let mi = a.citer().min().unwrap();
 
-    let b = a
+    let ans = a
         .citer()
-        .flat_map(|aa| {
-            let aa0 = aa;
-            let mut factors = vec![];
-            for i in 1.. {
-                if i * i > aa {
-                    break;
-                }
-                if aa % i == 0 {
-                    factors.push(i);
-                    if i != aa / i {
-                        factors.push(aa / i);
-                    }
-                }
-            }
+        .scan(FxHashMap::default(), |map, x| {
+            Some(
+                (1..)
+                    .take_while(|&i| i * i <= x && i <= mi)
+                    .filter(|&i| x % i == 0)
+                    .flat_map(|i| it![i, x / i])
+                    .dedup()
+                    .filter(|&d| d <= mi)
+                    .map(|d| {
+                        if let Some(&g) = map.get(&d) {
+                            if g != 1 {
+                                let gg = gcd(g, x / d);
+                                map.insert(d, gg);
 
-            factors.into_iter().map(move |f| (f, aa0))
+                                if gg == 1 {
+                                    1
+                                } else {
+                                    0
+                                }
+                            } else {
+                                0
+                            }
+                        } else {
+                            map.insert(d, x / d);
+
+                            if x / d == 1 {
+                                1
+                            } else {
+                                0
+                            }
+                        }
+                    })
+                    .sum::<usize>(),
+            )
         })
-        .fold(FxHashMap::default(), |mut map, (f, aa)| {
-            map.entry(f).or_insert(vec![]).push(aa);
-            map
-        });
-    let m = a.citer().min().unwrap();
-    // eprintln!("{:?}", b);
+        .sum::<usize>();
 
-    let ans = b
-        .iter()
-        .filter(|t| *t.0 <= m)
-        .filter(|(f, v)| {
-            let g = v.citer().skip(1).fold(v[0], |g, vv| gcd(g, vv));
-
-            **f == g
-        })
-        .count();
     println!("{}", ans);
 }
