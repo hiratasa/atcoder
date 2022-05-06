@@ -1,21 +1,28 @@
 #[allow(unused_imports)]
-use bitset_fixed::BitSet;
-#[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
-use std::io::*;
+use std::io;
+#[allow(unused_imports)]
+use std::iter::*;
 #[allow(unused_imports)]
 use std::mem::*;
 #[allow(unused_imports)]
 use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
+
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -33,10 +40,53 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! read_tuple {
     ($($t:ty),+) => {{
         let mut line = String::new();
-        stdin().read_line(&mut line).unwrap();
+        io::stdin().read_line(&mut line).unwrap();
 
         let mut it = line.trim()
             .split_whitespace();
@@ -50,7 +100,7 @@ macro_rules! read_tuple {
 #[allow(dead_code)]
 fn read<T: FromStr>() -> T {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
     line.trim().to_string().parse().ok().unwrap()
 }
 
@@ -60,9 +110,17 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
 
     line.trim()
         .split_whitespace()
@@ -85,60 +143,32 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-trait IteratorDpExt: Iterator + Sized {
-    fn dp<T, F: FnMut(&Vec<T>, Self::Item) -> T>(self, init: Vec<T>, mut f: F) -> Vec<T> {
-        self.fold(init, |mut dp, item| {
-            let next = f(&dp, item);
-            dp.push(next);
-            dp
-        })
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
     }
 }
 
-impl<I> IteratorDpExt for I where I: Iterator + Sized {}
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
 
 fn main() {
     let (a, b, x, y) = read_tuple!(usize, usize, usize, usize);
-    let a = a - 1;
-    let b = b - 1;
 
-    let mut costs = vec![std::usize::MAX; 200];
-    let mut q = BinaryHeap::new();
-    costs[a] = 0;
-    q.push(std::cmp::Reverse((0, a)));
+    let y = min(y, 2 * x);
 
-    while let Some(std::cmp::Reverse((cost, v))) = q.pop() {
-        if v == 100 + b {
-            println!("{}", cost);
-            return;
-        }
+    let ans = if a >= b + 1 {
+        x + y * (a - 1 - b)
+    } else {
+        x + y * (b - a)
+    };
 
-        let mut edges = vec![];
-        if v < 100 {
-            if v > 0 {
-                edges.push((100 + v - 1, x));
-                edges.push((v - 1, y));
-            }
-            edges.push((100 + v, x));
-            if v < 99 {
-                edges.push((v + 1, y));
-            }
-        } else {
-            if v > 100 {
-                edges.push((v - 1, y));
-            }
-            edges.push((v - 100, x));
-            if v < 199 {
-                edges.push((v + 1 - 100, x));
-                edges.push((v + 1, y));
-            }
-        }
-
-        for (u, edge_cost) in edges {
-            if cost + edge_cost < costs[u] {
-                costs[u] = cost + edge_cost;
-                q.push(std::cmp::Reverse((cost + edge_cost, u)));
-            }
-        }
-    }
+    println!("{}", ans);
 }

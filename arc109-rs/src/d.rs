@@ -1,21 +1,28 @@
 #[allow(unused_imports)]
-use bitset_fixed::BitSet;
-#[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
-use std::io::*;
+use std::io;
+#[allow(unused_imports)]
+use std::iter::*;
 #[allow(unused_imports)]
 use std::mem::*;
 #[allow(unused_imports)]
 use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
+
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -33,10 +40,53 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! read_tuple {
     ($($t:ty),+) => {{
         let mut line = String::new();
-        stdin().read_line(&mut line).unwrap();
+        io::stdin().read_line(&mut line).unwrap();
 
         let mut it = line.trim()
             .split_whitespace();
@@ -50,7 +100,7 @@ macro_rules! read_tuple {
 #[allow(dead_code)]
 fn read<T: FromStr>() -> T {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
     line.trim().to_string().parse().ok().unwrap()
 }
 
@@ -60,9 +110,17 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+    io::stdin().read_line(&mut line).unwrap();
 
     line.trim()
         .split_whitespace()
@@ -85,139 +143,100 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
-trait IteratorDpExt: Iterator + Sized {
-    fn dp<T, F: FnMut(&Vec<T>, Self::Item) -> T>(self, init: Vec<T>, mut f: F) -> Vec<T> {
-        self.fold(init, |mut dp, item| {
-            let next = f(&dp, item);
-            dp.push(next);
-            dp
-        })
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
     }
 }
 
-impl<I> IteratorDpExt for I where I: Iterator + Sized {}
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
 
-fn solve(ax: i64, ay: i64, bx: i64, by: i64, cx: i64, cy: i64) -> i64 {
-    let count_x = |x: i64| [ax, bx, cx].iter().filter(|&xx| *xx == x).count() as i64;
-    let count_y = |y: i64| [ay, by, cy].iter().filter(|&yy| *yy == y).count() as i64;
-    let count_xy = |x: i64, y: i64| {
-        [(ax, ay), (bx, by), (cx, cy)]
-            .iter()
-            .filter(|&&(xx, yy)| xx == x && yy == y)
-            .count() as i64
+fn calc(i: i64, j: i64) -> usize {
+    let dist = |x: i64| {
+        if x % 3 == 0 {
+            usize::MAX
+        } else if x >= 0 {
+            (x / 3 * 2 + x % 3 - 1) as usize
+        } else {
+            let xx = x.abs();
+            (xx / 3 * 2 + xx % 3) as usize
+        }
     };
 
-    let mx = min(ax, min(bx, cx));
-    let my = min(ay, min(by, cy));
-
-    if mx < 0 {
-        let mx = -(mx + 1);
-        if my < 0 {
-            let my = -(my + 1);
-            if mx == 0 && my == 0 {
-                count_xy(-1, 0) + count_xy(0, -1) + count_xy(-1, -1)
-            } else if mx == my {
-                2 + 2 * mx + 1 - count_xy(-mx, -my)
-            } else if mx < my {
-                2 + 2 * mx + 2 * (my - mx) - 2 + count_y(-my - 1)
-            } else {
-                2 + 2 * my + 2 * (mx - my) - 2 + count_x(-mx - 1)
-            }
-        } else {
-            if mx == 0 && my == 0 {
-                count_x(-1)
-            } else if mx == my {
-                1 + 2 * mx + count_x(-mx - 1) - 1
-            } else if mx < my {
-                1 + 2 * mx + 2 * (my - mx) - 2 + count_y(my + 1)
-            } else {
-                1 + 2 * my + 2 * (mx - my) - 1 + count_x(-mx - 1)
-            }
-        }
+    if i == 1 && j == 1 {
+        0
+    } else if i == 2 && j == 2 {
+        1
+    } else if i == j {
+        max(dist(i), dist(j)).saturating_add(1)
     } else {
-        if my < 0 {
-            let my = -(my + 1);
-            if mx == 0 && my == 0 {
-                count_y(-1)
-            } else if mx == my {
-                1 + 2 * mx + count_y(-my - 1) - 1
-            } else if mx < my {
-                1 + 2 * mx + 2 * (my - mx) - 1 + count_y(-my - 1)
+        max(dist(i), dist(j))
+    }
+}
+
+// 検証用
+#[allow(dead_code)]
+fn check0() {
+    const N: usize = 20;
+
+    let mut costs = vec![vec![usize::MAX; 2 * N + 1]; 2 * N + 1];
+    let mut q = VecDeque::new();
+
+    costs[N + 1][N + 1] = 0;
+    q.push_back((N + 1, N + 1));
+
+    while let Some((i, j)) = q.pop_front() {
+        iproduct!(-2i32..=2, -2i32..=2)
+            .filter(|&(di, dj)| di.abs() + dj.abs() <= 3 && ((di + 3) % 3, (dj + 3) % 3) != (0, 0))
+            .map(|(di, dj)| ((i as i32 + di) as usize, (j as i32 + dj) as usize))
+            .filter(|&(ni, nj)| ni < 2 * N + 1 && nj < 2 * N + 1)
+            .filter(|&(ni, nj)| ni % 3 != N % 3 && nj % 3 != N % 3)
+            .for_each(|(ni, nj)| {
+                if costs[i][j] + 1 < costs[ni][nj] {
+                    costs[ni][nj] = costs[i][j] + 1;
+                    q.push_back((ni, nj));
+                }
+            });
+    }
+
+    for i in (0..2 * N + 1).rev() {
+        for j in 0..2 * N + 1 {
+            let expected = calc(i as i64 - N as i64, j as i64 - N as i64);
+
+            assert_eq!(
+                costs[i][j],
+                expected,
+                "{} {}",
+                i as i32 - N as i32,
+                j as i32 - N as i32
+            );
+
+            if costs[i][j] == usize::MAX {
+                print!("__ ");
             } else {
-                1 + 2 * my + 2 * (mx - my) - 2 + count_x(mx + 1)
-            }
-        } else {
-            if mx == 0 && my == 0 {
-                count_xy(mx + 1, my + 1)
-            } else if mx == my {
-                2 * mx + 2 - count_xy(mx, my)
-            } else if mx < my {
-                2 * mx + 1 + 2 * (my - mx) - 2 + count_y(my + 1)
-            } else {
-                2 * my + 1 + 2 * (mx - my) - 2 + count_x(mx + 1)
+                print!("{:>2} ", costs[i][j]);
             }
         }
+        println!();
     }
 }
 
 fn main() {
-    let t: usize = read();
+    let t = read::<usize>();
+    let query = read_vec(t, || read_tuple!(i64, i64, i64, i64, i64, i64));
 
-    for _ in 0..t {
-        let (ax, ay, bx, by, cx, cy) = read_tuple!(i64, i64, i64, i64, i64, i64);
-
-        let ans = solve(ax, ay, bx, by, cx, cy);
-        println!("{}", ans);
-    }
-}
-
-#[test]
-fn test() {
-    let correct_solve = |ax: i64, ay: i64, bx: i64, by: i64, cx: i64, cy: i64| {
-        let mut x = ax + bx + cx;
-        let mut y = ay + by + cy;
-
-        x = if x > 0 {
-            x - x / 3 - 1
-        } else {
-            x + (2 - x) / 3 - 1
-        };
-        y = if y > 0 {
-            y - y / 3 - 1
-        } else {
-            y + (2 - y) / 3 - 1
-        };
-        if x == 0 && y == 0 {
-            return 0;
-        }
-        if x == 1 && y == 1 {
-            return 1;
-        };
-        max(max(x, -x), max(y, -y)) + if x == y { 1 } else { 0 }
-    };
-
-    for ax in -10..=10 {
-        for ay in -10..=10 {
-            for &dx in &[-1, 1] {
-                for &dy in &[-1, 1] {
-                    let bx = ax + dx;
-                    let by = ay;
-                    let cx = ax;
-                    let cy = ay + dy;
-
-                    assert_eq!(
-                        solve(ax, ay, bx, by, cx, cy),
-                        correct_solve(ax, ay, bx, by, cx, cy),
-                        "{} {} {} {} {} {}",
-                        ax,
-                        ay,
-                        bx,
-                        by,
-                        cx,
-                        cy
-                    );
-                }
-            }
-        }
-    }
+    query
+        .citer()
+        .map(|(ax, ay, bx, by, cx, cy)| calc(ax + bx + cx, ay + by + cy))
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
 }
