@@ -1,13 +1,10 @@
 [package]
-name = "abc213-rs"
+name = "abc172-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[profile.release]
-debug = true
 
 [dependencies]
 num = "0.2.1"
@@ -21,37 +18,21 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "abc213-a"
+name = "abc172-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "abc213-b"
+name = "abc172-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "abc213-c"
+name = "abc172-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "abc213-d"
+name = "abc172-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "abc213-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "abc213-f"
+name = "abc172-f"
 path = "src/f.rs"
-
-[[bin]]
-name = "abc213-g"
-path = "src/g.rs"
-
-[[bin]]
-name = "abc213-h"
-path = "src/h.rs"
-
-[[bin]]
-name = "abc213-f2"
-path = "src/f2.rs"
