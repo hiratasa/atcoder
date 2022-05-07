@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -149,39 +160,47 @@ where
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
     let a = read_row::<usize>();
 
-    let x = a.citer().fold(0, |x, aa| x ^ aa);
+    let x = a.citer().fold(0, |x, y| x ^ y);
 
-    let b = a.citer().map(|aa| aa & !x).collect::<Vec<_>>();
+    let basis = a
+        .citer()
+        .map(|b| b & !x)
+        .fold(vec![], |mut basis: Vec<usize>, b| {
+            let b = basis.citer().fold(b, |b, c| {
+                let idx = (c + 1).next_power_of_two().trailing_zeros() - 1;
 
-    let c = (0..60)
-        .rev()
-        .fold((b, 0), |(mut b, y), i| {
-            let idx = if let Some(idx) = b.citer().position(|bb| (bb >> i) & 1 > 0) {
-                idx
-            } else {
-                return (b, y);
-            };
+                if b & (1 << idx) > 0 {
+                    b ^ c
+                } else {
+                    b
+                }
+            });
 
-            let l = b.len();
-            b.swap(idx, l - 1);
-            let b0 = b[l - 1];
-            b.pop();
-
-            b.iter_mut()
-                .filter(|bb| (**bb >> i) & 1 > 0)
-                .for_each(|bb| *bb ^= b0);
-
-            if (y >> i) & 1 > 0 {
-                (b, y)
-            } else {
-                (b, y ^ b0)
+            if b != 0 {
+                let idx = basis
+                    .binary_search_by_key(&Reverse(b), |&c| Reverse(c))
+                    .unwrap_err();
+                basis.insert(idx, b);
             }
-        })
-        .1;
 
-    let ans = 2 * c + x;
+            basis
+        });
+
+    let y = basis.citer().fold(0, |y, b| {
+        let idx = (b + 1).next_power_of_two().trailing_zeros() - 1;
+
+        assert!(x & (1 << idx) == 0);
+        if y & (1 << idx) == 0 {
+            y ^ b
+        } else {
+            y
+        }
+    });
+
+    let ans = x + (y << 1);
+
     println!("{}", ans);
 }
