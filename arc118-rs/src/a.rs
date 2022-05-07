@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -150,22 +161,16 @@ where
 
 fn main() {
     let (t, n) = read_tuple!(usize, usize);
-    let n = n - 1;
 
-    let b = (0..=100)
-        .map(|x| (100 + t) * x / 100)
-        .tuple_windows()
-        .map(|(x, y)| y - x - 1)
-        .sum::<usize>();
+    let exist = (0..100)
+        .map(|r| (100 + t) * r / 100)
+        .collect::<FxHashSet<_>>();
+    let unexist = (0..100 + t)
+        .filter(|&x| !exist.contains(&x))
+        .collect::<Vec<_>>();
+    let m = unexist.len();
 
-    let c = n / b;
-    // eprintln!("{}", c);
+    let ans = (n - 1) / m * (100 + t) + unexist[(n - 1) % m];
 
-    let ans = (c * 100..)
-        .map(|x| (100 + t) * x / 100)
-        .tuple_windows()
-        .flat_map(|(x, y)| (x + 1..y))
-        .nth(n % b)
-        .unwrap();
     println!("{}", ans);
 }

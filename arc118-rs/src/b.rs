@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -188,36 +199,42 @@ where
 }
 
 fn main() {
-    let (k, n, m) = read_tuple!(i64, i64, i64);
-
+    let (k, n, m) = read_tuple!(usize, i64, i64);
     let a = read_row::<i64>();
 
-    let t = lower_bound_int(0, n * m, |t| {
-        // |b_i/m - a_i/n| を全て t/nm 以下にできるか
-        let lower_sum = a.citer().map(|aa| (-t + aa * m + n - 1) / n).sum::<i64>();
-        let upper_sum = a.citer().map(|aa| (t + aa * m) / n).sum::<i64>();
+    let r = lower_bound_int(0i64, n * m, |r| {
+        let lower = a
+            .citer()
+            .map(|x| max(0, min(m, (-r + m * x + n - 1).div_euclid(n))))
+            .sum::<i64>();
+        let upper = a
+            .citer()
+            .map(|x| max(0, min(m, (r + m * x) / n)))
+            .sum::<i64>();
 
-        // eprintln!("{} {} {}", t, lower_sum, upper_sum);
-        if lower_sum <= m && m <= upper_sum {
+        if lower <= m && m <= upper {
             Ordering::Greater
         } else {
             Ordering::Less
         }
     });
-    // eprintln!("{}", t);
 
-    let lower_sum = a.citer().map(|aa| (-t + aa * m + n - 1) / n).sum::<i64>();
-
-    let ans = a
+    let lowers = a
         .citer()
-        .scan(lower_sum, |x, aa| {
-            let lower = (-t + aa * m + n - 1) / n;
-            let upper = (t + aa * m) / n;
+        .map(|x| max(0, min(m, (-r + m * x + n - 1).div_euclid(n))))
+        .collect::<Vec<_>>();
+    let uppers = a
+        .citer()
+        .map(|x| max(0, min(m, (r + m * x) / n)))
+        .collect::<Vec<_>>();
+    let s = lowers.citer().sum::<i64>();
 
-            let x0 = *x;
-            *x = min(*x + (upper - lower), m);
+    let ans = izip!(lowers, uppers)
+        .scan(s, |s, (l, u)| {
+            let x = min(u, l + (m - *s));
+            *s += x - l;
 
-            Some(*x - x0 + lower)
+            Some(x)
         })
         .collect::<Vec<_>>();
 

@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -148,4 +159,26 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+
+    if n == 3 {
+        println!("{} {} {}", 6, 10, 15);
+        return;
+    }
+
+    const M: usize = 10000;
+
+    let ans = (1..)
+        .map(|i| 6 * i)
+        .take_while(|&i| i <= M)
+        .chain((1..).map(|i| 10 * i).take_while(|&i| i <= M))
+        .chain((1..).map(|i| 15 * i).take_while(|&i| i <= M))
+        .sorted()
+        .dedup()
+        .take(n)
+        .collect::<Vec<_>>();
+    assert!(ans.len() == n);
+
+    println!("{}", ans.citer().join(" "));
+}
