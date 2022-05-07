@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -148,4 +159,61 @@ where
 {
 }
 
-fn main() {}
+fn dfs(n: usize, used: &mut [bool], v: &mut [Vec<usize>], idx: usize) -> bool {
+    let m = n * (n - 1) / 2 / 3;
+
+    if idx == 3 {
+        return true;
+    }
+
+    let s = v[idx].citer().sum::<usize>();
+    assert!(s < m);
+
+    (1..n).filter(|&x| s + x <= m).any(|x| {
+        if used[x] {
+            return false;
+        }
+
+        v[idx].push(x);
+        used[x] = true;
+
+        if dfs(n, used, v, idx + (s + x == m) as usize) {
+            true
+        } else {
+            used[x] = false;
+            v[idx].pop();
+            false
+        }
+    })
+}
+
+fn main() {
+    let n = read::<usize>();
+
+    if n * (n - 1) / 2 % 3 > 0 {
+        println!("No");
+        return;
+    }
+
+    if n == 3 || n == 4 {
+        println!("No");
+        return;
+    }
+
+    let mut v = vec![vec![]; 3];
+    let ok = dfs(n, &mut vec![false; n], &mut v, 0);
+    assert!(ok);
+
+    println!("Yes");
+    for i in 0..n - 1 {
+        let x = v.iter().position(|t| t.contains(&(n - 1 - i))).unwrap();
+        let c = match x {
+            0 => 'R',
+            1 => 'B',
+            2 => 'W',
+            _ => unreachable!(),
+        };
+
+        println!("{}", repeat(c).take(n - 1 - i).join(""));
+    }
+}
