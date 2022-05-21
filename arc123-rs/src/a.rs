@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -149,49 +160,19 @@ where
 }
 
 fn main() {
-    let (a0, a1, a2) = read_tuple!(i64, i64, i64);
+    let a = read_row::<i64>();
 
-    let ans0 = {
-        let b0 = a1 - (a2 - a1);
+    let c = (a[2] - a[1]) - (a[1] - a[0]);
 
-        if b0 >= a0 {
-            Some(b0 - a0)
+    let ans = if c >= 0 {
+        if c % 2 == 0 {
+            c / 2
         } else {
-            None
+            c / 2 + 2
         }
+    } else {
+        c.abs()
     };
 
-    let ans1 = {
-        if (a0 + a2) % 2 > 0 {
-            let b1 = (a0 + a2 + 1) / 2;
-
-            if b1 >= a1 {
-                Some(b1 - a1 + 1)
-            } else {
-                None
-            }
-        } else {
-            let b1 = (a0 + a2) / 2;
-
-            if b1 >= a1 {
-                Some(b1 - a1)
-            } else {
-                None
-            }
-        }
-    };
-
-    let ans2 = {
-        let b2 = a1 + (a1 - a0);
-
-        if b2 >= a2 {
-            Some(b2 - a2)
-        } else {
-            None
-        }
-    };
-
-    eprintln!("{:?} {:?} {:?}", ans0, ans1, ans2);
-    let ans = [ans0, ans1, ans2].citer().flatten().min().unwrap();
     println!("{}", ans);
 }

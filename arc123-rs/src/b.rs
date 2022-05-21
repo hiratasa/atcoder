@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -148,49 +159,49 @@ where
 {
 }
 
-use std::ops::RangeFrom;
-
 fn main() {
-    let n: usize = read();
-    let a = read_row::<usize>();
-    let b = read_row::<usize>();
-    let c = read_row::<usize>();
+    let n = read::<usize>();
+    let mut a = read_row::<usize>();
+    let mut b = read_row::<usize>();
+    let mut c = read_row::<usize>();
 
-    let a2 = a.citer().sorted().collect::<Vec<_>>();
+    a.sort();
+    b.sort();
+    c.sort();
 
-    let b2 = a2
+    let d = a
         .citer()
-        .scan(
-            b.citer()
-                .enumerate()
-                .map(|t| (t.1, t.0))
-                .collect::<BTreeSet<_>>(),
-            |s, x| {
-                let &y = s.range(RangeFrom { start: (x + 1, 0) }).next()?;
+        .scan(0, |idx, x| {
+            while *idx < n && b[*idx] <= x {
+                *idx += 1;
+            }
 
-                s.remove(&y);
-
-                Some(y.0)
-            },
-        )
+            if *idx < n {
+                *idx += 1;
+                Some(b[*idx - 1])
+            } else {
+                None
+            }
+        })
         .collect::<Vec<_>>();
 
-    let c2 = b2
+    let e = d
         .citer()
-        .scan(
-            c.citer()
-                .enumerate()
-                .map(|t| (t.1, t.0))
-                .collect::<BTreeSet<_>>(),
-            |s, x| {
-                let &y = s.range(RangeFrom { start: (x + 1, 0) }).next()?;
+        .scan(0, |idx, x| {
+            while *idx < n && c[*idx] <= x {
+                *idx += 1;
+            }
 
-                s.remove(&y);
-
-                Some(y.0)
-            },
-        )
+            if *idx < n {
+                *idx += 1;
+                Some(c[*idx - 1])
+            } else {
+                None
+            }
+        })
         .collect::<Vec<_>>();
 
-    println!("{}", c2.len());
+    let ans = e.len();
+
+    println!("{}", ans);
 }
