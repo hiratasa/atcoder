@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -291,58 +302,50 @@ mod detail {
             self.out_edges[edge.from].push(edge);
             self.in_edges[edge.to].push(edge);
         }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
     }
 }
 
-use detail::Graph;
+type Graph = detail::UnweightedGraph;
 
-#[allow(dead_code)]
-fn dfs(g: &Graph, a: &[usize], v: usize, p: usize) -> Option<usize> {
-    if g.out_edges[v].len() == 1 && p < g.size() {
+fn dfs(g: &Graph, v: usize, p: usize, a: &[usize]) -> Option<usize> {
+    if g.children(v, p).next().is_none() {
         // leaf
-        return Some(a[v]);
-    }
-
-    let b = g.out_edges[v]
-        .iter()
-        .map(|e| e.to)
-        .filter(|&u| u != p)
-        .map(|u| dfs(g, a, u, v))
-        .collect::<Option<Vec<_>>>()?;
-    let m = b.citer().max().unwrap();
-    let s = b.citer().sum::<usize>();
-
-    let (l, u) = if 2 * m >= s { (m, s) } else { ((s + 1) / 2, s) };
-
-    if l <= a[v] && a[v] <= u {
-        // a = c + d, s = 2 * c + d
-        // => c = s - a, d = 2 * a - s
-        Some(2 * a[v] - s)
+        Some(a[v])
     } else {
-        None
+        let x = g
+            .children(v, p)
+            .map(|u| dfs(g, u, v, a).filter(|&x| x <= a[v]))
+            .sum::<Option<usize>>()?;
+
+        if a[v] <= x && x <= 2 * a[v] {
+            Some(2 * a[v] - x)
+        } else {
+            None
+        }
     }
 }
 
 fn main() {
-    let n: usize = read();
-
+    let n = read::<usize>();
     let a = read_row::<usize>();
+    let ab = read_vec(n - 1, || read_tuple!(usize, usize));
 
-    let edges = read_vec(n - 1, || read_tuple!(usize, usize));
+    let g = Graph::from_edges1_undirected(n, ab);
 
-    let g = Graph::from_edges1_undirected(n, &edges);
-
-    let ans = if n == 2 {
-        a[0] == a[1]
-    } else {
-        let non_leaf = if g.out_edges[0].len() > 1 {
-            0
-        } else {
-            g.out_edges[0][0].to
-        };
-        dfs(&g, &a, non_leaf, n).map_or(false, |x| x == 0)
-    };
-    if ans {
+    if matches!(dfs(&g, 0, n, &a), Some(x) if g.out_edges[0].len() == 1 || x == 0) {
         println!("YES");
     } else {
         println!("NO");

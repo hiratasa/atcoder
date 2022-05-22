@@ -320,28 +320,53 @@ mod detail {
 
 type Graph = detail::UnweightedGraph;
 
-fn dfs(g: &Graph, v: usize, k: usize) -> (usize, usize) {
-    g.adjs(v)
-        .filter(|&u| u != 0)
-        .map(|u| dfs(g, u, k))
-        .fold((0, 0), |(r, d), (r1, d1)| {
-            if d1 + 1 == k && v != 0 {
-                (r + r1 + 1, d)
-            } else {
-                (r + r1, max(d, d1 + 1))
-            }
-        })
+fn dfs(g: &Graph, v: usize, p: usize, nums_non_marked_children: &mut [usize]) -> bool {
+    nums_non_marked_children[v] = g
+        .children(v, p)
+        .filter(|&u| !dfs(g, u, v, nums_non_marked_children))
+        .count();
+
+    let marked = nums_non_marked_children[v] > 0;
+
+    marked
+}
+
+// rerooting
+fn dfs2(
+    g: &Graph,
+    v: usize,
+    p: usize,
+    parent_marked: bool,
+    nums_non_marked_children: &[usize],
+) -> usize {
+    let num_non_marked_children = nums_non_marked_children[v] + !parent_marked as usize;
+
+    let marked = num_non_marked_children > 0;
+    !marked as usize
+        + g.children(v, p)
+            .map(|u| {
+                // uから見たときにvがmarkedか
+                let marked2 = if num_non_marked_children == 0
+                    || (num_non_marked_children == 1 && nums_non_marked_children[u] == 0)
+                {
+                    false
+                } else {
+                    true
+                };
+                dfs2(g, u, v, marked2, nums_non_marked_children)
+            })
+            .sum::<usize>()
 }
 
 fn main() {
-    let (n, k) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
+    let n = read::<usize>();
+    let uv = read_vec(n - 1, || read_tuple!(usize, usize));
 
-    let g = Graph::from_edges_directed(n, a.citer().enumerate().map(|(i, x)| (x - 1, i)));
+    let g = Graph::from_edges1_undirected(n, uv);
 
-    let (r, _) = dfs(&g, 0, k);
-
-    let ans = r + (a[0] != 1) as usize;
+    let mut nums = vec![0; n];
+    dfs(&g, 0, n, &mut nums);
+    let ans = dfs2(&g, 0, n, true, &nums);
 
     println!("{}", ans);
 }
