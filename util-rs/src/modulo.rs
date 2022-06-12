@@ -219,7 +219,7 @@ impl<M: Modulus> std::ops::Sub<Mod<M>> for Mod<M> {
 impl<M: Modulus> std::ops::Sub<usize> for Mod<M> {
     type Output = Self;
     fn sub(self, rhs: usize) -> Self {
-        Mod::new(self.0 + M::modulus() - rhs)
+        Mod::new(self.0 + M::modulus() - rhs % M::modulus())
     }
 }
 
