@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -153,50 +164,23 @@ fn main() {
     let s = read_row::<usize>();
     let t = read_row::<usize>();
 
-    let s_has_0 = s.citer().any(|c| c == 0);
-    let s_has_1 = s.citer().any(|c| c == 1);
-    let t_has_0 = t.citer().any(|c| c == 0);
-    let t_has_1 = t.citer().any(|c| c == 1);
+    let x = s
+        .citer()
+        .positions(|c| c != s[0])
+        .map(|x| min(x, n - x))
+        .min();
 
-    if t_has_0 && !s_has_0 {
-        println!("-1");
-        return;
-    }
+    let l = t.citer().dedup().skip_while(|&c| c == s[0]).count();
 
-    if t_has_1 && !s_has_1 {
-        println!("-1");
-        return;
-    }
+    let ans = match (x, l) {
+        (_, 0) => Some(m),
+        (None, _) => None,
+        (Some(x), l) => Some(m + x + l - 1),
+    };
 
-    if !s_has_0 || !s_has_1 {
-        println!("{}", t.len());
-        return;
-    }
-
-    let nearest_diff = (1..).find(|&i| s[i] != s[0] || s[n - i] != s[0]).unwrap();
-
-    if !t_has_0 {
-        // T is all 1
-        if s[0] == 1 {
-            println!("{}", t.len());
-            return;
-        }
-
-        println!("{}", t.len() + nearest_diff);
-    } else if !t_has_1 {
-        // T is all 0
-        if s[0] == 0 {
-            println!("{}", t.len());
-            return;
-        }
-
-        println!("{}", t.len() + nearest_diff);
+    if let Some(ans) = ans {
+        println!("{}", ans);
     } else {
-        let k = t.citer().tuple_windows().filter(|&(x, y)| x != y).count();
-        if t[0] == s[0] {
-            println!("{}", t.len() + nearest_diff + (k - 1));
-        } else {
-            println!("{}", t.len() + nearest_diff + k);
-        }
+        println!("-1");
     }
 }
