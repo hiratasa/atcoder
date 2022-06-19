@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -150,75 +161,52 @@ where
 
 fn main() {
     let (h, w, k) = read_tuple!(usize, usize, usize);
-
     let a = read_mat::<usize>(h);
 
     let b = a
         .iter()
-        .flat_map(|row| row.citer())
+        .flatten()
+        .copied()
         .sorted()
         .dedup()
         .collect::<Vec<_>>();
-    let idxs = b
+
+    let ans = b
         .citer()
-        .enumerate()
-        .map(|(idx, bb)| (bb, idx))
-        .collect::<FxHashMap<_, _>>();
+        .filter_map(|c| {
+            let mut costs = vec![vec![vec![usize::MAX; w]; h]; k + 2];
 
-    let m = idxs.len();
-
-    let ans = (0..m)
-        .map(|lower| {
-            // lowerより大きいのは全部取る, idxと等しいのは取っても取らなくてもokという前提で解を求める
-            let mut dp = vec![vec![vec![usize::MAX; k + 1]; w]; h];
-            let idx0 = idxs[&a[0][0]];
-
-            if idx0 <= lower {
-                dp[0][0][0] = 0;
+            if a[0][0] <= c {
+                costs[0][0][0] = 0;
             }
-            if idx0 >= lower {
-                dp[0][0][1] = a[0][0];
+            if a[0][0] >= c {
+                costs[1][0][0] = a[0][0];
             }
 
             for i in 0..h {
                 for j in 0..w {
-                    for kk in 0..=k {
-                        // 右へ
-                        if j + 1 < w {
-                            let aa = a[i][j + 1];
-                            let idx = idxs[&aa];
+                    if i == 0 && j == 0 {
+                        continue;
+                    }
 
-                            if lower <= idx && kk + 1 <= k {
-                                dp[i][j + 1][kk + 1] =
-                                    min(dp[i][j + 1][kk + 1], dp[i][j][kk].saturating_add(aa));
-                            }
+                    for l in 0..=k {
+                        let d = it![(i.wrapping_sub(1), j), (i, j.wrapping_sub(1))]
+                            .filter(|&(ni, nj)| ni < h && nj < w)
+                            .map(|(ni, nj)| costs[l][ni][nj])
+                            .min()
+                            .unwrap();
 
-                            if idx <= lower {
-                                dp[i][j + 1][kk] = min(dp[i][j + 1][kk], dp[i][j][kk]);
-                            }
+                        if a[i][j] <= c {
+                            costs[l][i][j] = min(costs[l][i][j], d);
                         }
-
-                        // 下へ
-                        if i + 1 < h {
-                            let aa = a[i + 1][j];
-                            let idx = idxs[&aa];
-
-                            if lower <= idx && kk + 1 <= k {
-                                dp[i + 1][j][kk + 1] =
-                                    min(dp[i + 1][j][kk + 1], dp[i][j][kk].saturating_add(aa));
-                            }
-
-                            if idx <= lower {
-                                dp[i + 1][j][kk] = min(dp[i + 1][j][kk], dp[i][j][kk]);
-                            }
+                        if a[i][j] >= c {
+                            costs[l + 1][i][j] = min(costs[l + 1][i][j], d.saturating_add(a[i][j]));
                         }
                     }
                 }
             }
 
-            // eprintln!("{:?}", dp);
-
-            dp[h - 1][w - 1][k]
+            Some(costs[k][h - 1][w - 1]).filter(|&d| d != usize::MAX)
         })
         .min()
         .unwrap();
