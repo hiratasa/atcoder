@@ -81,14 +81,6 @@ where
         let mut left_idx = a + self.cap - 1;
         let mut right_idx = b + self.cap - 1;
 
-        let c0 = std::cmp::min(
-            // trailing_ones
-            (!left_idx).trailing_zeros(),
-            (right_idx + 1).trailing_zeros(),
-        );
-        left_idx = left_idx >> c0;
-        right_idx = ((right_idx + 1) >> c0) - 1;
-
         while left_idx < right_idx {
             if left_idx % 2 == 0 {
                 left = M::op(&left, &self.values[left_idx]);
@@ -100,13 +92,8 @@ where
                 right_idx -= 1;
             }
 
-            let c = std::cmp::min(
-                // trailing_ones
-                (!left_idx).trailing_zeros(),
-                (right_idx + 1).trailing_zeros(),
-            );
-            left_idx = left_idx >> c;
-            right_idx = ((right_idx + 1) >> c) - 1;
+            left_idx = left_idx >> 1;
+            right_idx = (right_idx - 1) >> 1;
         }
 
         M::op(&left, &right)
@@ -398,13 +385,8 @@ where
                 right_idx -= 1;
             }
 
-            let c = std::cmp::min(
-                // trailing_ones
-                (!left_idx).trailing_zeros(),
-                (right_idx + 1).trailing_zeros(),
-            );
-            left_idx = left_idx >> c;
-            right_idx = ((right_idx + 1) >> c) - 1;
+            left_idx = left_idx >> 1;
+            right_idx = (right_idx - 1) >> 1;
         }
 
         M::op(&left, &right)
