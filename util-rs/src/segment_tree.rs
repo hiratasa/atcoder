@@ -5,6 +5,7 @@ use cargo_snippet::snippet;
 //  解決策2) fがlenも受け取れるようにする
 
 #[snippet("segtree")]
+#[snippet("dualsegtree")]
 #[snippet("lazysegtree")]
 trait Monoid {
     type Item: Clone;
@@ -226,6 +227,118 @@ where
     }
 }
 
+// 演算だけのったセグメント木
+// Op: Monoid of operation
+#[snippet("dualsegtree")]
+#[derive(Debug)]
+struct DualSegmentTree<Op>
+where
+    Op: Monoid,
+{
+    height: usize,
+    cap: usize,
+    lazy: Vec<Op::Item>,
+}
+
+#[snippet("dualsegtree")]
+#[allow(dead_code)]
+impl<Op> DualSegmentTree<Op>
+where
+    Op: Monoid,
+{
+    fn new(n: usize) -> Self {
+        let cap = n.next_power_of_two();
+        DualSegmentTree {
+            height: cap.trailing_zeros() as usize + 1,
+            cap,
+            lazy: vec![Op::id(); 2 * cap - 1],
+        }
+    }
+
+    fn with(vals: &Vec<Op::Item>) -> Self {
+        let n = vals.len();
+        let cap = n.next_power_of_two();
+
+        let mut lazy = Vec::with_capacity(2 * cap - 1);
+        lazy.resize(cap - 1, Op::id());
+        lazy.extend(vals.iter().cloned());
+        lazy.resize(2 * cap - 1, Op::id());
+
+        DualSegmentTree {
+            height: cap.trailing_zeros() as usize + 1,
+            cap,
+            lazy,
+        }
+    }
+
+    // internal
+    // pをidx全体に適用する
+    fn apply(&mut self, idx: usize, p: &Op::Item) {
+        self.lazy[idx] = Op::op(p, &self.lazy[idx]);
+    }
+
+    // internal
+    // lazyを子に伝搬する
+    fn push(&mut self, parent_idx: usize) {
+        let left_idx = 2 * (parent_idx + 1) - 1;
+        let right_idx = 2 * (parent_idx + 1);
+
+        if left_idx < self.lazy.len() {
+            let l = self.lazy[parent_idx].clone();
+            self.apply(left_idx, &l);
+            self.apply(right_idx, &l);
+            self.lazy[parent_idx] = Op::id();
+        }
+    }
+
+    // internal
+    // idxの全ての祖先でpushする
+    fn push_all(&mut self, idx: usize) {
+        for i in (1..(idx + 2).next_power_of_two().trailing_zeros()).rev() {
+            self.push(((idx + 1) >> i) - 1);
+        }
+    }
+
+    fn get(&mut self, pos: usize) -> Op::Item {
+        let idx = self.cap - 1 + pos;
+
+        self.push_all(idx);
+
+        self.lazy[idx].clone()
+    }
+
+    fn set(&mut self, pos: usize, p: Op::Item) {
+        let idx = self.cap - 1 + pos;
+
+        self.push_all(idx);
+
+        self.lazy[idx] = p;
+    }
+
+    fn update(&mut self, a: usize, b: usize, p: Op::Item) {
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        // Opが非可換の場合、[l, r)とその他の区間にまたがるlazyをpushしておく必要がある
+        self.push_all(((left_idx + 1) >> (left_idx + 1).trailing_zeros()) - 1);
+        self.push_all(((right_idx + 1) >> (right_idx + 1).trailing_zeros()) - 1);
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                self.apply(left_idx, &p);
+            }
+
+            if right_idx % 2 == 0 {
+                self.apply(right_idx - 1, &p);
+            }
+
+            // 偶数の場合は一つ右隣の親になる
+            left_idx = left_idx >> 1;
+            right_idx = (right_idx - 1) >> 1;
+        }
+    }
+}
+
 // M: Monoid of value
 // Op: Monoid of lazy operation
 #[snippet("lazysegtree")]
@@ -412,6 +525,7 @@ where
 }
 
 #[snippet("segtree")]
+#[snippet("dualsegtree")]
 #[snippet("lazysegtree")]
 macro_rules! define_monoid {
     ($name: ident, $t: ty, $id: expr, $op: expr) => {
