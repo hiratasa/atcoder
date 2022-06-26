@@ -1,7 +1,11 @@
+use cargo_snippet::snippet;
+
 // NOTE: 区間長に依存する場合（たとえば一定の値を足す、など）
 //  解決策1) 値を (value, len) にする
 //  解決策2) fがlenも受け取れるようにする
 
+#[snippet("segtree")]
+#[snippet("lazysegtree")]
 trait Monoid {
     type Item: Clone;
 
@@ -9,6 +13,7 @@ trait Monoid {
     fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
 }
 
+#[snippet("segtree")]
 #[derive(Debug)]
 struct SegmentTree<M>
 where
@@ -18,6 +23,7 @@ where
     values: Vec<M::Item>,
 }
 
+#[snippet("segtree")]
 #[allow(dead_code)]
 impl<M> SegmentTree<M>
 where
@@ -222,6 +228,7 @@ where
 
 // M: Monoid of value
 // Op: Monoid of lazy operation
+#[snippet("lazysegtree")]
 #[derive(Debug)]
 struct LazySegmentTree<M, Op>
 where
@@ -234,10 +241,12 @@ where
     lazy: Vec<Op::Item>,
 }
 
+#[snippet("lazysegtree")]
 trait Operator<T>: Monoid {
     fn apply(op: &Self::Item, v: &T) -> T;
 }
 
+#[snippet("lazysegtree")]
 #[allow(dead_code)]
 impl<M, Op> LazySegmentTree<M, Op>
 where
@@ -402,6 +411,8 @@ where
     }
 }
 
+#[snippet("segtree")]
+#[snippet("lazysegtree")]
 macro_rules! define_monoid {
     ($name: ident, $t: ty, $id: expr, $op: expr) => {
         #[derive(Clone, Debug)]
