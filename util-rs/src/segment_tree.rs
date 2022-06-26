@@ -42,15 +42,24 @@ where
 
         let mut st = SegmentTree { cap, values };
         for idx in (0..cap - 1).rev() {
-            st.fix_value(idx);
+            st.fix(idx);
         }
         st
     }
 
-    fn fix_value(&mut self, idx: usize) {
+    fn fix(&mut self, idx: usize) {
         let left_idx = 2 * (idx + 1) - 1;
         let right_idx = 2 * (idx + 1);
-        self.values[idx] = M::op(&self.values[left_idx], &self.values[right_idx]);
+        if left_idx < self.values.len() {
+            self.values[idx] = M::op(&self.values[left_idx], &self.values[right_idx]);
+        }
+    }
+
+    fn fix_all(&mut self, mut idx: usize) {
+        while idx > 0 {
+            idx = (idx - 1) / 2;
+            self.fix(idx);
+        }
     }
 
     fn get(&self, pos: usize) -> M::Item {
@@ -58,14 +67,11 @@ where
     }
 
     fn set(&mut self, pos: usize, v: M::Item) {
-        let mut idx = self.cap - 1 + pos;
+        let idx = self.cap - 1 + pos;
 
         self.values[idx] = v;
 
-        while idx > 0 {
-            idx = (idx - 1) / 2;
-            self.fix_value(idx);
-        }
+        self.fix_all(idx);
     }
 
     fn query(&self, a: usize, b: usize) -> M::Item {
@@ -274,14 +280,14 @@ where
         };
 
         for idx in (0..cap - 1).rev() {
-            st.fix_value(idx);
+            st.fix(idx);
         }
 
         st
     }
 
     // internal
-    fn fix_value(&mut self, idx: usize) {
+    fn fix(&mut self, idx: usize) {
         let left_idx = 2 * (idx + 1) - 1;
         let right_idx = 2 * (idx + 1);
         if left_idx < self.values.len() {
@@ -289,6 +295,14 @@ where
                 &self.lazy[idx],
                 &M::op(&self.values[left_idx], &self.values[right_idx]),
             );
+        }
+    }
+
+    // internal
+    fn fix_all(&mut self, mut idx: usize) {
+        while idx > 0 {
+            idx = (idx - 1) / 2;
+            self.fix(idx);
         }
     }
 
@@ -327,17 +341,14 @@ where
     }
 
     fn set(&mut self, pos: usize, v: M::Item) {
-        let mut idx = self.cap - 1 + pos;
+        let idx = self.cap - 1 + pos;
 
         self.push_all(idx);
 
         self.values[idx] = v;
         self.lazy[idx] = Op::id();
 
-        while idx > 0 {
-            idx = (idx - 1) / 2;
-            self.fix_value(idx);
-        }
+        self.fix_all(idx);
     }
 
     fn update(&mut self, a: usize, b: usize, p: Op::Item) {
@@ -362,17 +373,8 @@ where
             right_idx = (right_idx - 1) >> 1;
         }
 
-        let mut left_idx = a + self.cap - 1;
-        let mut right_idx = b + self.cap - 1;
-        for _ in 0..self.height - 1 {
-            left_idx = (left_idx - 1) >> 1;
-            self.fix_value(left_idx);
-
-            right_idx = (right_idx - 1) >> 1;
-            // This is out of bounds if b == self.cap.
-            // (currently checked in fix_value())
-            self.fix_value(right_idx);
-        }
+        self.fix_all(a + self.cap - 1);
+        self.fix_all(b + self.cap - 1);
     }
 
     fn query(&mut self, a: usize, b: usize) -> M::Item {
