@@ -299,7 +299,7 @@ where
     }
 
     // internal
-    fn resolve(&mut self, parent_idx: usize) {
+    fn push(&mut self, parent_idx: usize) {
         let left_idx = 2 * (parent_idx + 1) - 1;
         let right_idx = 2 * (parent_idx + 1);
 
@@ -312,22 +312,22 @@ where
     }
 
     // internal
-    fn resolve_all(&mut self, pos: usize) {
+    fn push_all(&mut self, pos: usize) {
         let idx = self.cap - 1 + pos;
         for i in (1..self.height).rev() {
-            self.resolve(((idx + 1) >> i) - 1);
+            self.push(((idx + 1) >> i) - 1);
         }
     }
 
     fn get(&mut self, pos: usize) -> M::Item {
-        self.resolve_all(pos);
+        self.push_all(pos);
 
         let idx = self.cap - 1 + pos;
         self.values[idx].clone()
     }
 
     fn set(&mut self, pos: usize, v: M::Item) {
-        self.resolve_all(pos);
+        self.push_all(pos);
 
         let mut idx = self.cap - 1 + pos;
         self.values[idx] = v;
@@ -345,8 +345,8 @@ where
 
         // Opが非可換の場合用に, これより前にupdateされたものを適用させておく
         for i in (1..self.height).rev() {
-            self.resolve(((left_idx + 1) >> i) - 1);
-            self.resolve(((right_idx + 1) >> i) - 1);
+            self.push(((left_idx + 1) >> i) - 1);
+            self.push(((right_idx + 1) >> i) - 1);
         }
 
         while left_idx < right_idx {
@@ -390,8 +390,8 @@ where
         ) as usize;
 
         for i in (c0 + 1..self.height).rev() {
-            self.resolve(((left_idx + 1) >> i) - 1);
-            self.resolve(((right_idx + 1) >> i) - 1);
+            self.push(((left_idx + 1) >> i) - 1);
+            self.push(((right_idx + 1) >> i) - 1);
         }
 
         left_idx = left_idx >> c0;
