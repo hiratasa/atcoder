@@ -312,24 +312,25 @@ where
     }
 
     // internal
-    fn push_all(&mut self, pos: usize) {
-        let idx = self.cap - 1 + pos;
-        for i in (1..self.height).rev() {
+    fn push_all(&mut self, idx: usize) {
+        for i in (1..(idx + 2).next_power_of_two().trailing_zeros()).rev() {
             self.push(((idx + 1) >> i) - 1);
         }
     }
 
     fn get(&mut self, pos: usize) -> M::Item {
-        self.push_all(pos);
-
         let idx = self.cap - 1 + pos;
+
+        self.push_all(idx);
+
         self.values[idx].clone()
     }
 
     fn set(&mut self, pos: usize, v: M::Item) {
-        self.push_all(pos);
-
         let mut idx = self.cap - 1 + pos;
+
+        self.push_all(idx);
+
         self.values[idx] = v;
         self.lazy[idx] = Op::id();
 
@@ -343,11 +344,9 @@ where
         let mut left_idx = a + self.cap - 1;
         let mut right_idx = b + self.cap - 1;
 
-        // Opが非可換の場合用に, これより前にupdateされたものを適用させておく
-        for i in (1..self.height).rev() {
-            self.push(((left_idx + 1) >> i) - 1);
-            self.push(((right_idx + 1) >> i) - 1);
-        }
+        // Opが非可換の場合、[l, r)とその他の区間にまたがるlazyをpushしておく必要がある
+        self.push_all(((left_idx + 1) >> (left_idx + 1).trailing_zeros()) - 1);
+        self.push_all(((right_idx + 1) >> (right_idx + 1).trailing_zeros()) - 1);
 
         while left_idx < right_idx {
             if left_idx % 2 == 0 {
@@ -383,19 +382,8 @@ where
         let mut left_idx = a + self.cap - 1;
         let mut right_idx = b + self.cap - 1;
 
-        let c0 = std::cmp::min(
-            // trailing_ones
-            (!left_idx).trailing_zeros(),
-            (right_idx + 1).trailing_zeros(),
-        ) as usize;
-
-        for i in (c0 + 1..self.height).rev() {
-            self.push(((left_idx + 1) >> i) - 1);
-            self.push(((right_idx + 1) >> i) - 1);
-        }
-
-        left_idx = left_idx >> c0;
-        right_idx = ((right_idx + 1) >> c0) - 1;
+        self.push_all(((left_idx + 1) >> (left_idx + 1).trailing_zeros()) - 1);
+        self.push_all(((right_idx + 1) >> (right_idx + 1).trailing_zeros()) - 1);
 
         while left_idx < right_idx {
             if left_idx % 2 == 0 {
