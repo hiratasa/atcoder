@@ -561,7 +561,7 @@ mod test {
         let mut rng = rand::rngs::SmallRng::from_entropy();
 
         let dist = rand::distributions::Uniform::new(0, 100000);
-        let dist01 = rand::distributions::Uniform::new(0, 2);
+        let dist_op = rand::distributions::Uniform::new(0, 4);
 
         for i in 0..5 {
             // 2の冪乗のあたりを試す
@@ -578,7 +578,7 @@ mod test {
             let q = 1000;
             let mut a = a0.clone();
             for _ in 0..q {
-                let t = dist01.sample(&mut rng);
+                let t = dist_op.sample(&mut rng);
 
                 if t == 0 {
                     // update
@@ -593,7 +593,7 @@ mod test {
                     }
 
                     logs.push(format!("Add {} for [{}, {});", x, l, r));
-                } else {
+                } else if t == 1 {
                     // query
                     let l = distidx.sample(&mut rng);
                     let r = distidx.sample(&mut rng);
@@ -607,6 +607,28 @@ mod test {
                         a,
                         l,
                         r,
+                        logs.join(" ")
+                    );
+                } else if t == 2 {
+                    // set
+                    let pos = std::cmp::min(distidx.sample(&mut rng), n - 1);
+                    let x = dist.sample(&mut rng);
+
+                    st.set(pos, x);
+                    a[pos] = x;
+
+                    logs.push(format!("Set {} for {};", x, pos));
+                } else if t == 3 {
+                    // get
+                    let pos = std::cmp::min(distidx.sample(&mut rng), n - 1);
+
+                    assert_eq!(
+                        st.get(pos),
+                        a[pos],
+                        "a0: {:?}, a: {:?}, pos: {}, ops: {}",
+                        a0,
+                        a,
+                        pos,
                         logs.join(" ")
                     );
                 }
