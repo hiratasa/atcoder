@@ -281,20 +281,21 @@ where
     }
 
     // internal
-    fn get_node_value(&mut self, idx: usize) -> M::Item {
-        Op::apply(&self.lazy[idx], &self.values[idx])
-    }
-
-    // internal
     fn fix_value(&mut self, idx: usize) {
         let left_idx = 2 * (idx + 1) - 1;
         let right_idx = 2 * (idx + 1);
         if left_idx < self.values.len() {
-            self.values[idx] = M::op(
-                &self.get_node_value(left_idx),
-                &self.get_node_value(right_idx),
+            self.values[idx] = Op::apply(
+                &self.lazy[idx],
+                &M::op(&self.values[left_idx], &self.values[right_idx]),
             );
         }
+    }
+
+    // internal
+    fn apply(&mut self, idx: usize, p: &Op::Item) {
+        self.lazy[idx] = Op::op(p, &self.lazy[idx]);
+        self.values[idx] = Op::apply(p, &self.values[idx]);
     }
 
     // internal
@@ -303,12 +304,9 @@ where
         let right_idx = 2 * (parent_idx + 1);
 
         if left_idx < self.values.len() {
-            self.lazy[left_idx] = Op::op(&self.lazy[parent_idx], &self.lazy[left_idx]);
-            self.lazy[right_idx] = Op::op(&self.lazy[parent_idx], &self.lazy[right_idx]);
-            self.lazy[parent_idx] = Op::id();
-            self.fix_value(parent_idx);
-        } else {
-            self.values[parent_idx] = Op::apply(&self.lazy[parent_idx], &self.values[parent_idx]);
+            let l = self.lazy[parent_idx].clone();
+            self.apply(left_idx, &l);
+            self.apply(right_idx, &l);
             self.lazy[parent_idx] = Op::id();
         }
     }
@@ -316,7 +314,7 @@ where
     // internal
     fn resolve_all(&mut self, pos: usize) {
         let idx = self.cap - 1 + pos;
-        for i in (0..self.height).rev() {
+        for i in (1..self.height).rev() {
             self.resolve(((idx + 1) >> i) - 1);
         }
     }
@@ -353,11 +351,11 @@ where
 
         while left_idx < right_idx {
             if left_idx % 2 == 0 {
-                self.lazy[left_idx] = Op::op(&p, &self.lazy[left_idx]);
+                self.apply(left_idx, &p);
             }
 
             if right_idx % 2 == 0 {
-                self.lazy[right_idx - 1] = Op::op(&p, &self.lazy[right_idx - 1]);
+                self.apply(right_idx - 1, &p);
             }
 
             // 偶数の場合は一つ右隣の親になる
@@ -401,12 +399,12 @@ where
 
         while left_idx < right_idx {
             if left_idx % 2 == 0 {
-                left = M::op(&left, &self.get_node_value(left_idx));
+                left = M::op(&left, &self.values[left_idx]);
                 left_idx += 1;
             }
 
             if right_idx % 2 == 0 {
-                right = M::op(&self.get_node_value(right_idx - 1), &right);
+                right = M::op(&self.values[right_idx - 1], &right);
                 right_idx -= 1;
             }
 
