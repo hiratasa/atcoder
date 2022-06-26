@@ -47,6 +47,8 @@ where
         st
     }
 
+    // internal
+    // 子の値を反映する
     fn fix(&mut self, idx: usize) {
         let left_idx = 2 * (idx + 1) - 1;
         let right_idx = 2 * (idx + 1);
@@ -55,6 +57,8 @@ where
         }
     }
 
+    // internal
+    // idxの全ての祖先でfixする
     fn fix_all(&mut self, mut idx: usize) {
         while idx > 0 {
             idx = (idx - 1) / 2;
@@ -274,6 +278,7 @@ where
     }
 
     // internal
+    // 子の値を反映する
     fn fix(&mut self, idx: usize) {
         let left_idx = 2 * (idx + 1) - 1;
         let right_idx = 2 * (idx + 1);
@@ -286,6 +291,7 @@ where
     }
 
     // internal
+    // idxの全ての祖先でfixする
     fn fix_all(&mut self, mut idx: usize) {
         while idx > 0 {
             idx = (idx - 1) / 2;
@@ -294,12 +300,14 @@ where
     }
 
     // internal
+    // pをidx全体に適用する
     fn apply(&mut self, idx: usize, p: &Op::Item) {
         self.lazy[idx] = Op::op(p, &self.lazy[idx]);
         self.values[idx] = Op::apply(p, &self.values[idx]);
     }
 
     // internal
+    // lazyを子に伝搬する
     fn push(&mut self, parent_idx: usize) {
         let left_idx = 2 * (parent_idx + 1) - 1;
         let right_idx = 2 * (parent_idx + 1);
@@ -313,6 +321,7 @@ where
     }
 
     // internal
+    // idxの全ての祖先でpushする
     fn push_all(&mut self, idx: usize) {
         for i in (1..(idx + 2).next_power_of_two().trailing_zeros()).rev() {
             self.push(((idx + 1) >> i) - 1);
