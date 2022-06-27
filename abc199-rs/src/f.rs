@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -104,6 +107,14 @@ fn read<T: FromStr>() -> T {
 #[allow(dead_code)]
 fn read_str() -> Vec<char> {
     read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -152,6 +163,7 @@ use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
     let mut y = 1;
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;
@@ -177,11 +189,14 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
+define_static_mod!(2013265921, Modulus2013265921, Mod2013265921);
+define_static_mod!(1811939329, Modulus1811939329, Mod1811939329);
 define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
 #[allow(dead_code)]
 impl<M: Modulus> Mod<M> {
     pub fn modulus() -> usize {
@@ -229,7 +244,7 @@ impl<M> std::fmt::Debug for Mod<M> {
 }
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::TryFrom<T>,
+    usize: std::convert::TryFrom<T> + num::traits::Unsigned,
 {
     fn from(v: T) -> Self {
         use std::convert::TryFrom;
@@ -248,73 +263,117 @@ impl<M: Modulus> std::ops::Neg for Mod<M> {
         Mod::new(M::modulus() - self.0)
     }
 }
-impl<T, M: Modulus> std::ops::Add<T> for Mod<M>
-where
-    T: std::convert::Into<Mod<M>>,
-{
+impl<M: Modulus> std::ops::Add<Mod<M>> for Mod<M> {
     type Output = Self;
-    fn add(self, rhs: T) -> Self {
-        Mod::new(self.0 + rhs.into().0)
+    fn add(self, rhs: Mod<M>) -> Self {
+        Mod::new(self.0 + rhs.0)
+    }
+}
+impl<M: Modulus> std::ops::Add<usize> for Mod<M> {
+    type Output = Self;
+    fn add(self, rhs: usize) -> Self {
+        Mod::new(self.0 + rhs)
+    }
+}
+impl<M: Modulus> std::ops::Add<Mod<M>> for usize {
+    type Output = Mod<M>;
+    fn add(self, rhs: Mod<M>) -> Mod<M> {
+        Mod::new(self + rhs.0)
     }
 }
 impl<T, M: Modulus> std::ops::AddAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod<M>>,
+    Mod<M>: std::ops::Add<T, Output = Mod<M>>,
 {
     fn add_assign(&mut self, rhs: T) {
         *self = *self + rhs;
     }
 }
-impl<T, M: Modulus> std::ops::Sub<T> for Mod<M>
-where
-    T: std::convert::Into<Mod<M>>,
-{
+impl<M: Modulus> std::ops::Sub<Mod<M>> for Mod<M> {
     type Output = Self;
-    fn sub(self, rhs: T) -> Self {
-        Mod::new(self.0 + M::modulus() - rhs.into().0)
+    fn sub(self, rhs: Mod<M>) -> Self {
+        Mod::new(self.0 + M::modulus() - rhs.0)
+    }
+}
+impl<M: Modulus> std::ops::Sub<usize> for Mod<M> {
+    type Output = Self;
+    fn sub(self, rhs: usize) -> Self {
+        Mod::new(self.0 + M::modulus() - rhs % M::modulus())
+    }
+}
+impl<M: Modulus> std::ops::Sub<Mod<M>> for usize {
+    type Output = Mod<M>;
+    fn sub(self, rhs: Mod<M>) -> Mod<M> {
+        Mod::new(self + M::modulus() - rhs.0)
     }
 }
 impl<T, M: Modulus> std::ops::SubAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod<M>>,
+    Mod<M>: std::ops::Sub<T, Output = Mod<M>>,
 {
     fn sub_assign(&mut self, rhs: T) {
         *self = *self - rhs;
     }
 }
-impl<T, M: Modulus> std::ops::Mul<T> for Mod<M>
-where
-    T: std::convert::Into<Mod<M>>,
-{
+impl<M: Modulus> std::ops::Mul<Mod<M>> for Mod<M> {
     type Output = Self;
-    fn mul(self, rhs: T) -> Self {
-        Mod::new(self.0 * rhs.into().0)
+    fn mul(self, rhs: Mod<M>) -> Self {
+        Mod::new(self.0 * rhs.0)
+    }
+}
+impl<M: Modulus> std::ops::Mul<usize> for Mod<M> {
+    type Output = Self;
+    fn mul(self, rhs: usize) -> Self {
+        Mod::new(self.0 * (rhs % M::modulus()))
+    }
+}
+impl<M: Modulus> std::ops::Mul<Mod<M>> for usize {
+    type Output = Mod<M>;
+    fn mul(self, rhs: Mod<M>) -> Mod<M> {
+        Mod::new((self % M::modulus()) * rhs.0)
     }
 }
 impl<T, M: Modulus> std::ops::MulAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod<M>>,
+    Mod<M>: std::ops::Mul<T, Output = Mod<M>>,
 {
     fn mul_assign(&mut self, rhs: T) {
         *self = *self * rhs;
     }
 }
-impl<T, M: Modulus> std::ops::Div<T> for Mod<M>
-where
-    T: std::convert::Into<Mod<M>>,
-{
+impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
-    fn div(self, rhs: T) -> Self {
+    fn div(self, rhs: Mod<M>) -> Self {
         if self.0 == 0 {
             self
         } else {
-            self * rhs.into().inv()
+            self * rhs.inv()
+        }
+    }
+}
+impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
+    type Output = Self;
+    fn div(self, rhs: usize) -> Self {
+        if self.0 == 0 {
+            self
+        } else {
+            self * Mod::new(rhs).inv()
+        }
+    }
+}
+impl<M: Modulus> std::ops::Div<Mod<M>> for usize {
+    type Output = Mod<M>;
+    fn div(self, rhs: Mod<M>) -> Mod<M> {
+        if self == 0 {
+            Mod::new(self)
+        } else {
+            self * rhs.inv()
         }
     }
 }
 impl<T, M: Modulus> std::ops::DivAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod<M>>,
+    Mod<M>: std::ops::Div<T, Output = Mod<M>>,
 {
     fn div_assign(&mut self, rhs: T) {
         *self = *self / rhs;
@@ -353,68 +412,77 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-fn matmul<M: Modulus>(mat0: &Vec<Vec<Mod<M>>>, mat1: &Vec<Vec<Mod<M>>>) -> Vec<Vec<Mod<M>>> {
-    let n = mat0.len();
+fn mat_mul(a: &[Vec<Mod1000000007>], b: &[Vec<Mod1000000007>]) -> Vec<Vec<Mod1000000007>> {
+    let n = a.len();
+    let mut c = vec![vec![Mod::zero(); n]; n];
 
-    let mut ret = vec![vec![Mod::zero(); n]; n];
     for i in 0..n {
         for k in 0..n {
             for j in 0..n {
-                ret[i][j] += mat0[i][k] * mat1[k][j];
+                c[i][j] += a[i][k] * b[k][j];
             }
         }
     }
 
-    ret
+    c
+}
+
+fn mat_pow(a: &[Vec<Mod1000000007>], p: usize) -> Vec<Vec<Mod1000000007>> {
+    let n = a.len();
+
+    if p == 0 {
+        let mut c = vec![vec![Mod::zero(); n]; n];
+        for i in 0..n {
+            c[i][i] += 1;
+        }
+
+        return c;
+    }
+
+    if p == 1 {
+        return a.to_vec();
+    }
+
+    let c = mat_pow(a, p / 2);
+    let c2 = mat_mul(&c, &c);
+    if p % 2 == 0 {
+        c2
+    } else {
+        mat_mul(&c2, a)
+    }
 }
 
 fn main() {
     type Mod = Mod1000000007;
 
     let (n, m, k) = read_tuple!(usize, usize, usize);
-
-    let a = read_row::<Mod>();
+    let a = read_row::<usize>();
     let xy = read_vec(m, || read_tuple!(usize, usize));
 
-    let matunit = (0..n)
-        .map(|i| {
-            let mut v = vec![Mod::zero(); n];
-            v[i] = Mod::one();
-            v
-        })
+    let invm = Mod::new(m).inv();
+    let inv2 = Mod::new(2).inv();
+    let mut c = vec![vec![Mod::zero(); n]; n];
+    for (x, y) in xy {
+        let x = x - 1;
+        let y = y - 1;
+
+        for i in 0..n {
+            if i != x && i != y {
+                c[i][i] += invm;
+            }
+        }
+        for (i, j) in iproduct!(it![x, y], it![x, y]) {
+            c[i][j] += invm * inv2;
+        }
+    }
+
+    let d = mat_pow(&c, k);
+
+    let ans = (0..n)
+        .map(|i| (0..n).map(|j| d[i][j] * a[j]).sum::<Mod>())
         .collect::<Vec<_>>();
 
-    // 対角項: 1 - (次数)/2M
-    // 非対角項: 隣接行列/2M
-    let mat0 = xy
-        .citer()
-        .map(|(x, y)| (x - 1, y - 1))
-        .fold(matunit.clone(), |mut mat, (x, y)| {
-            mat[x][x] -= Mod::one() / 2 / m;
-            mat[y][y] -= Mod::one() / 2 / m;
-            mat[x][y] += Mod::one() / 2 / m;
-            mat[y][x] += Mod::one() / 2 / m;
-            mat
-        });
-
-    let (_, mat) = iterate(k, |&kk| kk >> 1).take_while(|&kk| kk > 0).fold(
-        (mat0, matunit.clone()),
-        |(mat0, mat1), kk| {
-            if kk & 1 > 0 {
-                (matmul(&mat0, &mat0), matmul(&mat1, &mat0))
-            } else {
-                (matmul(&mat0, &mat0), mat1)
-            }
-        },
-    );
-
-    (0..n)
-        .map(|i| {
-            izip!(mat[i].citer(), a.citer())
-                .map(|(x, y)| x * y)
-                .sum::<Mod>()
-        })
-        .for_each(|ans| {
-            println!("{}", ans);
-        });
+    for x in ans {
+        println!("{}", x);
+    }
 }
