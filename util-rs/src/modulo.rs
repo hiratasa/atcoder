@@ -148,7 +148,8 @@ impl<M> std::fmt::Debug for Mod<M> {
 #[snippet("modulo")]
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::TryFrom<T> + num::traits::Unsigned,
+    usize: std::convert::TryFrom<T>,
+    T: num::traits::Unsigned,
 {
     fn from(v: T) -> Self {
         use std::convert::TryFrom;
