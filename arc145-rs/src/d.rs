@@ -168,4 +168,34 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, i64);
+
+    let a = (2..n).fold(vec![1i64, 2i64], |mut a, i| {
+        let next = if i % 2 == 0 {
+            1
+        } else {
+            a[(i + 1) / 2 - 1] * 3 - 1
+        };
+        a.push(next);
+        a
+    });
+    let mut b = a.citer().cumsum::<i64>().collect::<Vec<_>>();
+    let s = b.citer().sum::<i64>();
+
+    let nn = n as i64;
+    let r = (m - s).rem_euclid(nn);
+
+    b[n - 1] += 5000000 / nn * nn + r;
+    let s = b.citer().sum::<i64>();
+    assert!((m - s) % nn == 0);
+    let k = (m - s) / nn;
+    for i in 0..n {
+        b[i] += k;
+    }
+
+    let s = b.citer().sum::<i64>();
+    assert!(s == m);
+
+    println!("{}", b.citer().join(" "));
+}
