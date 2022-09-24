@@ -211,6 +211,15 @@ fn log(x: usize, y: usize, p: usize) -> Option<usize> {
         .citer()
         .enumerate()
         .map(|(i, z)| (z, i))
+        .scan(FxHashSet::default(), |seen, (z, i)| {
+            if seen.contains(&z) {
+                Some(None)
+            } else {
+                seen.insert(z);
+                Some(Some((z, i)))
+            }
+        })
+        .flatten()
         .collect::<FxHashMap<_, _>>();
 
     let r = invmod(pows[m], p).unwrap();
