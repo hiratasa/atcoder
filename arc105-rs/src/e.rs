@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -108,6 +110,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -133,6 +143,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -149,149 +168,206 @@ where
 {
 }
 
-#[derive(Clone, Copy, Debug)]
-enum UnionFindNode {
-    Root { size: usize },
-    Child { parent: usize },
-}
-struct UnionFind {
-    g: Vec<UnionFindNode>,
-}
-#[allow(dead_code)]
-impl UnionFind {
-    fn new(n: usize) -> UnionFind {
-        use UnionFindNode::*;
-        UnionFind {
-            g: (0..n).map(|_| Root { size: 1 }).collect(),
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
+        }
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
         }
     }
-    fn root(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let p = match self.g[v] {
-            Root { size: _ } => return v,
-            Child { parent: p } => p,
-        };
-        let r = self.root(p);
-        self.g[v] = Child { parent: r };
-        r
-    }
-    fn unite(&mut self, v: usize, u: usize) -> bool {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        let ru = self.root(u);
-        if rv == ru {
-            return false;
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
         }
-        let size_rv = self.size(rv);
-        let size_ru = self.size(ru);
-        let (rsmall, rlarge) = if size_rv < size_ru {
-            (rv, ru)
-        } else {
-            (ru, rv)
-        };
-        self.g[rsmall] = Child { parent: rlarge };
-        self.g[rlarge] = Root {
-            size: size_rv + size_ru,
-        };
-        true
     }
-    fn same(&mut self, v: usize, u: usize) -> bool {
-        self.root(v) == self.root(u)
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
     }
-    fn size(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        match self.g[rv] {
-            Root { size } => size,
-            Child { parent: _ } => unreachable!(),
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + Iterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
         }
     }
 }
 
-fn calc(
-    n0: usize,
-    n1: usize,
-    k: usize,
-    odd: usize,
-    memo: &mut FxHashMap<(usize, usize, usize, usize), bool>,
-) -> bool {
-    let n0 = n0 % 2;
-    let n1 = n1 % 2;
-    let k = k % 2;
+type Graph = detail::UnweightedGraph;
 
-    if let Some(ret) = memo.get(&(n0, n1, k, odd)) {
-        return *ret;
+fn calc_size(g: &Graph, v: usize, visited: &mut [bool]) -> usize {
+    if visited[v] {
+        return 0;
     }
 
-    let ret = if odd == 0 {
-        k != 0
-    } else {
-        let ret_o_o = if odd >= 2 {
-            calc(n0, n1, k, odd - 2, memo)
-        } else {
-            true
-        };
-        let ret_o_0 = if odd >= 1 {
-            calc(n0 + 1, n1, k + n0 + 1, odd - 1, memo)
-        } else {
-            true
-        };
-        let ret_o_1 = if odd >= 1 {
-            calc(n0, n1 + 1, k + n1 + 1, odd - 1, memo)
-        } else {
-            true
-        };
+    visited[v] = true;
 
-        !ret_o_o || !ret_o_0 || !ret_o_1
-    };
-
-    memo.insert((n0, n1, k, odd), ret);
-
-    ret
+    1 + g.adjs(v).map(|u| calc_size(g, u, visited)).sum::<usize>()
 }
 
 fn main() {
     let t = read::<usize>();
-    for _ in 0..t {
+
+    repeat_with(|| {
         let (n, m) = read_tuple!(usize, usize);
         let ab = read_vec(m, || read_tuple!(usize, usize));
 
-        let mut uf = ab.citer().fold(UnionFind::new(n), |mut uf, (a, b)| {
-            uf.unite(a - 1, b - 1);
-            uf
-        });
+        (n, m, ab)
+    })
+    .take(t)
+    .map(|(n, m, ab)| {
+        let g = Graph::from_edges1_undirected(n, ab);
 
-        let n0 = uf.size(0);
-        let n1 = uf.size(n - 1);
-
-        let mut num_verts = vec![0; n];
-        for i in 0..n {
-            num_verts[uf.root(i)] += 1;
-        }
-        let mut num_edges = vec![0; n];
-        for (a, _b) in ab {
-            num_edges[uf.root(a - 1)] += 1;
-        }
-
-        let mut k = 0;
-        let mut odd = 0;
-        for i in 0..n {
-            if i == uf.root(i) {
-                k += num_verts[i] * (num_verts[i] - 1) / 2 - num_edges[i];
-                if uf.root(0) == i || uf.root(n - 1) == i {
-                    // NOP
-                } else if num_verts[i] % 2 == 0 {
-                    // NOP
-                } else {
-                    odd += 1;
-                }
-            }
-        }
-
-        if calc(n0, n1, k, odd, &mut FxHashMap::default()) {
-            println!("First");
+         if n % 2 > 0 {
+            (n % 4 / 2 + m) % 2 > 0
         } else {
-            println!("Second");
+            let x = (n % 4 / 2 + m + 1) % 2;
+
+            let n1 = calc_size(&g, 0, &mut vec![false; n]);
+            let n2 = calc_size(&g, n - 1, &mut vec![false; n]);
+
+            n1 % 2 == x || n2 % 2 == x
         }
-    }
+    })
+    .for_each(|win| {
+        if win {
+            println!("First")
+        } else {
+            println!("Second")
+        }
+    })
 }
