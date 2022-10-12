@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, unfold, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -148,4 +148,56 @@ where
 {
 }
 
-fn main() {}
+pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
+    let mut y = 1;
+
+    x = x % m;
+    while p > 0 {
+        if p & 1 > 0 {
+            y = y * x % m;
+        }
+
+        x = x * x % m;
+        p >>= 1;
+    }
+
+    y
+}
+
+fn main() {
+    let n = read::<usize>();
+
+    let ks = unfold(n, |m| {
+        if *m == 0 {
+            None
+        } else {
+            let k = (0..=((2.0 * n as f64).sqrt() as usize))
+                .rev()
+                .find(|&k| k * (k + 1) / 2 <= *m)
+                .unwrap();
+            *m -= k * (k + 1) / 2;
+
+            Some(k)
+        }
+    })
+    .collect::<Vec<_>>();
+
+    let ans = ks
+        .citer()
+        .scan(vec![], |r: &mut Vec<usize>, k| {
+            let d = (1..)
+                .find(|&d| r.citer().all(|rr| (rr + d) % 7 > 0))
+                .unwrap();
+            let q = pow_mod(3, k + 1, 7);
+            r.push(0);
+            r.iter_mut().for_each(|rr| {
+                *rr = ((*rr + d) * q) % 7;
+            });
+
+            Some(vvec![d; 7; k + 1])
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+
+    println!("{}", ans.citer().join(""));
+}
