@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +110,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +143,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -149,25 +169,27 @@ where
 }
 
 fn main() {
-    let n: usize = read();
+    let n = read::<usize>();
 
-    if n == 1 {
-        println!("1");
-        println!("AB");
-        return;
+    let ans = (2..=n).fold(vec![vec![false, true]], |prev, i| {
+        chain(
+            prev.iter()
+                .map(|g| chain(g.citer(), g.citer()).collect::<Vec<_>>()),
+            prev.iter()
+                .map(|g| chain(g.citer(), g.citer().map(|x| !x)).collect::<Vec<_>>()),
+        )
+        .chain(once(
+            chain(
+                repeat(false).take(1 << (i - 1)),
+                repeat(true).take(1 << (i - 1)),
+            )
+            .collect::<Vec<_>>(),
+        ))
+        .collect()
+    });
+
+    println!("{}", ans.len());
+    for g in ans {
+        println!("{}", g.citer().map(|x| if x { 'B' } else { 'A' }).join(""));
     }
-
-    if n == 2 {
-        println!("3");
-        println!("AABB");
-        println!("ABAB");
-        println!("ABBA");
-        return;
-    }
-
-    // 一度に同じチームになれる人数 2^(n - 1) - 1
-    // 特定の相手とa回同じチームになる
-    // K*(2^(n-1)-1) = a*(2^n-1)
-    // K >= lcm(2^(n-1)-1, 2^n-1)/(2^(n-1)-1) = (2^n-1)/gcd(2^(n-1)-1, 2^n-1)
-    // gcd(2^(n-1)-1, 2^n-1) = 1 => K >= 2^n-1, a = 2^(n-1)-1
 }

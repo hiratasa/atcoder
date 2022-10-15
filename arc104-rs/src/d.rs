@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -108,6 +110,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -133,6 +143,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -152,31 +171,28 @@ where
 fn main() {
     let (n, k, m) = read_tuple!(usize, usize, usize);
 
-    let b = (n + 1) * (n + 1) * k / 2 + 1;
+    const M: usize = 150000;
+    let t = once(vvec![1; 0; M])
+        .chain((1..=n).scan(vvec![1; 0; M], |v, i| {
+            for j in i..M {
+                v[j] += v[j - i];
+                v[j] %= m;
+            }
+            for j in (i * (k + 1)..M).rev() {
+                v[j] += (m - v[j - i * (k + 1)]) % m;
+            }
 
-    let dp = (1..=n).fold(vec![vvec![1; 0; b]], |dp, i| {
-        let mut c = vec![0; b];
-        for j in 0..b {
-            c[j] = (j.checked_sub(i).map_or(0, |jj| c[jj]) + dp[i - 1][j]) % m;
-        }
-
-        let next = (0..b)
-            .map(|j| (c[j] + m - j.checked_sub((k + 1) * i).map_or(0, |jj| c[jj])) % m)
-            .collect::<Vec<_>>();
-
-        pushed!(dp, next)
-    });
+            Some(v.clone())
+        }))
+        .collect::<Vec<_>>();
 
     (1..=n)
-        .map(|x| {
-            (izip!(dp[x - 1].citer(), dp[n - x].citer())
-                .map(|(y, z)| y * z % m)
-                .fold(0, |s, y| (s + y) % m)
-                * (k + 1)
-                + (m - 1))
+        .map(|i| {
+            ((k + 1)
+                * izip!(t[i - 1].citer(), t[n - i].citer())
+                    .map(|(x, y)| x * y % m)
+                    .fold(0, |x, y| (x + y) % m) + m - /* empty */ 1)
                 % m
         })
-        .for_each(|ans| {
-            println!("{}", ans);
-        });
+        .for_each(|ans| println!("{}", ans))
 }
