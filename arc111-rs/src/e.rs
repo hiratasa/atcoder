@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +56,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +66,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +110,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +143,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -148,19 +168,16 @@ where
 {
 }
 
-// sum[x=0 to n-1] floor((a+x*b)/c)
+// calc sum[x=0 to n-1] floor((a+x*b)/c)
+#[allow(dead_code)]
 fn floor_sum(n: usize, mut a: usize, mut b: usize, c: usize) -> usize {
     let mut ret = 0;
 
-    if a / c > 0 {
-        ret += a / c * n;
-        a %= c;
-    }
+    ret += a.div_euclid(c) * n;
+    a = a.rem_euclid(c);
 
-    if b / c > 0 {
-        ret += (b / c) * n * (n - 1) / 2;
-        b %= c;
-    }
+    ret += b.div_euclid(c) * n * (n - 1) / 2;
+    b = b.rem_euclid(c);
 
     if b == 0 {
         return ret;
@@ -177,15 +194,23 @@ fn floor_sum(n: usize, mut a: usize, mut b: usize, c: usize) -> usize {
 }
 
 fn main() {
-    let t: usize = read();
-    let abcd = read_vec(t, || read_tuple!(usize, usize, usize, usize));
+    let t = read::<usize>();
 
-    for (a, b, c, d) in abcd {
-        // C*i - B*i + 1 < D => i < (D-1)/(C-B)
-        let i0 = (d - 1) / (c - b);
-        // floor((A+i*C)/D) - floor((A+i*B-1)/D)
-        let t = floor_sum(i0 + 1, a, c, d) - floor_sum(i0 + 1, a - 1, b, d);
+    repeat_with(|| read_tuple!(usize, usize, usize, usize))
+        .take(t)
+        .map(|(a, b, c, d)| {
+            // (a+b*i ～ a+c*i がdの倍数を含まないような0<iの個数)
+            // = (a+b*i ～ a+c*i がdの倍数を含まないような0<i<ceil((d-1)/(c-b))の個数)
+            // = ceil((d-1)/(c-b)) - 1 - (a+b*i ～ a+c*i がdの倍数を含むような0<i<ceil((d-1)/(c-b))の個数)
+            // = ceil((d-1)/(c-b)) - 1 - (0<i<ceil((d-1)/(c-b)) に対して a+b*i ～ a+c*i に含まれるdの倍数の個数の和)
+            // = ceil((d-1)/(c-b)) - 1 - (0<i<ceil((d-1)/(c-b)) に対して a+c*i 以下のdの倍数の個数の和)
+            //                         + (0<i<ceil((d-1)/(c-b)) に対して a+b*i-1 以下のdの倍数の個数の和)
 
-        println!("{}", i0 - t);
-    }
+            let u = (d - 1 + c - b - 1) / (c - b);
+
+            u - 1 - ((floor_sum(u, a, c, d) - a / d) - (floor_sum(u, a - 1, b, d) - (a - 1) / d))
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
 }
