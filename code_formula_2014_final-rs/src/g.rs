@@ -168,89 +168,62 @@ where
 {
 }
 
-fn solve3(p: &[usize], start_odd: bool) -> Vec<usize> {
-    let l = iterate((p.to_vec(), start_odd), |(q, odd)| {
-        let mut q = q.clone();
-        if *odd {
-            q.swap(0, 1);
-        } else {
-            q.swap(1, 2);
+fn solve(
+    s: &mut [Vec<usize>; 3],
+    from: usize,
+    to: usize,
+    min: usize,
+    max: usize,
+    ops: &mut Vec<(usize, usize)>,
+) {
+    let n = max - min + 1;
+
+    assert!(s[from].len() >= n);
+
+    if n == 1 {
+        if from != to {
+            ops.push((from, to));
+            let x = s[from].pop().unwrap();
+            assert!(min == x && x == max);
+            s[to].push(x);
         }
 
-        (q, !odd)
-    })
-    .take_while(|(q, _)| q != &[1, 2, 3])
-    .count();
+        return;
+    }
 
-    it![1 + !start_odd as usize, 1 + start_odd as usize]
-        .cycle()
-        .take(l)
-        .collect()
+    let idx0 = if from == to { (from + 1) % 3 } else { to };
+
+    let idx1 = 3 - from - idx0;
+
+    let mid = (min + max) / 2;
+
+    for _ in 0..n {
+        let x = s[from].pop().unwrap();
+        assert!(min <= x);
+        assert!(x <= max);
+
+        if x > mid {
+            ops.push((from, idx0));
+            s[idx0].push(x);
+        } else {
+            ops.push((from, idx1));
+            s[idx1].push(x);
+        }
+    }
+
+    solve(s, idx0, to, mid + 1, max, ops);
+    solve(s, idx1, to, min, mid, ops);
 }
 
 fn main() {
-    let t = read::<usize>();
+    let n = read::<usize>();
+    let r = read_col::<usize>(n);
 
-    repeat_with(|| {
-        let n = read::<usize>();
-        let p = read_row::<usize>();
+    let mut ans = vec![];
+    solve(&mut [r, vec![], vec![]], 0, 2, 1, n, &mut ans);
 
-        p
-    })
-    .take(t)
-    .map(|p| {
-        (0..)
-            .try_fold((p, vec![]), |(mut p, mut ops), _| {
-                if p.len() == 2 {
-                    assert!(ops.is_empty());
-                    if p[0] == 1 {
-                        Err(vec![])
-                    } else {
-                        Err(vec![1])
-                    }
-                } else if p.len() == 3 {
-                    ops.extend(solve3(&p, ops.len() % 2 == 0));
-                    Err(ops)
-                } else {
-                    let pos = p.citer().position_max().unwrap();
-
-                    if pos == p.len() - 1 {
-                        p.pop();
-                        Ok((p, ops))
-                    } else if pos % 2 == ops.len() % 2 {
-                        ops.extend((pos + 1)..p.len());
-                        p.remove(pos);
-                        Ok((p, ops))
-                    } else if ops.len() % 2 == 0 {
-                        assert!(pos % 2 > 0);
-                        if pos > 1 {
-                            ops.push(1);
-                            p.swap(0, 1);
-                        } else {
-                            ops.push(3);
-                            p.swap(2, 3);
-                        }
-                        Ok((p, ops))
-                    } else {
-                        assert!(pos % 2 == 0);
-                        if pos != 2 {
-                            ops.push(2);
-                            p.swap(1, 2);
-                        } else {
-                            ops.push(2);
-                            p.swap(1, 2);
-                            ops.push(3);
-                            p.swap(2, 3);
-                        }
-
-                        Ok((p, ops))
-                    }
-                }
-            })
-            .unwrap_err()
-    })
-    .for_each(|ans| {
-        println!("{}", ans.len());
-        println!("{}", ans.citer().join(" "));
-    });
+    println!("{}", ans.len());
+    for (from, to) in ans {
+        println!("{} {}", from + 1, to + 1);
+    }
 }

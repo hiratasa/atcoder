@@ -1,13 +1,10 @@
 [package]
-name = "code_formula_2014_final-rs"
+name = "abc158-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[profile.release]
-debug = true
 
 [dependencies]
 num = "0.2.1"
@@ -21,33 +18,21 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "code_formula_2014_final-a"
+name = "abc158-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "code_formula_2014_final-b"
+name = "abc158-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "code_formula_2014_final-c"
+name = "abc158-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "code_formula_2014_final-d"
+name = "abc158-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "code_formula_2014_final-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "code_formula_2014_final-f"
+name = "abc158-f"
 path = "src/f.rs"
-
-[[bin]]
-name = "code_formula_2014_final-h"
-path = "src/h.rs"
-
-[[bin]]
-name = "code_formula_2014_final-g"
-path = "src/g.rs"
