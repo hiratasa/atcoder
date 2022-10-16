@@ -148,4 +148,37 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let s = read_row::<usize>();
+
+    let mut s = s
+        .citer()
+        .enumerate()
+        .map(|(i, x)| (x, i))
+        .collect::<BTreeSet<_>>();
+
+    let (x0, i0) = s.citer().next_back().unwrap();
+    s.remove(&(x0, i0));
+
+    let ans = (0..n)
+        .try_fold((s, vec![x0]), |(mut s, mut v), _| {
+            let mut u = vec![];
+            for &x in &v {
+                let (y, ii) = *s.range(..(x, 0)).next_back()?;
+                s.remove(&(y, ii));
+
+                u.push(y);
+            }
+            v.extend(u);
+
+            Some((s, v))
+        })
+        .is_some();
+
+    if ans {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
+}
