@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,7 +20,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +60,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +70,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +114,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +147,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -148,4 +172,51 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let a = read_row::<usize>();
+    let b = read_row::<usize>();
+
+    let ans = (0..=1)
+        .map(|c0| {
+            let mut init = [usize::MAX, usize::MAX];
+            if c0 == 0 {
+                init[0] = a[0];
+            } else {
+                init[1] = 0;
+            }
+
+            let dp = (1..n).fold(init, |prev, i| {
+                let mut next = [usize::MAX, usize::MAX];
+
+                iproduct!(0..=1, 0..=1).for_each(|(prev_c, next_c)| {
+                    let mut cost = prev[prev_c];
+                    if next_c == 0 {
+                        cost = cost.saturating_add(a[i]);
+                    }
+                    if prev_c == next_c {
+                        cost = cost.saturating_add(b[i - 1]);
+                    }
+                    next[next_c] = min(next[next_c], cost);
+                });
+
+                next
+            });
+
+            dp.citer()
+                .enumerate()
+                .map(|(c, cost)| {
+                    if c == c0 {
+                        cost.saturating_add(b[n - 1])
+                    } else {
+                        cost
+                    }
+                })
+                .min()
+                .unwrap()
+        })
+        .min()
+        .unwrap();
+
+    println!("{}", ans);
+}

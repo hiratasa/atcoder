@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,7 +20,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +60,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +70,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +114,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -130,6 +145,15 @@ fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
 #[allow(dead_code)]
 fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
+}
+
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
@@ -191,79 +215,49 @@ fn main() {
     let s = read_str();
     let k = read::<usize>();
 
-    let ypos = s.citer().positions(|c| c == 'Y').collect::<Vec<_>>();
-    let m = ypos.len();
+    let n = s.len();
 
-    let possum = once(0)
-        .chain(ypos.citer())
+    let t = once(0)
+        .chain(s.citer().map(|c| (c == 'Y') as usize))
+        .scan(0, |x, c| {
+            if c == 0 {
+                Some(*x)
+            } else {
+                *x += 1;
+                Some(0)
+            }
+        })
         .cumsum::<usize>()
         .collect::<Vec<_>>();
+    let u = once(0)
+        .chain(s.citer().map(|c| (c == 'Y') as usize))
+        .map(|x| 1 - x)
+        .cumsum::<usize>()
+        .collect::<Vec<_>>();
+    let poss = s.citer().positions(|c| c == 'Y').collect::<Vec<_>>();
 
-    // eprintln!("{:?}", possum);
-    let ans = ypos
-        .citer()
-        .enumerate()
-        .map(|(i, pos)| {
-            // posの左からj個、右からj-1個集める
-            let j0 = lower_bound_int(0, m + 1, |j| {
-                if j == 0 {
-                    Ordering::Less
-                } else if j > i || j - 1 > m - i - 1 {
-                    Ordering::Greater
-                } else {
-                    if (j * ((pos - j) + (pos - 1)) / 2 - (possum[i] - possum[i - j]))
-                        + ((possum[i + j - 1 + 1] - possum[i + 1])
-                            - (j - 1) * ((pos + j - 1) + (pos + 1)) / 2)
-                        <= k
-                    {
-                        Ordering::Less
-                    } else {
-                        Ordering::Greater
-                    }
-                }
-            }) - 1;
+    let m = poss.len();
 
-            // posの左からj個、右からj個集める
-            let j1 = lower_bound_int(0, m + 1, |j| {
-                if j == 0 {
-                    Ordering::Less
-                } else if j > i || j > m - i - 1 {
-                    Ordering::Greater
-                } else {
-                    if (j * ((pos - j) + (pos - 1)) / 2 - (possum[i] - possum[i - j]))
-                        + ((possum[i + j + 1] - possum[i + 1]) - j * ((pos + j) + (pos + 1)) / 2)
-                        <= k
-                    {
-                        Ordering::Less
-                    } else {
-                        Ordering::Greater
-                    }
-                }
-            }) - 1;
+    let ans = lower_bound_int(1, m + 1, |l| {
+        let ok = (0..=m - l)
+            .map(|i| {
+                let j = i + l - 1;
+                let mid = (i + j) / 2;
+                let leftpos = poss[i];
+                let rightpos = poss[j];
+                let midpos = poss[mid];
 
-            // posの左からj-1個、右からj個集める
-            let j2 = lower_bound_int(0, m + 1, |j| {
-                if j == 0 {
-                    Ordering::Less
-                } else if j - 1 > i || j > m - i - 1 {
-                    Ordering::Greater
-                } else {
-                    if ((j - 1) * ((pos - (j - 1)) + pos.saturating_sub(1)) / 2
-                        - (possum[i] - possum[i - (j - 1)]))
-                        + ((possum[i + j + 1] - possum[i + 1]) - j * ((pos + j) + (pos + 1)) / 2)
-                        <= k
-                    {
-                        Ordering::Less
-                    } else {
-                        Ordering::Greater
-                    }
-                }
-            }) - 1;
+                ((t[midpos] - t[leftpos]) - i * (u[midpos] - u[leftpos]))
+                    + ((j + 1) * (u[rightpos] - u[midpos]) - (t[rightpos] - t[midpos]))
+            })
+            .any(|c| c <= k);
 
-            it![2 * j0, 2 * j1 + 1, 2 * j2].max().unwrap()
-        })
-        .max()
-        .unwrap_or(0);
+        if ok {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        }
+    }) - 1;
 
     println!("{}", ans);
 }
