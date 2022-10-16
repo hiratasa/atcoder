@@ -12,6 +12,10 @@ use std::mem::*;
 use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
+use std::f64;
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
