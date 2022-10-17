@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -56,7 +60,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +70,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +114,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +147,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -148,129 +172,80 @@ where
 {
 }
 
-trait ToString {
-    fn to_string(self: Self) -> String;
-}
-impl<I, T> ToString for I
-where
-    I: IntoIterator<Item = T>,
-    T: std::convert::TryInto<u32>,
-{
-    fn to_string(self: Self) -> String {
-        self.into_iter()
-            .map(|t| t.try_into().ok().unwrap())
-            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
-            .collect()
-    }
-}
-
 fn main() {
-    let t: usize = read();
+    let t = read::<usize>();
 
-    for _ in 0..t {
-        let s = read_str()
-            .into_iter()
-            .map(|c| (c == 'b') as usize)
-            .collect::<Vec<_>>();
+    repeat_with(|| read_str())
+        .take(t)
+        .map(|s| {
+            let n = s.len();
 
-        let n = s.len();
-        let na = s.citer().filter(|&c| c == 0).count();
-        let nb = n - na;
-
-        let ans = if na % 2 == 0 && s[n - 1] == 1 {
-            // aが偶数、末尾がb
-            repeat_n('b', nb).to_string()
-        } else if s[n - 1] == 0 {
-            // aが偶数または奇数、末尾がa
             let ablock = s
                 .citer()
-                .group_by(|&x| x)
+                .enumerate()
+                .group_by(|&(_, c)| c)
                 .into_iter()
-                .filter(|(k, _it)| *k == 0)
-                .map(|(_, it)| it.count())
-                .collect_vec();
-            let ma = ablock
-                .citer()
-                .take(ablock.len() - 1)
-                .filter(|&x| x == 1)
-                .count()
-                % 2;
-            let ma2 = ablock
-                .citer()
-                .take(ablock.len() - 1)
-                .filter(|&x| x >= 2)
-                .map(|x| x - 2)
-                .sum::<usize>();
+                .map(|(c, mut it)| {
+                    let i = it.next().unwrap().0;
+                    (c, i, it.count() + 1)
+                })
+                .filter(|&(c, _, _)| c == 'a')
+                .map(|(_, i0, l)| (i0, l))
+                .collect::<Vec<_>>();
+            let na = ablock.citer().map(|(_, l)| l).sum::<usize>();
+            let nb = n - na;
+            let lastisa = *s.last().unwrap() == 'a';
 
-            let ka = ablock[ablock.len() - 1] + ma2 - ma;
+            if na == n {
+                repeat_n('a', na).collect::<String>()
+            } else if ablock.len() == 1 && ablock[0].0 == 0 {
+                repeat_n('a', ablock[0].1 % 2)
+                    .chain(repeat_n('b', nb))
+                    .collect::<String>()
+            } else if !lastisa && na % 2 == 0 {
+                repeat_n('b', nb).collect()
+            } else if !lastisa && ablock.last().map(|(i, l)| i + l == n - 1).unwrap() {
+                // aが奇数個で、...ab で終わる場合
+                repeat_n('b', nb - 1)
+                    .chain(once('a'))
+                    .chain(once('b'))
+                    .collect()
+            } else if !lastisa && ablock.last().map(|(i, l)| i + l + 2 == n).unwrap() {
+                // aが奇数個で、...abb で終わる場合
+                repeat_n('b', nb - 2)
+                    .chain(once('a'))
+                    .chain(repeat_n('b', 2))
+                    .collect()
+            } else {
+                let na1 = ablock
+                    .citer()
+                    .filter(|&(i, l)| l == 1 && i + l != n)
+                    .count();
+                let sa2 = ablock
+                    .citer()
+                    .filter(|&(i, l)| l >= 2 && i + l != n)
+                    .map(|(_, l)| l - 2)
+                    .sum::<usize>();
 
-            repeat_n('b', nb).chain(repeat_n('a', ka)).to_string()
-        } else {
-            // aが奇数、末尾がb
-            if let Some(firstb) = s.citer().position(|c| c == 1) {
-                if s.citer().skip(firstb).all_equal() {
-                    once('a').chain(repeat_n('b', nb)).to_string()
+                if lastisa {
+                    let lasta = ablock.last().unwrap().1;
+                    repeat_n('b', nb)
+                        .chain(repeat_n('a', sa2 + lasta - (na1 % 2) as usize))
+                        .collect()
                 } else {
-                    let lasta = s.citer().rposition(|c| c == 0).unwrap();
+                    let hasa2 = ablock.citer().any(|(i, l)| i != 0 && l >= 2);
 
-                    if n - lasta - 1 <= 2 {
-                        s.citer()
-                            .enumerate()
-                            .filter_map(|(i, c)| {
-                                if c == 1 {
-                                    Some('b')
-                                } else if i == lasta {
-                                    Some('a')
-                                } else {
-                                    None
-                                }
-                            })
-                            .to_string()
+                    if hasa2 {
+                        repeat_n('b', nb - 2)
+                            .chain(repeat_n('a', sa2 + 2 - (na1 % 2) as usize))
+                            .collect()
                     } else {
-                        let mut ablock = s
-                            .citer()
-                            .group_by(|&x| x)
-                            .into_iter()
-                            .filter(|(k, _it)| *k == 0)
-                            .map(|(_, it)| it.count())
-                            .collect_vec();
-
-                        if ablock.citer().all(|x| x == 1) {
-                            repeat_n('b', nb - 2).chain(once('a')).to_string()
-                        } else {
-                            if ablock[ablock.len() - 1] == 1 {
-                                let idx = ablock.citer().rposition(|x| x > 1).unwrap();
-                                let al = ablock.len();
-                                if idx > 0 || s[0] == 1 {
-                                    ablock.swap(idx, al - 1);
-                                }
-                            }
-
-                            let ma = ablock
-                                .citer()
-                                .take(ablock.len() - 1)
-                                .filter(|&x| x == 1)
-                                .count()
-                                % 2;
-                            let ma2 = ablock
-                                .citer()
-                                .take(ablock.len() - 1)
-                                .filter(|&x| x >= 2)
-                                .map(|x| x - 2)
-                                .sum::<usize>();
-
-                            let ka = ablock[ablock.len() - 1] + ma2 - ma;
-                            // eprintln!("{} {} {} {} {:?}", na, ma, ma2, ka, ablock);
-
-                            repeat_n('b', nb - 2).chain(repeat_n('a', ka)).to_string()
-                        }
+                        repeat_n('b', nb - 2)
+                            .chain(repeat_n('a', sa2 + 1 - ((na1 + 1) % 2) as usize))
+                            .collect()
                     }
                 }
-            } else {
-                repeat_n('a', na).to_string()
             }
-        };
-
-        println!("{}", ans);
-    }
+        })
+        .for_each(|ans| println!("{}", ans))
 }

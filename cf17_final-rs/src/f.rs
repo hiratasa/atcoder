@@ -137,4 +137,58 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let k = 37 + 1;
+    let n = k * (k - 1) + 1;
+
+    let mut ans = vec![];
+    ans.push((1..=k).collect::<Vec<_>>());
+
+    for j in 1..k {
+        ans.push(
+            (2 + (k - 1) * j..2 + (k - 1) * (j + 1))
+                .chain(once(1))
+                .collect(),
+        );
+    }
+    for i in 0..=k - 2 {
+        for j in 0..k - 1 {
+            ans.push(
+                ((0..k - 1).map(|l| ans[1 + l][(j + i * l) % (k - 1)]))
+                    .chain(once(i + 2))
+                    .collect(),
+            );
+        }
+    }
+
+    println!("{} {}", n, k);
+    for row in &ans {
+        println!("{}", row.citer().join(" "));
+    }
+
+    // verify
+    // assert!(ans.len() == n);
+    // assert!(ans.iter().all(|row| row.citer().all(|x| x <= n)));
+    // assert!(ans.iter().all(|row| row.len() == k));
+    // assert!(ans
+    //     .iter()
+    //     .all(|row| row.citer().sorted().dedup().count() == k));
+    // assert!(ans
+    //     .iter()
+    //     .flatten()
+    //     .sorted()
+    //     .group_by(|&x| x)
+    //     .into_iter()
+    //     .all(|(_, it)| it.count() == k));
+    // assert!(ans
+    //     .iter()
+    //     .tuple_combinations()
+    //     .all(|(row0, row1)| chain(row0, row1)
+    //         .sorted()
+    //         .group_by(|&x| x)
+    //         .into_iter()
+    //         .map(|(_, it)| it.count())
+    //         .filter(|&c| c == 2)
+    //         .count()
+    //         == 1));
+}
