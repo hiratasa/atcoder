@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,7 +20,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -56,7 +60,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +70,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +114,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +147,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -152,6 +176,7 @@ use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
     let mut y = 1;
+    x = x % m;
     while p > 0 {
         if p & 1 > 0 {
             y = y * x % m;
@@ -177,10 +202,14 @@ macro_rules! define_static_mod {
         pub type $mod = Mod<$modulus>;
     };
 }
+define_static_mod!(2013265921, Modulus2013265921, Mod2013265921);
+define_static_mod!(1811939329, Modulus1811939329, Mod1811939329);
+define_static_mod!(469762049, Modulus469762049, Mod469762049);
 define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
 define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Mod<M>(usize, std::marker::PhantomData<fn() -> M>);
+pub struct Mod<M>(pub usize, std::marker::PhantomData<fn() -> M>);
 #[allow(dead_code)]
 impl<M: Modulus> Mod<M> {
     pub fn modulus() -> usize {
@@ -228,10 +257,12 @@ impl<M> std::fmt::Debug for Mod<M> {
 }
 impl<T, M: Modulus> std::convert::From<T> for Mod<M>
 where
-    usize: std::convert::From<T>,
+    usize: std::convert::TryFrom<T>,
+    T: num::traits::Unsigned,
 {
     fn from(v: T) -> Self {
-        Mod::new(usize::from(v))
+        use std::convert::TryFrom;
+        Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
 impl<M: Modulus> std::str::FromStr for Mod<M> {
@@ -246,73 +277,117 @@ impl<M: Modulus> std::ops::Neg for Mod<M> {
         Mod::new(M::modulus() - self.0)
     }
 }
-impl<T, M: Modulus> std::ops::Add<T> for Mod<M>
-where
-    T: std::convert::Into<Mod<M>>,
-{
+impl<M: Modulus> std::ops::Add<Mod<M>> for Mod<M> {
     type Output = Self;
-    fn add(self, rhs: T) -> Self {
-        Mod::new(self.0 + rhs.into().0)
+    fn add(self, rhs: Mod<M>) -> Self {
+        Mod::new(self.0 + rhs.0)
+    }
+}
+impl<M: Modulus> std::ops::Add<usize> for Mod<M> {
+    type Output = Self;
+    fn add(self, rhs: usize) -> Self {
+        Mod::new(self.0 + rhs)
+    }
+}
+impl<M: Modulus> std::ops::Add<Mod<M>> for usize {
+    type Output = Mod<M>;
+    fn add(self, rhs: Mod<M>) -> Mod<M> {
+        Mod::new(self + rhs.0)
     }
 }
 impl<T, M: Modulus> std::ops::AddAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod<M>>,
+    Mod<M>: std::ops::Add<T, Output = Mod<M>>,
 {
     fn add_assign(&mut self, rhs: T) {
         *self = *self + rhs;
     }
 }
-impl<T, M: Modulus> std::ops::Sub<T> for Mod<M>
-where
-    T: std::convert::Into<Mod<M>>,
-{
+impl<M: Modulus> std::ops::Sub<Mod<M>> for Mod<M> {
     type Output = Self;
-    fn sub(self, rhs: T) -> Self {
-        Mod::new(self.0 + M::modulus() - rhs.into().0)
+    fn sub(self, rhs: Mod<M>) -> Self {
+        Mod::new(self.0 + M::modulus() - rhs.0)
+    }
+}
+impl<M: Modulus> std::ops::Sub<usize> for Mod<M> {
+    type Output = Self;
+    fn sub(self, rhs: usize) -> Self {
+        Mod::new(self.0 + M::modulus() - rhs % M::modulus())
+    }
+}
+impl<M: Modulus> std::ops::Sub<Mod<M>> for usize {
+    type Output = Mod<M>;
+    fn sub(self, rhs: Mod<M>) -> Mod<M> {
+        Mod::new(self + M::modulus() - rhs.0)
     }
 }
 impl<T, M: Modulus> std::ops::SubAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod<M>>,
+    Mod<M>: std::ops::Sub<T, Output = Mod<M>>,
 {
     fn sub_assign(&mut self, rhs: T) {
         *self = *self - rhs;
     }
 }
-impl<T, M: Modulus> std::ops::Mul<T> for Mod<M>
-where
-    T: std::convert::Into<Mod<M>>,
-{
+impl<M: Modulus> std::ops::Mul<Mod<M>> for Mod<M> {
     type Output = Self;
-    fn mul(self, rhs: T) -> Self {
-        Mod::new(self.0 * rhs.into().0)
+    fn mul(self, rhs: Mod<M>) -> Self {
+        Mod::new(self.0 * rhs.0)
+    }
+}
+impl<M: Modulus> std::ops::Mul<usize> for Mod<M> {
+    type Output = Self;
+    fn mul(self, rhs: usize) -> Self {
+        Mod::new(self.0 * (rhs % M::modulus()))
+    }
+}
+impl<M: Modulus> std::ops::Mul<Mod<M>> for usize {
+    type Output = Mod<M>;
+    fn mul(self, rhs: Mod<M>) -> Mod<M> {
+        Mod::new((self % M::modulus()) * rhs.0)
     }
 }
 impl<T, M: Modulus> std::ops::MulAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod<M>>,
+    Mod<M>: std::ops::Mul<T, Output = Mod<M>>,
 {
     fn mul_assign(&mut self, rhs: T) {
         *self = *self * rhs;
     }
 }
-impl<T, M: Modulus> std::ops::Div<T> for Mod<M>
-where
-    T: std::convert::Into<Mod<M>>,
-{
+impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
-    fn div(self, rhs: T) -> Self {
+    fn div(self, rhs: Mod<M>) -> Self {
         if self.0 == 0 {
             self
         } else {
-            self * rhs.into().inv()
+            self * rhs.inv()
+        }
+    }
+}
+impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
+    type Output = Self;
+    fn div(self, rhs: usize) -> Self {
+        if self.0 == 0 {
+            self
+        } else {
+            self * Mod::new(rhs).inv()
+        }
+    }
+}
+impl<M: Modulus> std::ops::Div<Mod<M>> for usize {
+    type Output = Mod<M>;
+    fn div(self, rhs: Mod<M>) -> Mod<M> {
+        if self == 0 {
+            Mod::new(self)
+        } else {
+            self * rhs.inv()
         }
     }
 }
 impl<T, M: Modulus> std::ops::DivAssign<T> for Mod<M>
 where
-    T: std::convert::Into<Mod<M>>,
+    Mod<M>: std::ops::Div<T, Output = Mod<M>>,
 {
     fn div_assign(&mut self, rhs: T) {
         *self = *self / rhs;
@@ -351,47 +426,34 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
+#[allow(dead_code)]
+fn generate_inv<M: Modulus>(n: usize) -> Vec<Mod<M>> {
+    (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
+        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
+        inv
+    })
+}
+
 fn main() {
     type Mod = Mod998244353;
 
     let (h, w) = read_tuple!(usize, usize);
-
     let (h1, w1, h2, w2) = read_tuple!(usize, usize, usize, usize);
 
-    let hmin = min(h1, h2);
-    let hmax = max(h1, h2);
-    let wmin = min(w1, w2);
-    let wmax = max(w1, w2);
+    let inv = generate_inv(h + w);
 
-    let delta_h = hmax - hmin;
-    let delta_w = wmax - wmin;
+    let (h1, h2) = (min(h1, h2), max(h1, h2));
+    let (w1, w2) = (min(w1, w2), max(w1, w2));
 
-    let ans0 = (1..h)
-        .filter_map(|i| {
-            if i < hmin {
-                Some(hmin - i)
-            } else if i >= hmax {
-                Some(i - hmax + 1)
-            } else {
-                None
-            }
-        })
-        .map(|a| Mod::one() / Mod::new(a + delta_h + delta_w))
-        .sum::<Mod>();
+    let m = (h2 - h1) + (w2 - w1);
 
-    let ans1 = (1..w)
-        .filter_map(|i| {
-            if i < wmin {
-                Some(wmin - i)
-            } else if i >= wmax {
-                Some(i - wmax + 1)
-            } else {
-                None
-            }
-        })
-        .map(|a| Mod::one() / Mod::new(a + delta_h + delta_w))
-        .sum::<Mod>();
+    let ans = (0..h1 - 1)
+        .chain(0..h - h2)
+        .chain(0..w1 - 1)
+        .chain(0..w - w2)
+        .map(|i| inv[i + m + 1])
+        .sum::<Mod>()
+        + 1;
 
-    let ans = ans0 + ans1 + Mod::one();
     println!("{}", ans);
 }
