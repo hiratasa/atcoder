@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -14,7 +18,9 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -51,10 +57,22 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -96,6 +114,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -121,6 +147,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -137,4 +172,44 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (H, W, h, w) = read_tuple!(usize, usize, usize, usize);
+
+    const B: i64 = 1000000000;
+    let ans = if H % h != 0 {
+        (0..H)
+            .map(|i| {
+                (0..W)
+                    .map(|j| match i % h {
+                        0 => B - 1,
+                        r if r == h - 1 => -B,
+                        _ => 0,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
+    } else if W % w != 0 {
+        (0..H)
+            .map(|i| {
+                (0..W)
+                    .map(|j| match j % w {
+                        0 => B - 1,
+                        r if r == w - 1 => -B,
+                        _ => 0,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
+    } else {
+        println!("No");
+        return;
+    };
+
+    println!("Yes");
+    println!(
+        "{}",
+        ans.iter()
+            .map(|row| format!("{}", row.citer().join(" ")))
+            .join("\n")
+    );
+}

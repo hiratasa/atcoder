@@ -36,3 +36,7 @@ path = "src/d.rs"
 [[bin]]
 name = "abc265-e"
 path = "src/e.rs"
+
+[[bin]]
+name = "abc265-f"
+path = "src/f.rs"
