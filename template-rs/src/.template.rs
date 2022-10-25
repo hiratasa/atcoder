@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -12,10 +16,6 @@ use std::mem::*;
 use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
-#[allow(unused_imports)]
-use std::i64;
-#[allow(unused_imports)]
-use std::f64;
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
