@@ -24,6 +24,8 @@ use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+#[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
 use rustc_hash::FxHashSet;
