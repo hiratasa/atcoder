@@ -3,10 +3,6 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
-use std::f64;
-#[allow(unused_imports)]
-use std::i64;
-#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,6 +12,10 @@ use std::mem::*;
 use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
+use std::f64;
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
@@ -172,32 +172,4 @@ where
 {
 }
 
-fn main() {
-    let (h, w, n) = read_tuple!(usize, usize, usize);
-    let xy = read_vec(n, || read_tuple!(usize, usize));
-
-    let xy = xy.citer().collect::<FxHashSet<_>>();
-
-    let can_access = once(1)
-        .chain((2..=h).scan(1, |ma, i| {
-            if *ma + 1 <= w && !xy.contains(&(i, *ma + 1)) {
-                *ma += 1;
-            }
-            Some(*ma)
-        }))
-        .collect::<Vec<_>>();
-
-    let ans = xy
-        .citer()
-        .filter_map(|(x, y)| {
-            if y > can_access[x - 1] {
-                None
-            } else {
-                Some(x - 1)
-            }
-        })
-        .min()
-        .unwrap_or(h);
-
-    println!("{}", ans);
-}
+fn main() {}

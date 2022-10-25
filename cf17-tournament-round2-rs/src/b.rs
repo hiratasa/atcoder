@@ -173,31 +173,27 @@ where
 }
 
 fn main() {
-    let (h, w, n) = read_tuple!(usize, usize, usize);
-    let xy = read_vec(n, || read_tuple!(usize, usize));
+    let n = read::<usize>();
+    let mut p = read_row::<usize>();
 
-    let xy = xy.citer().collect::<FxHashSet<_>>();
-
-    let can_access = once(1)
-        .chain((2..=h).scan(1, |ma, i| {
-            if *ma + 1 <= w && !xy.contains(&(i, *ma + 1)) {
-                *ma += 1;
+    let mut ans = vec![];
+    for i in 0..n - 1 {
+        for j in 0..n {
+            if j < n - 1 && p[0] < p[n - 1] {
+                ans.push(n - 1);
+                p.swap(0, n - 1);
             }
-            Some(*ma)
-        }))
-        .collect::<Vec<_>>();
-
-    let ans = xy
-        .citer()
-        .filter_map(|(x, y)| {
-            if y > can_access[x - 1] {
-                None
-            } else {
-                Some(x - 1)
+            ans.push(1);
+            for k in 1..n {
+                p.swap(k - 1, k);
             }
-        })
-        .min()
-        .unwrap_or(h);
+        }
+    }
 
-    println!("{}", ans);
+    ans.extend(repeat_n(1, n - 1));
+
+    println!("{}", ans.len());
+    for x in ans {
+        println!("{}", x);
+    }
 }
