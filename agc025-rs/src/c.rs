@@ -175,26 +175,28 @@ where
 }
 
 fn main() {
-    let (n, m, s) = read_tuple!(usize, f64, f64);
-    let a = read_row::<f64>();
+    let n = read::<usize>();
+    let lr = read_vec(n, || read_tuple!(i64, i64));
 
-    let csum = once(0.0)
-        .chain(a.citer().rev())
-        .cumsum::<f64>()
-        .collect::<Vec<_>>();
-    let ans = (0..=n)
-        .flat_map(|i| (i..=n).map(move |j| (i, j)))
-        .map(|(i, j)| {
-            if m * i as f64 > s || (s - m * i as f64) > m * (j - i) as f64 {
-                0.0
-            } else if i == j {
-                m * csum[i]
-            } else {
-                m * csum[i] + (s - m * i as f64) / (j - i) as f64 * (csum[j] - csum[i])
-            }
-        })
-        .max_by_key(|&c| ordered_float::OrderedFloat(c))
+    let ls = lr.citer().map(|t| t.0).sorted().collect::<Vec<_>>();
+    let rs = lr.citer().map(|t| t.1).sorted().collect::<Vec<_>>();
+
+    let ans0 = 2 * ls
+        .citer()
+        .rev()
+        .interleave(rs.citer().map(|r| -r))
+        .cumsum::<i64>()
+        .max()
         .unwrap();
+    let ans1 = 2 * rs
+        .citer()
+        .map(|r| -r)
+        .interleave(ls.citer().rev())
+        .cumsum::<i64>()
+        .max()
+        .unwrap();
+
+    let ans = max(ans0, ans1);
 
     println!("{}", ans);
 }
