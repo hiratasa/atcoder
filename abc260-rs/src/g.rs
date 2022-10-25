@@ -175,38 +175,94 @@ where
 }
 
 fn main() {
-    let n = read::<usize>();
-    let p = read_row::<usize>();
+    let (n, m) = read_tuple!(usize, usize);
+    let s = read_vec(n, || read_str());
+    let q = read::<usize>();
+    let xy = read_vec(q, || read_tuple!(usize, usize));
 
-    let (dp, _) = (0..n).rev().fold(
-        (vec![(0, 0, false); n], vec![vec![]; n]),
-        |(mut dp, mut children): (Vec<(usize, usize, bool)>, Vec<Vec<usize>>), i| {
-            dp[i] = children[i]
-                .citer()
-                .map(|c| dp[c])
-                .sorted_by_key(|&(s, t, change)| match (s < t, change) {
-                    (true, false) => (0, 0),
-                    (true, true) => (1, 0usize.wrapping_sub(t - s)),
-                    (false, true) => (2, s - t),
-                    (false, false) => (3, 0),
-                })
-                .fold((1, 0, true), |(s, t, turn), (ss, tt, change)| {
-                    if !turn {
-                        (s + tt, t + ss, turn ^ change)
-                    } else {
-                        (s + ss, t + tt, turn ^ change)
-                    }
-                });
+    let sums = once(vec![0; n + 1])
+        .chain(s.iter().map(|row| {
+            once(0)
+                .chain(row.citer().map(|c| (c == 'O') as usize))
+                .cumsum::<usize>()
+                .collect::<Vec<_>>()
+        }))
+        .scan(vec![0; n + 1], |sums, row| {
+            izip!(sums.iter_mut(), row.citer()).for_each(|(x, y)| *x += y);
 
-            if i > 0 {
-                children[p[i - 1] - 1].push(i);
-            }
+            Some(sums.clone())
+        })
+        .collect::<Vec<_>>();
 
-            (dp, children)
-        },
-    );
+    // i' <= i, i'+j'/2 >= i+j/2 を満たす (i', j') に対する和
+    // 横方向は4nずらす
+    let offset = 4 * n;
+    let diag_sums = s
+        .iter()
+        .map(|row| {
+            let mut v = once(0)
+                .chain(row.citer().rev().map(|c| (c == 'O') as usize))
+                .chain(repeat_n(0, offset))
+                .cumsum::<usize>()
+                .collect::<Vec<_>>();
+            v.reverse();
+            v
+        })
+        .scan(vec![0; offset + n + 1], |sums, row| {
+            *sums = izip!(sums.citer().skip(2).chain(repeat(0)), row.citer())
+                .map(|(x, y)| x + y)
+                .collect::<Vec<_>>();
 
-    let ans = dp[0].0;
+            Some(sums.clone())
+        })
+        .collect::<Vec<_>>();
 
-    println!("{}", ans);
+    xy.citer()
+        .map(|(x, y)| (x - 1, y - 1))
+        .map(|(x, y)| {
+            //  ............
+            //  ............
+            //  ....**......
+            //  ..****......
+            //  ******......
+            // =
+            // (A)
+            //  ........****
+            //  ......******
+            //  ....********
+            //  ..**********
+            //  ************
+            // -
+            // (B)
+            //  ........****
+            //  ......******
+            //  ............
+            //  ............
+            //  ............
+            // -
+            // (C)
+            //  ............
+            //  ............
+            //  ......******
+            //  ......******
+            //  ......******
+
+            // (A)
+            let a = diag_sums[x][offset + y - 2 * m + 1];
+
+            // (B)
+            let b = x
+                .checked_sub(m)
+                .map_or(0, |xx| diag_sums[xx][offset + y + 1]);
+
+            // (C)
+            let c = sums[x + 1][n] + x.checked_sub(m).map_or(0, |xx| sums[xx + 1][y + 1])
+                - sums[x + 1][y + 1]
+                - x.checked_sub(m).map_or(0, |xx| sums[xx + 1][n]);
+
+            a - b - c
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
 }
