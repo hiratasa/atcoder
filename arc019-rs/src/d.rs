@@ -174,89 +174,46 @@ where
 {
 }
 
-#[derive(Clone, Copy, Debug)]
-enum UnionFindNode {
-    Root { size: usize },
-    Child { parent: usize },
-}
-struct UnionFind {
-    g: Vec<UnionFindNode>,
-}
-#[allow(dead_code)]
-impl UnionFind {
-    fn new(n: usize) -> UnionFind {
-        use UnionFindNode::*;
-        UnionFind {
-            g: (0..n).map(|_| Root { size: 1 }).collect(),
-        }
-    }
-    fn root(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let p = match self.g[v] {
-            Root { size: _ } => return v,
-            Child { parent: p } => p,
-        };
-        let r = self.root(p);
-        self.g[v] = Child { parent: r };
-        r
-    }
-    fn unite(&mut self, v: usize, u: usize) -> bool {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        let ru = self.root(u);
-        if rv == ru {
-            return false;
-        }
-        let size_rv = self.size(rv);
-        let size_ru = self.size(ru);
-        let (rsmall, rlarge) = if size_rv < size_ru {
-            (rv, ru)
-        } else {
-            (ru, rv)
-        };
-        self.g[rsmall] = Child { parent: rlarge };
-        self.g[rlarge] = Root {
-            size: size_rv + size_ru,
-        };
-        true
-    }
-    fn same(&mut self, v: usize, u: usize) -> bool {
-        self.root(v) == self.root(u)
-    }
-    fn size(&mut self, v: usize) -> usize {
-        use UnionFindNode::*;
-        let rv = self.root(v);
-        match self.g[rv] {
-            Root { size } => size,
-            Child { parent: _ } => unreachable!(),
-        }
-    }
-}
-
 fn main() {
-    let n = read::<usize>();
-    let ab = read_vec(n, || read_tuple!(usize, usize));
+    let n = 150;
 
-    const M: usize = 400000;
-    let mut uf = ab.citer().fold(UnionFind::new(M + 1), |mut uf, (a, b)| {
-        uf.unite(a, b);
-        uf
-    });
+    let mut ans = vec![vec![false; n]; n];
+    let mut score = 0;
 
-    let num_edges = ab.citer().fold(vec![0; M + 1], |mut num_edges, (a, _b)| {
-        num_edges[uf.root(a)] += 1;
-        num_edges
-    });
+    let p = 13;
 
-    let ans = (0..=M)
-        .map(|i| {
-            if uf.root(i) == i {
-                min(num_edges[i], uf.size(i))
-            } else {
-                0
+    for i in 0.. {
+        if p * i >= n {
+            break;
+        }
+
+        for j in 0..p {
+            let l = p * i + j;
+            if l >= n {
+                break;
             }
-        })
-        .sum::<usize>();
 
-    println!("{}", ans);
+            ans[l][i] = true;
+            score += 1;
+
+            for k in 0..p {
+                let t = p + k * p + (j + i * k) % p;
+                if t >= n {
+                    break;
+                }
+
+                ans[l][t] = true;
+                score += 1;
+            }
+        }
+    }
+
+    println!("{}", n);
+    for row in ans {
+        println!(
+            "{}",
+            row.citer().map(|c| if c { 'O' } else { '.' }).join("")
+        );
+    }
+    eprintln!("score={}", score);
 }

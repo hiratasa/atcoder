@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -172,43 +178,34 @@ fn main() {
     let (n, m, k) = read_tuple!(usize, usize, usize);
     let a = read_row::<usize>();
 
-    let ans = (0..=30)
-        .rev()
-        .scan((a, m), |(a, m), i| {
-            let (a0, a1): (Vec<_>, Vec<_>) = a.citer().partition(|&x| x & (1 << i) == 0);
+    let (_, _, ans) = (0..=30).rev().fold((a, m, 0), |(mut a, m, ans), i| {
+        assert!(a.len() >= k);
 
-            if a1.len() >= k {
-                *a = a1;
+        a.sort_by_key(|&x| Reverse(x));
 
-                Some(1 << i)
+        let l = a.citer().position(|x| x & (1 << i) == 0).unwrap_or(a.len());
+
+        if l < k {
+            let r = (k - l) * (1 << i) - a[l..k].citer().map(|x| x).sum::<usize>();
+
+            if r <= m {
+                a.resize_with(k, || unreachable!());
+                a[..l].iter_mut().for_each(|x| *x ^= 1 << i);
+                a[l..k].iter_mut().for_each(|x| *x = 0);
+
+                (a, m - r, ans | (1 << i))
             } else {
-                let r = k - a1.len();
+                a.iter_mut().for_each(|x| *x &= (1 << i) - 1);
 
-                let b = a0
-                    .citer()
-                    .sorted_by_key(|&x| (1 << i) - (x & ((1 << i) - 1)))
-                    .take(r)
-                    .collect::<Vec<_>>();
-                if b.len() < r {
-                    Some(0)
-                } else {
-                    let s = b
-                        .citer()
-                        .map(|x| (1 << i) - (x & ((1 << i) - 1)))
-                        .sum::<usize>();
-
-                    if s <= *m {
-                        *a = chain(a1, repeat(1 << i).take(r)).collect();
-                        *m -= s;
-
-                        Some(1 << i)
-                    } else {
-                        Some(0)
-                    }
-                }
+                (a, m, ans)
             }
-        })
-        .sum::<usize>();
+        } else {
+            a.resize_with(l, || unreachable!());
+            a.iter_mut().for_each(|x| *x ^= 1 << i);
+
+            (a, m, ans | (1 << i))
+        }
+    });
 
     println!("{}", ans);
 }
