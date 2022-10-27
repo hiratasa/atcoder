@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -425,55 +431,35 @@ impl<M: Modulus> num::One for Mod<M> {
 fn main() {
     type Mod = Mod998244353;
 
-    let mut cache = FxHashMap::<usize, bool>::default();
-    let mut check = |t: usize| {
-        if let Some(r) = cache.get(&t) {
-            return *r;
-        }
+    let n = read::<usize>();
 
-        let x = (0..)
-            .scan(t, |tt, _| {
-                if tt.trailing_zeros() == 64 {
-                    None
-                } else {
-                    let x = tt.trailing_zeros() as usize;
-                    *tt ^= 1 << x;
+    let inv = (2..=n + 1).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
+        inv.push(-Mod::new(Mod::modulus() / i) * inv[Mod::modulus() % i]);
+        inv
+    });
 
-                    Some(x)
-                }
-            })
-            .fold(0, |x, y| x ^ y);
+    let pows2 = iterate(Mod::one(), |&p| p * 2)
+        .take(n + 1)
+        .collect::<Vec<_>>();
 
-        let r = x > 0;
-        cache.insert(t, r);
+    let ans = once(/* empty set */ Mod::one())
+        .chain((1..=n + 1).scan(Mod::one(), |s, k| {
+            // 条件を満たす要素数k-1の集合はs個ある
+            // それぞれの要素数が奇数の部分集合のxorは 2^(k-2) 通りある
+            // これらのいずれとも異なる要素を追加する
+            *s *= if k == 1 {
+                pows2[n]
+            } else {
+                pows2[n] - pows2[k - 2]
+            };
 
-        r
-    };
+            // 追加順序が異なるだけのものの重複カウントを防ぐためにkで割る
+            // (最後に追加される要素がk通り)
+            *s *= inv[k];
 
-    for n in 1..=3 {
-        eprintln!("=========={}===============", n);
-        let ans = (0..(1usize << (1usize << n)))
-            .filter(|&s| {
-                successors(Some(s), |&t| t.checked_sub(1).map(|t| t & s))
-                    .all(|t| t == 0 || t.count_ones() % 2 > 0 || check(t))
-            })
-            .inspect(|&s| {
-                let v = (0..)
-                    .scan(s, |tt, _| {
-                        if tt.trailing_zeros() == 64 {
-                            None
-                        } else {
-                            let x = tt.trailing_zeros() as usize;
-                            *tt ^= 1 << x;
+            Some(*s)
+        }))
+        .sum::<Mod>();
 
-                            Some(x)
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                println!("{}", v.citer().join(" "));
-            })
-            .count();
-
-        println!("{}", ans);
-    }
+    println!("{}", ans);
 }
