@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,9 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -56,7 +62,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +72,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +116,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +149,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -148,4 +174,58 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, t) = read_tuple!(usize, usize);
+    let mut ab = read_vec(n, || read_tuple!(usize, usize));
+
+    ab.sort_by(|&(a0, b0), &(a1, b1)| (a1 * (b0 + 1)).cmp(&(a0 * (b1 + 1))).then(b0.cmp(&b1)));
+
+    let idx0 = ab
+        .binary_search_by(|&(a, _)| {
+            if a > 0 {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            }
+        })
+        .unwrap_err();
+
+    let ab0 = &ab[idx0..];
+    let ab1 = &ab[..idx0];
+
+    let tsum0 = once(0)
+        .chain(ab0.citer().map(|(_, b)| b + 1))
+        .cumsum::<usize>()
+        .collect::<Vec<_>>();
+
+    let dp = ab1
+        .citer()
+        .fold(vvec![0; usize::MAX; 31], |mut dp, (a, b)| {
+            for i in (0..30).rev() {
+                let tt = dp[i].saturating_add(1);
+                dp[i + 1] = min(
+                    dp[i + 1],
+                    tt.saturating_add(a.saturating_mul(tt)).saturating_add(b),
+                );
+            }
+
+            dp
+        });
+    let ans = dp
+        .citer()
+        .enumerate()
+        .filter_map(|(i, x)| {
+            let y = t.checked_sub(x)?;
+
+            let m = tsum0
+                .binary_search_by(|&s| s.cmp(&y).then(Ordering::Less))
+                .unwrap_err()
+                - 1;
+
+            Some(i + m)
+        })
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
+}
