@@ -92,3 +92,7 @@ path = "src/r.rs"
 [[bin]]
 name = "tdpc-s"
 path = "src/s.rs"
+
+[[bin]]
+name = "tdpc-t"
+path = "src/t.rs"

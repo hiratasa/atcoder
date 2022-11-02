@@ -174,4 +174,91 @@ where
 {
 }
 
-fn main() {}
+#[allow(dead_code)]
+fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    let two = T::try_from(2).ok().unwrap();
+    while end - begin >= epsilon {
+        let mid = begin + (end - begin) / two;
+        match f(mid) {
+            std::cmp::Ordering::Less => {
+                begin = mid + epsilon;
+            }
+            _ => {
+                end = mid;
+            }
+        }
+    }
+    begin
+}
+#[allow(dead_code)]
+fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
+where
+    T: std::marker::Copy
+        + std::ops::Add<T, Output = T>
+        + std::ops::Sub<T, Output = T>
+        + std::ops::Div<T, Output = T>
+        + std::cmp::PartialOrd<T>
+        + std::convert::TryFrom<i32>,
+    F: Fn(T) -> std::cmp::Ordering,
+{
+    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
+}
+
+fn main() {
+    let (n, t, l) = read_tuple!(usize, usize, usize);
+    let uv = read_vec(t, || read_tuple!(usize, usize));
+
+    println!(
+        "{}",
+        (0..n)
+            .map(|i| {
+                let ans = lower_bound_int(0, t + 1, |s| {
+                    let mut adjs =
+                        uv.citer()
+                            .take(s)
+                            .fold(vec![vec![0u128; 30]; n], |mut adjs, (u, v)| {
+                                let u = u - 1;
+                                let v = v - 1;
+                                adjs[u][0] |= 1 << v;
+
+                                adjs
+                            });
+
+                    for j in 1..30 {
+                        for v in 0..n {
+                            adjs[v][j] = (0..n)
+                                .filter(|&u| adjs[v][j - 1] & (1 << u) > 0)
+                                .map(|u| adjs[u][j - 1])
+                                .fold(0, |x, y| x | y);
+                        }
+                    }
+
+                    let bs = (0..30).filter(|&j| l & (1 << j) > 0).fold(1 << 0, |bs, j| {
+                        (0..n)
+                            .filter(|&v| bs & (1 << v) > 0)
+                            .map(|v| adjs[v][j])
+                            .fold(0, |x, y| x | y)
+                    });
+
+                    if bs & (1 << i) > 0 {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Less
+                    }
+                });
+
+                Some(ans).filter(|&x| x != t + 1)
+            })
+            .map(|x| x.map_or(-1, |x| x as i64))
+            .join(" ")
+    );
+}
