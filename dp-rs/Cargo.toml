@@ -60,3 +60,51 @@ path = "src/n.rs"
 [[bin]]
 name = "dp-o"
 path = "src/o.rs"
+
+[[bin]]
+name = "dp-p"
+path = "src/p.rs"
+
+[[bin]]
+name = "dp-q"
+path = "src/q.rs"
+
+[[bin]]
+name = "dp-r"
+path = "src/r.rs"
+
+[[bin]]
+name = "dp-s"
+path = "src/s.rs"
+
+[[bin]]
+name = "dp-t"
+path = "src/t.rs"
+
+[[bin]]
+name = "dp-u"
+path = "src/u.rs"
+
+[[bin]]
+name = "dp-uy"
+path = "src/uy.rs"
+
+[[bin]]
+name = "dp-v"
+path = "src/v.rs"
+
+[[bin]]
+name = "dp-w"
+path = "src/w.rs"
+
+[[bin]]
+name = "dp-x"
+path = "src/x.rs"
+
+[[bin]]
+name = "dp-y"
+path = "src/y.rs"
+
+[[bin]]
+name = "dp-z"
+path = "src/z.rs"
