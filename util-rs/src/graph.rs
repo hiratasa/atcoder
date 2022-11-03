@@ -168,11 +168,15 @@ mod detail {
             self.in_edges[edge.to].push(edge);
         }
 
-        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + Iterator<Item = usize> {
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + DoubleEndedIterator<Item = usize> {
             self.out_edges[v].iter().map(|e| e.to)
         }
 
-        pub fn children<'a>(&'a self, v: usize, p: usize) -> impl 'a + Iterator<Item = usize> {
+        pub fn children<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = usize> {
             self.adjs(v).filter(move |&u| u != p)
         }
 
@@ -180,7 +184,7 @@ mod detail {
             &'a self,
             v: usize,
             p: usize,
-        ) -> impl 'a + Iterator<Item = Edge<W>> {
+        ) -> impl 'a + DoubleEndedIterator<Item = Edge<W>> {
             self.out_edges[v].iter().copied().filter(move |e| e.to != p)
         }
     }
