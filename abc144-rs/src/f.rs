@@ -174,60 +174,46 @@ where
 {
 }
 
-fn check(board: &[Vec<char>]) -> bool {
-    (0..8).all(|i| board[i].citer().filter(|&c| c == 'Q').count() <= 1)
-        && (0..8).all(|j| board.iter().map(|row| row[j]).filter(|&c| c == 'Q').count() <= 1)
-        && (0usize..=14).all(|x| {
-            (0..8)
-                .filter_map(|i| x.checked_sub(i).filter(|&j| j < 8).map(|j| board[i][j]))
-                .filter(|&c| c == 'Q')
-                .count()
-                <= 1
-        })
-        && (0usize..=14).all(|x| {
-            (0..8)
-                .filter_map(|i| {
-                    (x + i)
-                        .checked_sub(7)
-                        .filter(|&j| j < 8)
-                        .map(|j| board[i][j])
-                })
-                .filter(|&c| c == 'Q')
-                .count()
-                <= 1
-        })
-}
-
-fn dfs(board: &mut [Vec<char>], i: usize) -> bool {
-    if i == 8 {
-        check(board)
-    } else {
-        if (0..8).any(|j| board[i][j] == 'Q') {
-            dfs(board, i + 1)
-        } else {
-            (0..8).any(|j| {
-                (0..8).all(|ii| board[ii][j] == '.') && {
-                    board[i][j] = 'Q';
-                    if dfs(board, i + 1) {
-                        true
-                    } else {
-                        board[i][j] = '.';
-                        false
-                    }
-                }
-            })
-        }
-    }
-}
-
 fn main() {
-    let mut c = read_vec(8, || read_str());
+    let (n, m) = read_tuple!(usize, usize);
+    let st = read_vec(m, || read_tuple!(usize, usize));
 
-    if dfs(&mut c, 0) {
-        for row in c {
-            println!("{}", row.citer().join(""));
+    let adjs = st.citer().fold(vec![vec![]; n], |mut adjs, (s, t)| {
+        adjs[s - 1].push(t - 1);
+        adjs
+    });
+
+    let mut init = vec![1e30; n];
+    init[n - 1] = 0.0;
+    let ex = (0..n - 1).rev().fold(init, |mut dp, i| {
+        if !adjs[i].is_empty() {
+            dp[i] = adjs[i].citer().map(|t| dp[t]).sum::<f64>() / adjs[i].len() as f64 + 1.0;
         }
-    } else {
-        println!("No Answer");
-    }
+        dp
+    });
+    let p = (0..n).fold(vvec![1.0; 0.0; n], |mut dp, i| {
+        adjs[i].citer().for_each(|j| {
+            dp[j] += dp[i] / adjs[i].len() as f64;
+        });
+        dp
+    });
+
+    let ans0 = ex[0];
+    let ans1 = (0..n)
+        .filter_map(|i| {
+            let s = adjs[i].citer().map(|j| ex[j]).sum::<f64>();
+            adjs[i]
+                .citer()
+                .map(|j| {
+                    ex[0] - p[i] * s / adjs[i].len() as f64
+                        + p[i] * (s - ex[j]) / (adjs[i].len() - 1) as f64
+                })
+                .min_by_key(|&x| ordered_float::OrderedFloat(x))
+        })
+        .min_by_key(|&x| ordered_float::OrderedFloat(x))
+        .unwrap_or(ans0);
+
+    let ans = f64::min(ans0, ans1);
+
+    println!("{}", ans);
 }

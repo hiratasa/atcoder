@@ -1,5 +1,5 @@
 [package]
-name = "abc144-rs"
+name = "code_festival_2018_qualb-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,25 +18,17 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "abc144-a"
+name = "code_festival_2018_qualb-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "abc144-b"
+name = "code_festival_2018_qualb-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "abc144-c"
+name = "code_festival_2018_qualb-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "abc144-d"
+name = "code_festival_2018_qualb-d"
 path = "src/d.rs"
-
-[[bin]]
-name = "abc144-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "abc144-f"
-path = "src/f.rs"
