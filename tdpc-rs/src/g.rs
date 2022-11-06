@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,9 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -56,7 +62,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +72,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +116,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +149,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -148,81 +174,85 @@ where
 {
 }
 
-trait ToString {
-    fn to_string(self: Self) -> String;
-}
-impl<I, T> ToString for I
-where
-    I: IntoIterator<Item = T>,
-    T: std::convert::TryInto<u32>,
-{
-    fn to_string(self: Self) -> String {
-        self.into_iter()
-            .map(|t| t.try_into().ok().unwrap())
-            .map(|t| std::convert::TryInto::<char>::try_into(t).ok().unwrap())
-            .collect()
-    }
-}
-
 fn main() {
     let s = read_str();
-    let k: usize = read();
+    let k = read::<usize>();
 
-    let aoffset = 'a' as usize;
-    let poss = s
+    let cidxs = s
         .citer()
+        .rev()
         .enumerate()
-        .fold(vec![BTreeSet::new(); 26], |mut poss, (i, c)| {
-            poss[c as usize - aoffset].insert(i);
-            poss
+        .fold(vec![vec![]; 26], |mut cidxs, (i, c)| {
+            cidxs[c as usize - 'a' as usize].push(i);
+            cidxs
         });
 
-    let n = s.len();
-    let mut init = vec![0usize; n + 1];
-    init[n] = 1;
-    let dp = s.citer().enumerate().rev().fold(init, |mut dp, (i, c)| {
-        if let Some(pos) = poss[c as usize - aoffset].range(i + 1..).next() {
-            dp[i] = dp[i + 1] - dp[pos + 1];
-        } else {
-            dp[i] = dp[i + 1];
-        }
-        // cumsum
-        dp[i] = dp[i].saturating_add(dp[i + 1]);
+    let next = |i: usize, c: usize| {
+        let idx = cidxs[c]
+            .binary_search_by(|&j| j.cmp(&i).then(Ordering::Greater))
+            .unwrap_err();
 
-        dp
-    });
-    // eprintln!("{:?}", dp);
-    // dp[0] includes empty string
-    if dp[0] < k + 1 {
+        if idx == 0 {
+            None
+        } else {
+            Some(cidxs[c][idx - 1])
+        }
+    };
+
+    let n = s.len();
+    let mut dp = s
+        .citer()
+        .rev()
+        .enumerate()
+        .fold(vec![0usize; n + 1], |mut dp, (i, c)| {
+            let c = c as usize - 'a' as usize;
+
+            dp[i + 1] = if let Some(i1) = next(i, c) {
+                dp[i1 + 1..=i]
+                    .citer()
+                    .fold(0usize, |x, y| x.saturating_add(y))
+            } else {
+                dp[..=i]
+                    .citer()
+                    .fold(0usize, |x, y| x.saturating_add(y))
+                    .saturating_add(/* empty */ 1)
+            };
+
+            dp
+        });
+
+    if dp.citer().fold(0usize, |x, y| x.saturating_add(y)) < k {
         println!("Eel");
         return;
     }
 
-    let ans = successors(Some((0usize, k + 1, '#')), |&(pos, kk, _prevc)| {
-        if kk == 1 {
-            return None;
-        }
-        let kk = kk - 1;
+    for i in 1..=n {
+        dp[i] = dp[i].saturating_add(dp[i - 1]);
+    }
 
-        let (c, pos1, num, acc) = (b'a'..=b'z')
-            .map(|c| c as char)
-            .map(|c| {
-                poss[c as usize - aoffset]
-                    .range(pos + 1..)
-                    .next()
-                    .map_or((c, n, 0), |&pos1| (c, pos1, dp[pos1 + 1]))
-            })
-            .scan(0usize, |acc, (c, pos1, num)| {
-                Some((c, pos1, num, replace(acc, acc.saturating_add(num))))
-            })
-            .take_while(|&t| t.3 < kk)
-            .last()
-            .unwrap();
-        assert!(kk <= acc.saturating_add(num));
-        Some((pos1, kk - acc, c))
+    let ans = successors(Some((n, k + /* empty */ 1)), |&(m, r)| {
+        if r == 1 {
+            None
+        } else {
+            let r = r - 1;
+
+            let v = (0..26)
+                .scan(0, |x, c| {
+                    *x = next(m, c)
+                        .map_or(0, |ii| dp[ii].saturating_add(1))
+                        .saturating_add(*x);
+                    Some(*x)
+                })
+                .collect::<Vec<_>>();
+            let c = v.citer().position(|x| x >= r).unwrap();
+            let r = r - c.checked_sub(1).map_or(0, |cc| v[cc]);
+
+            Some((next(m, c).unwrap(), r))
+        }
     })
     .skip(1)
-    .map(|t| t.2)
-    .to_string();
-    println!("{}", ans);
+    .map(|(i, _)| s[n - 1 - i])
+    .collect::<Vec<_>>();
+
+    println!("{}", ans.citer().join(""));
 }

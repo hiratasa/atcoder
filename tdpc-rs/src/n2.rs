@@ -174,6 +174,171 @@ where
 {
 }
 
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
+        }
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
+        }
+    }
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
+    }
+}
+
+type Graph = detail::UnweightedGraph;
+
 use num::{One, Zero};
 #[allow(dead_code)]
 pub fn pow_mod(mut x: usize, mut p: usize, m: usize) -> usize {
@@ -428,100 +593,91 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-fn main() {
+#[allow(dead_code)]
+fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
+    let fact: Vec<_> = std::iter::once(Mod::one())
+        .chain((1..=n).scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        }))
+        .collect();
+    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
+        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
+        inv
+    });
+    let inv_fact: Vec<_> = inv
+        .iter()
+        .copied()
+        .scan(Mod::one(), |f, i| {
+            *f = *f * i;
+            Some(*f)
+        })
+        .collect();
+    (fact, inv, inv_fact)
+}
+
+// 返り値のk番目 = 根に隣接する辺をk番目に描くような描き方
+fn dfs(
+    g: &Graph,
+    v: usize,
+    p: usize,
+    fact: &[Mod1000000007],
+    inv_fact: &[Mod1000000007],
+) -> Vec<Mod1000000007> {
     type Mod = Mod1000000007;
 
-    let (h, w) = read_tuple!(usize, usize);
-
-    let dp = (0..w).fold(
-        once((vvec![1; 0; h], Mod::one())).collect::<FxHashMap<_, _>>(),
-        |prev, _| {
-            let mut next = FxHashMap::default();
-
-            for (s, v) in prev.into_iter() {
-                for t in 1..1 << h {
-                    let mut next_s = vec![0; h];
-
-                    for i in 0..h {
-                        if s[i] == 1 && t & (1 << i) > 0 {
-                            next_s[i] = 1;
-                        }
-                    }
-                    for i in 1..h {
-                        if next_s[i - 1] == 1 && t & (1 << i) > 0 {
-                            next_s[i] = 1;
-                        }
-                    }
-                    for i in (0..h - 1).rev() {
-                        if next_s[i + 1] == 1 && t & (1 << i) > 0 {
-                            next_s[i] = 1;
-                        }
-                    }
-
-                    let loop_connects_start = (0..h).any(|i| s[i] == 2 && next_s[i] == 1);
-                    let loop_idx = if loop_connects_start { 1 } else { 2 };
-
-                    for i in 0..h {
-                        if s[i] == 2 && t & (1 << i) > 0 {
-                            next_s[i] = loop_idx;
-                        }
-                    }
-                    for i in 1..h {
-                        if next_s[i - 1] == loop_idx && t & (1 << i) > 0 {
-                            next_s[i] = loop_idx;
-                        }
-                    }
-                    for i in (0..h - 1).rev() {
-                        if next_s[i + 1] == loop_idx && t & (1 << i) > 0 {
-                            next_s[i] = loop_idx;
-                        }
-                    }
-
-                    let mut idx = 3;
-                    for i in 0..h {
-                        if t & (1 << i) > 0 && next_s[i] == 0 {
-                            next_s[i] = idx;
-                        } else {
-                            idx += 1;
-                        }
-                    }
-
-                    let counts = next_s.citer().fold(vec![0; idx + 1], |mut counts, x| {
-                        counts[x] += 1;
-                        counts
-                    });
-
-                    if counts[1] == 0 {
-                        continue;
-                    }
-
-                    let next_loop_idx = (2..=idx)
-                        .find(|&idx| counts[idx] >= 2)
-                        .unwrap_or(usize::MAX);
-
-                    for i in 0..h {
-                        if next_s[i] >= 2 {
-                            if next_s[i] == next_loop_idx {
-                                next_s[i] = 2;
-                            } else {
-                                next_s[i] = 0;
-                            }
-                        }
-                    }
-
-                    *next.entry(next_s).or_insert(Mod::zero()) += v;
+    let t = g
+        .children(v, p)
+        .map(|u| dfs(g, u, v, fact, inv_fact))
+        .map(|mut r| {
+            // 子から親に向かう辺を1本付け加える
+            // 辺をi番目に描けるのは、
+            //  * i=0 => 部分木の頂点に隣接する辺を0番目に描く場合
+            //  * i>0 => 部分木の頂点に隣接する辺をi番目未満に描く場合
+            if r.is_empty() {
+                r.push(Mod::one());
+            } else {
+                r.insert(0, r[0]);
+                let s = r.len();
+                for i in 1..s - 1 {
+                    r[i + 1] = r[i] + r[i + 1];
                 }
             }
 
-            next
-        },
-    );
+            r
+        })
+        .collect::<Vec<_>>();
 
-    let ans = dp
-        .into_iter()
-        .filter(|(s, _)| s[h - 1] == 1)
-        .map(|(_, v)| v)
-        .sum::<Mod>();
+    let z = t.iter().map(|r| r[0] * inv_fact[r.len()]).product::<Mod>();
+
+    let l = t.iter().map(|r| r.len()).sum::<usize>();
+
+    (0..l)
+        .map(|k| {
+            // rの部分木の根に隣接する辺をk番目に選ぶ
+            t.iter()
+                .filter_map(|r| {
+                    r.get(k)
+                        .map(|x| *x * z / r[0] * fact[r.len()] * inv_fact[r.len() - (k + 1)])
+                })
+                .sum::<Mod>()
+                * fact[l - (k + 1)]
+        })
+        .collect()
+}
+
+fn main() {
+    let n = read::<usize>();
+
+    let ab = read_vec(n - 1, || read_tuple!(usize, usize));
+
+    let g = Graph::from_edges1_undirected(n, ab);
+
+    let (fact, _, inv_fact) = generate_fact::<Modulus1000000007>(n);
+
+    let dp = dfs(&g, 0, n, &fact, &inv_fact);
+
+    let ans = dp.citer().sum::<Mod1000000007>();
 
     println!("{}", ans);
 }

@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,9 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -56,7 +62,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +72,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +116,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +149,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -149,24 +175,25 @@ where
 }
 
 fn main() {
-    let k: usize = read();
-    let n = 1 << k;
-    let r = read_vec(n, || read::<f64>());
+    let k = read::<usize>();
+    let r = read_col::<f64>(1 << k);
 
-    let ans = (0..k).fold(vec![1.0; n], |prev, i| {
-        (0..n)
+    let dp = (0..k).fold(vec![1.0f64; 1 << k], |prev, i| {
+        (0..1 << k)
             .map(|j| {
-                // (0..n)
-                //     .filter(|&l| j >> i != l >> i && j >> (i + 1) == (l >> (i + 1)))
-                let b = (j & !((1 << i) - 1)) ^ (1 << i);
-                let e = (j | ((1 << i) - 1)) ^ (1 << i);
-                (b..=e)
-                    .map(|l| prev[j] * prev[l] / (1.0 + 10f64.powf((r[l] - r[j]) / 400.0)))
+                let p = prev[j];
+
+                let st = ((j >> i) ^ 1) << i;
+                let ed = (((j >> i) ^ 1) + 1) << i;
+
+                (st..ed)
+                    .map(|l| p * prev[l] * 1.0 / (1.0 + 10.0f64.powf((r[l] - r[j]) / 400.0)))
                     .sum::<f64>()
             })
-            .collect_vec()
+            .collect::<Vec<_>>()
     });
-    for a in ans {
-        println!("{}", a);
+
+    for x in dp {
+        println!("{}", x);
     }
 }

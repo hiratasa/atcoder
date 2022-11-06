@@ -96,3 +96,27 @@ path = "src/s.rs"
 [[bin]]
 name = "tdpc-t"
 path = "src/t.rs"
+
+[[bin]]
+name = "tdpc-q"
+path = "src/q.rs"
+
+[[bin]]
+name = "tdpc-make"
+path = "src/make.rs"
+
+[[bin]]
+name = "tdpc-i2"
+path = "src/i2.rs"
+
+[[bin]]
+name = "tdpc-n2"
+path = "src/n2.rs"
+
+[[bin]]
+name = "tdpc-r2"
+path = "src/r2.rs"
+
+[[bin]]
+name = "tdpc-g2"
+path = "src/g2.rs"

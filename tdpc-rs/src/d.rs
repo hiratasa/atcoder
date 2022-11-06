@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,9 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -56,7 +62,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +72,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +116,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +149,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -151,34 +177,42 @@ where
 fn main() {
     let (n, d) = read_tuple!(usize, usize);
 
-    let m2 = iterate(d, |&dd| dd / 2)
-        .take_while(|&dd| dd % 2 == 0)
-        .count();
-    let m3 = iterate(d, |&dd| dd / 3)
-        .take_while(|&dd| dd % 3 == 0)
-        .count();
-    let m5 = iterate(d, |&dd| dd / 5)
-        .take_while(|&dd| dd % 5 == 0)
-        .count();
+    let q2 = iterate(2usize, |&x| x.saturating_mul(2))
+        .position(|x| d % x != 0)
+        .unwrap();
+    let q3 = iterate(3usize, |&x| x.saturating_mul(3))
+        .position(|x| d % x != 0)
+        .unwrap();
+    let q5 = iterate(5usize, |&x| x.saturating_mul(5))
+        .position(|x| d % x != 0)
+        .unwrap();
 
-    if d / 2usize.pow(m2 as u32) / 3usize.pow(m3 as u32) / 5usize.pow(m5 as u32) > 1 {
+    if 2usize.pow(q2 as u32) * 3usize.pow(q3 as u32) * 5usize.pow(q5 as u32) != d {
         println!("0");
         return;
     }
 
-    let mut init = vec![vec![vec![0.0; m5 + 1]; m3 + 1]; m2 + 1];
+    let mut init = vec![vec![vec![0.0; q5 + 1]; q3 + 1]; q2 + 1];
     init[0][0][0] = 1.0;
-    let ans = (0..n).fold(init, |prev, _| {
-        let mut next = vec![vec![vec![0.0; m5 + 1]; m3 + 1]; m2 + 1];
-        for (i, j, k) in iproduct!(0..=m2, 0..=m3, 0..=m5) {
-            next[i][j][k] += prev[i][j][k] / 6.0;
-            next[min(m2, i + 1)][j][k] += prev[i][j][k] / 6.0;
-            next[i][min(m3, j + 1)][k] += prev[i][j][k] / 6.0;
-            next[min(m2, i + 2)][j][k] += prev[i][j][k] / 6.0;
-            next[i][j][min(m5, k + 1)] += prev[i][j][k] / 6.0;
-            next[min(m2, i + 1)][min(m3, j + 1)][k] += prev[i][j][k] / 6.0;
-        }
-        next
-    })[m2][m3][m5];
-    println!("{}", ans);
+    let dp = (0..n).fold(init, |prev, _| {
+        iproduct!(0..=q2, 0..=q3, 0..=q5).fold(
+            vec![vec![vec![0.0; q5 + 1]; q3 + 1]; q2 + 1],
+            |next, (i, j, k)| {
+                it![
+                    (0, 0, 0),
+                    (1, 0, 0),
+                    (0, 1, 0),
+                    (2, 0, 0),
+                    (0, 0, 1),
+                    (1, 1, 0)
+                ]
+                .fold(next, |mut next, (di, dj, dk)| {
+                    next[min(i + di, q2)][min(j + dj, q3)][min(k + dk, q5)] += prev[i][j][k] / 6.0;
+                    next
+                })
+            },
+        )
+    });
+
+    println!("{}", dp[q2][q3][q5]);
 }

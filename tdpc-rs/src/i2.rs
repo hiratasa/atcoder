@@ -175,26 +175,28 @@ where
 }
 
 fn main() {
-    let n = read::<usize>();
-    let f = read_mat::<i64>(n);
+    let s = read_str();
 
-    let dp = (1..n).fold(vec![0], |mut dp, i| {
-        for j in 1..i {
-            dp[j] = max(dp[j], dp[j - 1]);
-        }
-        dp.push(dp[i - 1]);
+    let n = s.len();
+    let dp = (3..=s.len())
+        .flat_map(|l| (0..=n - l).map(move |i| (i, i + l)))
+        .fold(vec![vec![0; n + 1]; n], |mut dp, (i, j)| {
+            dp[i][j] = (i + 1..j).map(|k| dp[i][k] + dp[k][j]).max().unwrap();
 
-        f[i][..i]
-            .citer()
-            .rev()
-            .cumsum::<i64>()
-            .zip(dp[..i].iter_mut().rev())
-            .for_each(|(x, y)| {
-                *y += 2 * x;
-            });
+            if (j - i) % 3 == 0 {
+                if (i + 1..j - 1).any(|k| {
+                    3 * dp[i + 1][k] == k - i - 1
+                        && 3 * dp[k + 1][j - 1] == j - k - 2
+                        && s[i] == 'i'
+                        && s[k] == 'w'
+                        && s[j - 1] == 'i'
+                }) {
+                    dp[i][j] = (j - i) / 3;
+                }
+            }
 
-        dp
-    });
+            dp
+        });
 
-    println!("{}", dp.citer().max().unwrap());
+    println!("{}", dp[0][n]);
 }

@@ -174,27 +174,78 @@ where
 {
 }
 
+use std::num::NonZeroUsize;
+
 fn main() {
-    let n = read::<usize>();
-    let f = read_mat::<i64>(n);
+    let mut s = read_str();
+    let k = read::<usize>();
 
-    let dp = (1..n).fold(vec![0], |mut dp, i| {
-        for j in 1..i {
-            dp[j] = max(dp[j], dp[j - 1]);
+    let n = s.len();
+    // 先頭にダミーの文字を入れておく
+    s.insert(0, 'a');
+    let (nexts, _) = s.citer().enumerate().rev().fold(
+        // メモリ厳しいのでNonZeroUsize使う
+        (vec![vec![None; 26]; n + 1], vec![None; 26]),
+        |(mut nexts, mut last), (i, c)| {
+            nexts[i] = last.clone();
+            // i=0のときにNoneになるけどi=0のところは誰も参照しないのでok
+            last[c as usize - 'a' as usize] = NonZeroUsize::new(i);
+            (nexts, last)
+        },
+    );
+
+    let dp = nexts
+        .iter()
+        .enumerate()
+        .rev()
+        .fold(vec![0; n + 1], |mut dp, (i, next)| {
+            // i文字目を1文字目として選んだときに作れる文字列の数
+            dp[i] = next
+                .citer()
+                .flatten()
+                .map_into::<usize>()
+                .map(|j| dp[j])
+                .chain(once(/* 1文字からなる文字列 */ 1))
+                .fold(0usize, |x, y| x.saturating_add(y));
+
+            dp
+        });
+
+    // 先頭はダミー文字であることに注意
+    // 先頭を1文字目として選んだ時に作れる文字列 = 残りの文字列で作れる文字列 + 1
+    if k + 1 > dp[0] {
+        println!("Eel");
+        return;
+    }
+
+    // +1についてはうえのコメント参照
+    let ans = successors(Some((0, k + 1)), |&(i, kk)| {
+        // i+1文字目から辞書順にkk番目を選ぶ
+        if kk == 1 {
+            // ここまでで打ち切り
+            None
+        } else {
+            let kk = kk - 1;
+
+            let (j, x0, _x1) = nexts[i]
+                .citer()
+                .flatten()
+                .map_into::<usize>()
+                .map(|j| (j, dp[j]))
+                .scan(0usize, |sum, (j, x)| {
+                    let tmp = *sum;
+                    *sum = sum.saturating_add(x);
+                    Some((j, tmp, *sum))
+                })
+                .find(|&(_, _, x)| x >= kk)
+                .unwrap();
+
+            Some((j, kk - x0))
         }
-        dp.push(dp[i - 1]);
+    })
+    .skip(1)
+    .map(|(i, _)| s[i])
+    .collect::<String>();
 
-        f[i][..i]
-            .citer()
-            .rev()
-            .cumsum::<i64>()
-            .zip(dp[..i].iter_mut().rev())
-            .for_each(|(x, y)| {
-                *y += 2 * x;
-            });
-
-        dp
-    });
-
-    println!("{}", dp.citer().max().unwrap());
+    println!("{}", ans);
 }

@@ -431,85 +431,32 @@ impl<M: Modulus> num::One for Mod<M> {
 fn main() {
     type Mod = Mod1000000007;
 
-    let (h, w) = read_tuple!(usize, usize);
+    let (n, l) = read_tuple!(usize, usize);
+    let w = read_vec(n, || read_digits());
 
-    let dp = (0..w).fold(
-        once((vvec![1; 0; h], Mod::one())).collect::<FxHashMap<_, _>>(),
+    let set = w.iter().fold(vec![FxHashSet::default(); 9], |mut set, ww| {
+        let x = ww.citer().fold(0, |x, y| (x << 1) | y);
+        set[ww.len()].insert(x);
+        set
+    });
+
+    let mask = (1 << 8) - 1;
+    let dp = (0..l).fold(
+        vvec![vvec![Mod::zero(), Mod::one(); Mod::zero(); 1<<8]; vec![Mod::zero(); 1<<8]; 1<<8],
         |prev, _| {
-            let mut next = FxHashMap::default();
+            let mut next = vec![vec![Mod::zero(); 1 << 8]; 1 << 8];
+            for s in 0..1 << 8 {
+                for t in 0..1 << 8 {
+                    for c in 0..2 {
+                        let f = (0..8).any(|i| {
+                            t & (1 << i) > 0
+                                && set[i + 1].contains(&(((s << 1) | c) & ((1 << (i + 1)) - 1)))
+                        });
+                        let next_s = ((s << 1) | c) & mask;
+                        let next_t = ((t << 1) | (f as usize)) & mask;
 
-            for (s, v) in prev.into_iter() {
-                for t in 1..1 << h {
-                    let mut next_s = vec![0; h];
-
-                    for i in 0..h {
-                        if s[i] == 1 && t & (1 << i) > 0 {
-                            next_s[i] = 1;
-                        }
+                        next[next_s][next_t] = next[next_s][next_t] + prev[s][t];
                     }
-                    for i in 1..h {
-                        if next_s[i - 1] == 1 && t & (1 << i) > 0 {
-                            next_s[i] = 1;
-                        }
-                    }
-                    for i in (0..h - 1).rev() {
-                        if next_s[i + 1] == 1 && t & (1 << i) > 0 {
-                            next_s[i] = 1;
-                        }
-                    }
-
-                    let loop_connects_start = (0..h).any(|i| s[i] == 2 && next_s[i] == 1);
-                    let loop_idx = if loop_connects_start { 1 } else { 2 };
-
-                    for i in 0..h {
-                        if s[i] == 2 && t & (1 << i) > 0 {
-                            next_s[i] = loop_idx;
-                        }
-                    }
-                    for i in 1..h {
-                        if next_s[i - 1] == loop_idx && t & (1 << i) > 0 {
-                            next_s[i] = loop_idx;
-                        }
-                    }
-                    for i in (0..h - 1).rev() {
-                        if next_s[i + 1] == loop_idx && t & (1 << i) > 0 {
-                            next_s[i] = loop_idx;
-                        }
-                    }
-
-                    let mut idx = 3;
-                    for i in 0..h {
-                        if t & (1 << i) > 0 && next_s[i] == 0 {
-                            next_s[i] = idx;
-                        } else {
-                            idx += 1;
-                        }
-                    }
-
-                    let counts = next_s.citer().fold(vec![0; idx + 1], |mut counts, x| {
-                        counts[x] += 1;
-                        counts
-                    });
-
-                    if counts[1] == 0 {
-                        continue;
-                    }
-
-                    let next_loop_idx = (2..=idx)
-                        .find(|&idx| counts[idx] >= 2)
-                        .unwrap_or(usize::MAX);
-
-                    for i in 0..h {
-                        if next_s[i] >= 2 {
-                            if next_s[i] == next_loop_idx {
-                                next_s[i] = 2;
-                            } else {
-                                next_s[i] = 0;
-                            }
-                        }
-                    }
-
-                    *next.entry(next_s).or_insert(Mod::zero()) += v;
                 }
             }
 
@@ -518,9 +465,8 @@ fn main() {
     );
 
     let ans = dp
-        .into_iter()
-        .filter(|(s, _)| s[h - 1] == 1)
-        .map(|(_, v)| v)
+        .iter()
+        .map(|r| r.citer().skip(1).step_by(2).sum::<Mod>())
         .sum::<Mod>();
 
     println!("{}", ans);
