@@ -310,6 +310,7 @@ fn dijkstra1(g: &WeightedGraph, src: usize, dst: usize) -> Option<usize> {
 // 強連結成分分解
 mod scc {
     use super::*;
+    use itertools::Itertools;
 
     #[allow(dead_code)]
     fn dfs(g: &Graph, v: usize, visited: &mut Vec<bool>, vs: &mut Vec<usize>) {
@@ -325,19 +326,28 @@ mod scc {
     }
 
     #[allow(dead_code)]
-    fn rev_dfs(g: &Graph, v: usize, visited: &mut Vec<bool>, vs: &mut Vec<usize>) {
-        visited[v] = true;
+    fn rev_dfs(
+        g: &Graph,
+        v: usize,
+        idx: usize,
+        idxs: &mut Vec<usize>,
+        vs: &mut Vec<usize>,
+        adjs: &mut Vec<usize>,
+    ) {
+        idxs[v] = idx;
         vs.push(v);
 
         for edge in &g.in_edges[v] {
-            if !visited[edge.from] {
-                rev_dfs(g, edge.from, visited, vs);
+            if idxs[edge.from] == std::usize::MAX {
+                rev_dfs(g, edge.from, idx, idxs, vs, adjs);
+            } else if idxs[edge.from] < idx {
+                adjs.push(idxs[edge.from]);
             }
         }
     }
 
     #[allow(dead_code)]
-    fn scc(g: &Graph) -> Vec<Vec<usize>> {
+    fn scc(g: &Graph) -> (Vec<Vec<usize>>, Vec<usize>, Vec<Vec<usize>>) {
         let mut vs = vec![];
         {
             let mut visited = vec![false; g.size()];
@@ -349,18 +359,24 @@ mod scc {
         }
 
         let mut ret = vec![];
+        let mut idxs = vec![std::usize::MAX; g.size()];
+        let mut scc_edges = vec![];
         {
-            let mut visited = vec![false; g.size()];
             for &v in vs.iter().rev() {
-                if !visited[v] {
+                if idxs[v] == std::usize::MAX {
                     let mut component = vec![];
-                    rev_dfs(g, v, &mut visited, &mut component);
+                    let mut adjs = vec![];
+                    rev_dfs(g, v, ret.len(), &mut idxs, &mut component, &mut adjs);
                     ret.push(component);
+                    scc_edges.push(vec![]);
+                    for idx in adjs.iter().copied().sorted().dedup() {
+                        scc_edges[idx].push(ret.len() - 1);
+                    }
                 }
             }
         }
 
-        ret
+        (ret, idxs, scc_edges)
     }
 
     // 2-sat
@@ -400,7 +416,7 @@ mod scc {
 
         #[allow(dead_code)]
         fn solve(&self) -> Option<Vec<bool>> {
-            let components = scc(&self.g);
+            let (components, _, _) = scc(&self.g);
 
             let mut ret = vec![false; self.size()];
             let mut idx = vec![components.len(); self.size()];
@@ -440,7 +456,7 @@ mod scc {
             g.add_edge((4, 5));
             g.add_edge((5, 3));
 
-            let mut components = scc(&g);
+            let (mut components, _, _) = scc(&g);
             assert!(components.len() == 3);
 
             for component in components.iter_mut() {
