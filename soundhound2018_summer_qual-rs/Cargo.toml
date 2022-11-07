@@ -1,5 +1,5 @@
 [package]
-name = "abc233-rs"
+name = "soundhound2018_summer_qual-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,29 +18,21 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "abc233-a"
+name = "soundhound2018_summer_qual-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "abc233-b"
+name = "soundhound2018_summer_qual-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "abc233-c"
+name = "soundhound2018_summer_qual-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "abc233-d"
+name = "soundhound2018_summer_qual-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "abc233-e"
+name = "soundhound2018_summer_qual-e"
 path = "src/e.rs"
-
-[[bin]]
-name = "abc233-f"
-path = "src/f.rs"
-
-[[bin]]
-name = "abc233-g"
-path = "src/g.rs"
