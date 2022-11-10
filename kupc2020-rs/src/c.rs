@@ -175,35 +175,40 @@ where
 }
 
 fn main() {
-    let n = read::<usize>();
-    let a = read_row::<usize>();
-    let b = read_row::<usize>();
+    let n = 13;
+    let m = 26;
 
-    let t0 = izip!(a.citer(), b.citer())
-        .filter(|&(x, y)| x < y)
-        .map(|(x, y)| (x, y - x))
+    let v0 = (0..n).collect::<Vec<_>>();
+    let used = v0
+        .citer()
+        .tuple_windows()
+        .fold(vec![vec![false; m]; m], |mut used, (x, y)| {
+            used[x][y] = true;
+            used
+        });
+    let ans = once(v0.clone())
+        .chain((1..n).scan((v0.clone(), used), |(row, used), _| {
+            *row = (0..n)
+                .map(|i| row[i])
+                .scan(row[0], |p, q| {
+                    let next = (*p..*p + m)
+                        .map(|x| x % m)
+                        .find(|&x| !used[*p][x] && !used[q][x])
+                        .unwrap();
+                    used[*p][next] = true;
+                    used[q][next] = true;
+                    *p = next;
+
+                    Some(*p)
+                })
+                .collect::<Vec<_>>();
+
+            Some(row.clone())
+        }))
         .collect::<Vec<_>>();
-    let t1 = izip!(a.citer(), b.citer())
-        .filter(|&(x, y)| x > y)
-        .map(|(x, y)| (y, x - y))
-        .collect::<Vec<_>>();
-    let dp0 = t0.citer().fold(vec![0; n + 1], |mut dp, (w, v)| {
-        for i in 0..(n + 1).saturating_sub(w) {
-            dp[i + w] = max(dp[i + w], dp[i] + v);
-        }
 
-        dp
-    });
-    let m = n + dp0[n];
-    let dp1 = t1.citer().fold(vec![0; m + 1], |mut dp, (w, v)| {
-        for i in 0..(m + 1).saturating_sub(w) {
-            dp[i + w] = max(dp[i + w], dp[i] + v);
-        }
-
-        dp
-    });
-
-    let ans = m + dp1[m];
-
-    println!("{}", ans);
+    println!("{}", n);
+    for row in ans.iter() {
+        println!("{}", row.citer().map(|x| (b'a' + x as u8) as char).join(""));
+    }
 }

@@ -175,35 +175,32 @@ where
 }
 
 fn main() {
-    let n = read::<usize>();
-    let a = read_row::<usize>();
-    let b = read_row::<usize>();
+    println!(
+        "{}",
+        max(
+            1,
+            read_str()
+                .into_iter()
+                .map(|c| c as usize - 'a' as usize)
+                .chain(once(0))
+                .scan(0usize, |state, c| Some(replace(state, *state ^ (1 << c))))
+                .skip(1)
+                .scan(once((0, 0)).collect::<FxHashMap<_, _>>(), |dp, state| {
+                    let x = min(
+                        dp.get(&state).copied().unwrap_or(usize::MAX),
+                        once(state)
+                            .chain((0..26).map(|i| state ^ (1 << i)))
+                            .filter_map(|prev_state| dp.get(&prev_state).copied())
+                            .min()
+                            .map_or(usize::MAX, |x| x + 1),
+                    );
 
-    let t0 = izip!(a.citer(), b.citer())
-        .filter(|&(x, y)| x < y)
-        .map(|(x, y)| (x, y - x))
-        .collect::<Vec<_>>();
-    let t1 = izip!(a.citer(), b.citer())
-        .filter(|&(x, y)| x > y)
-        .map(|(x, y)| (y, x - y))
-        .collect::<Vec<_>>();
-    let dp0 = t0.citer().fold(vec![0; n + 1], |mut dp, (w, v)| {
-        for i in 0..(n + 1).saturating_sub(w) {
-            dp[i + w] = max(dp[i + w], dp[i] + v);
-        }
+                    dp.insert(state, x);
 
-        dp
-    });
-    let m = n + dp0[n];
-    let dp1 = t1.citer().fold(vec![0; m + 1], |mut dp, (w, v)| {
-        for i in 0..(m + 1).saturating_sub(w) {
-            dp[i + w] = max(dp[i + w], dp[i] + v);
-        }
-
-        dp
-    });
-
-    let ans = m + dp1[m];
-
-    println!("{}", ans);
+                    Some(x)
+                })
+                .last()
+                .unwrap()
+        )
+    );
 }

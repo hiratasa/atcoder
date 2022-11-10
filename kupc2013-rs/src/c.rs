@@ -175,35 +175,39 @@ where
 }
 
 fn main() {
-    let n = read::<usize>();
-    let a = read_row::<usize>();
-    let b = read_row::<usize>();
+    let (m, n) = read_tuple!(usize, usize);
+    let a = read_mat::<usize>(m);
 
-    let t0 = izip!(a.citer(), b.citer())
-        .filter(|&(x, y)| x < y)
-        .map(|(x, y)| (x, y - x))
-        .collect::<Vec<_>>();
-    let t1 = izip!(a.citer(), b.citer())
-        .filter(|&(x, y)| x > y)
-        .map(|(x, y)| (y, x - y))
-        .collect::<Vec<_>>();
-    let dp0 = t0.citer().fold(vec![0; n + 1], |mut dp, (w, v)| {
-        for i in 0..(n + 1).saturating_sub(w) {
-            dp[i + w] = max(dp[i + w], dp[i] + v);
-        }
+    let ans = a
+        .iter()
+        .enumerate()
+        .map(|(i, row)| {
+            let k = row
+                .citer()
+                .map(|c| match i {
+                    0 => 1 - c,
+                    _ => c,
+                })
+                .enumerate()
+                .map(|(j, c)| match j {
+                    0 => 1 - c,
+                    _ => c,
+                })
+                .enumerate()
+                .map(|(j, c)| match j {
+                    _ if j == n - 1 => 1 - c,
+                    _ => c,
+                })
+                .filter(|&c| c == 1)
+                .count();
 
-        dp
-    });
-    let m = n + dp0[n];
-    let dp1 = t1.citer().fold(vec![0; m + 1], |mut dp, (w, v)| {
-        for i in 0..(m + 1).saturating_sub(w) {
-            dp[i + w] = max(dp[i + w], dp[i] + v);
-        }
-
-        dp
-    });
-
-    let ans = m + dp1[m];
+            if k == n {
+                n - 1
+            } else {
+                k + 1
+            }
+        })
+        .sum::<usize>();
 
     println!("{}", ans);
 }

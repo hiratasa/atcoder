@@ -174,4 +174,62 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let abc = read_vec(n, || read_tuple!(usize, usize, usize));
+
+    let mut q = VecDeque::new();
+    let mut visited = FxHashSet::default();
+
+    const MAX_HP: usize = 100;
+
+    q.push_back((0, (MAX_HP, 0, 0, abc[0].0)));
+    visited.insert((MAX_HP, 0, 0, abc[0].0));
+
+    while let Some((turn, (hp, boost, nth, enemy_hp))) = q.pop_front() {
+        let (_, enemy_attack, enemy_cure) = abc[nth];
+
+        // attack to player
+        if hp <= enemy_attack {
+            continue;
+        }
+
+        let hp = hp - enemy_attack;
+
+        let next0 = {
+            const ATTACK: usize = 5;
+            if ATTACK >= enemy_hp {
+                (hp, 0, nth + 1, usize::MAX)
+            } else {
+                (hp, 0, nth, enemy_hp - ATTACK + enemy_cure)
+            }
+        };
+
+        let next1 = {
+            if boost + 1 >= enemy_hp {
+                (hp, boost + 1, nth + 1, usize::MAX)
+            } else {
+                (hp, boost + 1, nth, enemy_hp - (boost + 1) + enemy_cure)
+            }
+        };
+
+        const CURE: usize = 50;
+        let next2 = (hp + CURE, 0, nth, enemy_hp + enemy_cure);
+
+        if it![next0, next1, next2].any(|(_, _, nth, _)| nth == n) {
+            println!("{}", turn + 1);
+            return;
+        }
+
+        it![next0, next1, next2]
+            .map(|(hp, boost, nth, enemy_hp)| {
+                (min(hp, MAX_HP), boost, nth, min(enemy_hp, abc[nth].0))
+            })
+            .filter(|&state| visited.insert(state))
+            .for_each(|state| {
+                q.push_back((turn + 1, state));
+            });
+    }
+
+    println!("-1");
+}

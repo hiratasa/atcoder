@@ -175,35 +175,43 @@ where
 }
 
 fn main() {
-    let n = read::<usize>();
-    let a = read_row::<usize>();
-    let b = read_row::<usize>();
+    let (n, x) = read_tuple!(usize, usize);
+    let a = read_row::<i64>();
 
-    let t0 = izip!(a.citer(), b.citer())
-        .filter(|&(x, y)| x < y)
-        .map(|(x, y)| (x, y - x))
-        .collect::<Vec<_>>();
-    let t1 = izip!(a.citer(), b.citer())
-        .filter(|&(x, y)| x > y)
-        .map(|(x, y)| (y, x - y))
-        .collect::<Vec<_>>();
-    let dp0 = t0.citer().fold(vec![0; n + 1], |mut dp, (w, v)| {
-        for i in 0..(n + 1).saturating_sub(w) {
-            dp[i + w] = max(dp[i + w], dp[i] + v);
+    let m = a.citer().filter(|&b| b == -1).count();
+    let y = a.citer().filter(|&b| b != -1).fold(0, |b, c| b ^ c) as usize;
+
+    let ans = match m {
+        0 if y == x => a.clone(),
+        1 if x ^ y <= x => a
+            .citer()
+            .map(|b| if b == -1 { (x ^ y) as i64 } else { b })
+            .collect(),
+        2..=usize::MAX if y.leading_zeros() >= x.leading_zeros() => {
+            let b0 = (x ^ y) & x;
+            let b1 = (x ^ y) & !x;
+
+            a.citer()
+                .scan(0, |c, b| {
+                    if b != -1 {
+                        Some(b)
+                    } else if *c == 0 {
+                        *c += 1;
+                        Some(b0 as i64)
+                    } else if *c == 1 {
+                        *c += 1;
+                        Some(b1 as i64)
+                    } else {
+                        Some(0)
+                    }
+                })
+                .collect()
         }
-
-        dp
-    });
-    let m = n + dp0[n];
-    let dp1 = t1.citer().fold(vec![0; m + 1], |mut dp, (w, v)| {
-        for i in 0..(m + 1).saturating_sub(w) {
-            dp[i + w] = max(dp[i + w], dp[i] + v);
+        _ => {
+            println!("-1");
+            return;
         }
+    };
 
-        dp
-    });
-
-    let ans = m + dp1[m];
-
-    println!("{}", ans);
+    println!("{}", ans.citer().join(" "));
 }

@@ -1,13 +1,10 @@
 [package]
-name = "tenka1_2012_final-rs"
+name = "code_festival_2017_qual-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[profile.release]
-debug = true
 
 [dependencies]
 num = "0.2.1"
@@ -21,17 +18,17 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "tenka1_2012_final-a"
+name = "code_festival_2017_qual-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "tenka1_2012_final-b"
+name = "code_festival_2017_qual-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "tenka1_2012_final-c"
+name = "code_festival_2017_qual-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "tenka1_2012_final-d"
+name = "code_festival_2017_qual-d"
 path = "src/d.rs"
