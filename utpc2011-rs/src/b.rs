@@ -174,4 +174,25 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_str();
+
+    let ans0 = izip!(s.citer(), s.citer().rev())
+        .take(s.len() / 2)
+        .filter(|&(c, d)| match (c, d) {
+            ('(', ')') | (')', '(') | ('i', 'i') | ('w', 'w') => false,
+            _ => true,
+        })
+        .count();
+
+    let ans1 = if s.len() % 2 == 0 {
+        0
+    } else {
+        match s[s.len() / 2] {
+            'i' | 'w' => 0,
+            _ => 1,
+        }
+    };
+
+    println!("{}", ans0 + ans1);
+}
