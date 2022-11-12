@@ -150,7 +150,7 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
 }
 
 #[allow(dead_code)]
-fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     if let Some(ans) = ans {
         println!("{}", ans);
     } else {
