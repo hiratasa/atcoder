@@ -428,58 +428,224 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-#[allow(dead_code)]
-fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
-    let fact: Vec<_> = std::iter::once(Mod::one())
-        .chain((1..=n).scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        }))
-        .collect();
-    let inv = (2..=n).fold(vec![Mod::one(), Mod::one()], |mut inv, i| {
-        inv.push(-Mod::new(M::modulus() / i) * inv[M::modulus() % i]);
-        inv
-    });
-    let inv_fact: Vec<_> = inv
-        .iter()
-        .copied()
-        .scan(Mod::one(), |f, i| {
-            *f = *f * i;
-            Some(*f)
-        })
-        .collect();
-    (fact, inv, inv_fact)
-}
-
-fn main() {
-    type Mod = Mod1000000007;
-
-    let (n, k) = read_tuple!(usize, usize);
-    let a = read_row::<usize>();
-
-    let (fact, _, inv_fact) = generate_fact(n);
-
-    let combi = |x: usize, y: usize| {
-        if x < y {
-            Mod::zero()
-        } else {
-            fact[x] * inv_fact[y] * inv_fact[x - y]
-        }
-    };
-
-    let dp = (0..k).fold(vvec![Mod::one(); Mod::zero(); n + 1], |prev, i| {
-        let mut next = vec![Mod::zero(); n + 1];
-
-        for j in 0..=a[i] {
-            for l in 0..=n - j {
-                next[l + j] = next[l + j] + prev[l] * inv_fact[j] * combi(n - j, a[i] - j);
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
             }
         }
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
+        }
+    }
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
+    }
+}
 
-        next
-    });
+type Graph = detail::UnweightedGraph;
 
-    let ans = dp[n] * fact[n];
+fn main() {
+    type Mod = Mod998244353;
+
+    let (n, m, k) = read_tuple!(usize, usize, usize);
+    let uv = read_vec(m, || read_tuple!(usize, usize));
+    let c = read_row::<usize>();
+
+    let g = Graph::from_edges1_undirected(n, uv);
+
+    let dp0 = iterate(
+        vvec![(Mod::one(), Mod::zero()); (Mod::zero(), Mod::zero()); n],
+        |prev| {
+            (0..n).fold(vec![(Mod::zero(), Mod::zero()); n], |next, i| {
+                let deg = g.out_edges[i].len();
+                g.adjs(i).fold(next, |mut next, j| {
+                    next[j].0 += prev[i].0 / deg;
+                    next[j].1 += prev[i].1 / deg;
+                    next[j].1 += ((c[j] == 0) as usize) * prev[i].0 / deg;
+                    next
+                })
+            })
+        },
+    )
+    .take(k + 1)
+    .collect::<Vec<_>>();
+
+    let dp1 = iterate(vec![Mod::zero(); n], |prev| {
+        (0..n)
+            .map(|i| {
+                let deg = g.out_edges[i].len();
+                if deg == 0 {
+                    Mod::zero()
+                } else {
+                    g.adjs(i)
+                        .map(|j| prev[j] + (c[j] == 1) as usize)
+                        .sum::<Mod>()
+                        / deg
+                }
+            })
+            .collect()
+    })
+    .take(k + 1)
+    .collect::<Vec<_>>();
+
+    let ans = iproduct!(0..n, 0..=k)
+        .map(|(v, i)| {
+            if c[v] == 0 {
+                2 * dp0[i][v].1 * dp1[k - i][v]
+            } else {
+                -dp0[i][v].1
+            }
+        })
+        .sum::<Mod>();
 
     println!("{}", ans);
 }
