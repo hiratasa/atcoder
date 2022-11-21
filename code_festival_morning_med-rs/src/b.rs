@@ -174,34 +174,4 @@ where
 {
 }
 
-fn main() {
-    let (n, m) = read_tuple!(usize, usize);
-    let xy = read_vec(n, || read_tuple!(usize, usize));
-    let a = read_col::<usize>(m);
-
-    let ans = chain(
-        xy.citer().map(|(x, y)| (x, y)),
-        a.citer().map(|x| (x, usize::MAX)),
-    )
-    .sorted()
-    .scan(BinaryHeap::new(), |q, (x, y)| {
-        if y == usize::MAX {
-            // makura
-            while matches!(q.peek(), Some(&Reverse(yy)) if yy < x) {
-                q.pop();
-            }
-            if q.pop().is_some() {
-                Some(1)
-            } else {
-                Some(0)
-            }
-        } else {
-            // human
-            q.push(Reverse(y));
-            Some(0)
-        }
-    })
-    .sum::<usize>();
-
-    println!("{}", ans);
-}
+fn main() {}

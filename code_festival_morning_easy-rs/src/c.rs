@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -14,9 +18,13 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -51,10 +59,22 @@ macro_rules! it {
 }
 
 #[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -96,6 +116,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -119,6 +147,15 @@ fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
 #[allow(dead_code)]
 fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
+}
+
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
@@ -280,13 +317,30 @@ mod detail {
             self.out_edges[edge.from].push(edge);
             self.in_edges[edge.to].push(edge);
         }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
     }
 }
 
-type Graph = detail::WeightedGraph;
+use detail::WeightedGraph;
 
 #[allow(dead_code)]
-fn dijkstra(g: &Graph, src: usize) -> Vec<usize> {
+fn dijkstra(g: &WeightedGraph, src: usize) -> Vec<usize> {
     let n = g.size();
     let mut q = std::collections::BinaryHeap::new();
     let mut costs = vec![std::usize::MAX; n];
@@ -312,16 +366,14 @@ fn main() {
     let (s, t) = read_tuple!(usize, usize);
     let xyd = read_vec(m, || read_tuple!(usize, usize, usize));
 
-    let g = Graph::from_edges1_undirected(n, xyd);
+    let g = WeightedGraph::from_edges1_undirected(n, xyd);
 
-    let dist0 = dijkstra(&g, s - 1);
-    let dist1 = dijkstra(&g, t - 1);
+    let cost0 = dijkstra(&g, s - 1);
+    let cost1 = dijkstra(&g, t - 1);
 
-    let ans = (0..n).find(|&i| dist0[i] == dist1[i] && dist0[i] != std::usize::MAX);
-
-    if let Some(ans) = ans {
-        println!("{}", ans + 1);
-    } else {
-        println!("-1");
-    }
+    println_opt(
+        (0..n)
+            .find(|&i| cost0[i] == cost1[i] && cost0[i] != usize::MAX)
+            .map(|i| i + 1),
+    );
 }
