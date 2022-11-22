@@ -44,3 +44,7 @@ path = "src/f.rs"
 [[bin]]
 name = "abc234-g"
 path = "src/g.rs"
+
+[[bin]]
+name = "abc234-h"
+path = "src/h.rs"
