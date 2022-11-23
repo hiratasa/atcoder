@@ -1,5 +1,5 @@
 [package]
-name = "abc225-rs"
+name = "abc168-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,29 +18,21 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "abc225-a"
+name = "abc168-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "abc225-b"
+name = "abc168-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "abc225-c"
+name = "abc168-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "abc225-d"
+name = "abc168-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "abc225-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "abc225-f"
+name = "abc168-f"
 path = "src/f.rs"
-
-[[bin]]
-name = "abc225-g"
-path = "src/g.rs"
