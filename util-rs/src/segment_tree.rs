@@ -8,10 +8,8 @@ use cargo_snippet::snippet;
 #[snippet("dualsegtree")]
 #[snippet("lazysegtree")]
 trait Monoid {
-    type Item: Clone;
-
-    fn id() -> Self::Item;
-    fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item;
+    fn id() -> Self;
+    fn op(lhs: &Self, rhs: &Self) -> Self;
 }
 
 #[snippet("segtree")]
@@ -21,14 +19,14 @@ where
     M: Monoid,
 {
     cap: usize,
-    values: Vec<M::Item>,
+    values: Vec<M>,
 }
 
 #[snippet("segtree")]
 #[allow(dead_code)]
 impl<M> SegmentTree<M>
 where
-    M: Monoid,
+    M: Monoid + Clone,
 {
     fn new(n: usize) -> Self {
         let cap = n.next_power_of_two();
@@ -38,13 +36,16 @@ where
         }
     }
 
-    fn with(vals: &Vec<M::Item>) -> Self {
+    fn with<T>(vals: &[T]) -> Self
+    where
+        T: Into<M> + Clone,
+    {
         let n = vals.len();
         let cap = n.next_power_of_two();
 
         let mut values = Vec::with_capacity(2 * cap - 1);
         values.resize(cap - 1, M::id());
-        values.extend(vals.iter().cloned());
+        values.extend(vals.iter().cloned().map(|x| x.into()));
         values.resize(2 * cap - 1, M::id());
 
         let mut st = SegmentTree { cap, values };
@@ -73,19 +74,22 @@ where
         }
     }
 
-    fn get(&self, pos: usize) -> M::Item {
+    fn get(&self, pos: usize) -> M {
         self.values[self.cap - 1 + pos].clone()
     }
 
-    fn set(&mut self, pos: usize, v: M::Item) {
+    fn set<T>(&mut self, pos: usize, v: T)
+    where
+        T: Into<M>,
+    {
         let idx = self.cap - 1 + pos;
 
-        self.values[idx] = v;
+        self.values[idx] = v.into();
 
         self.fix_all(idx);
     }
 
-    fn query(&self, a: usize, b: usize) -> M::Item {
+    fn query(&self, a: usize, b: usize) -> M {
         let mut left = M::id();
         let mut right = M::id();
 
@@ -114,7 +118,7 @@ where
     // (存在しないときにnを返してしまうとquery(a,n)がfalseのときと区別がつかないのでNoneを返す)
     fn right_partition_point<F>(&self, a: usize, mut f: F) -> Option<usize>
     where
-        F: FnMut(&M::Item) -> bool,
+        F: FnMut(&M) -> bool,
     {
         assert!(a <= self.cap);
         if !f(&M::id()) {
@@ -168,7 +172,7 @@ where
     // 存在しない場合は0を返す
     fn left_partition_point<F>(&self, b: usize, mut f: F) -> usize
     where
-        F: FnMut(&M::Item) -> bool,
+        F: FnMut(&M) -> bool,
     {
         assert!(b <= self.cap);
         if !f(&M::id()) {
@@ -237,14 +241,14 @@ where
 {
     height: usize,
     cap: usize,
-    lazy: Vec<Op::Item>,
+    lazy: Vec<Op>,
 }
 
 #[snippet("dualsegtree")]
 #[allow(dead_code)]
 impl<Op> DualSegmentTree<Op>
 where
-    Op: Monoid,
+    Op: Monoid + Clone,
 {
     fn new(n: usize) -> Self {
         let cap = n.next_power_of_two();
@@ -255,13 +259,16 @@ where
         }
     }
 
-    fn with(vals: &Vec<Op::Item>) -> Self {
+    fn with<T>(vals: &[T]) -> Self
+    where
+        T: Into<Op> + Clone,
+    {
         let n = vals.len();
         let cap = n.next_power_of_two();
 
         let mut lazy = Vec::with_capacity(2 * cap - 1);
         lazy.resize(cap - 1, Op::id());
-        lazy.extend(vals.iter().cloned());
+        lazy.extend(vals.iter().cloned().map(|x| x.into()));
         lazy.resize(2 * cap - 1, Op::id());
 
         DualSegmentTree {
@@ -273,7 +280,7 @@ where
 
     // internal
     // pをidx全体に適用する
-    fn apply(&mut self, idx: usize, p: &Op::Item) {
+    fn apply(&mut self, idx: usize, p: &Op) {
         self.lazy[idx] = Op::op(p, &self.lazy[idx]);
     }
 
@@ -299,7 +306,7 @@ where
         }
     }
 
-    fn get(&mut self, pos: usize) -> Op::Item {
+    fn get(&mut self, pos: usize) -> Op {
         let idx = self.cap - 1 + pos;
 
         self.push_all(idx);
@@ -307,15 +314,23 @@ where
         self.lazy[idx].clone()
     }
 
-    fn set(&mut self, pos: usize, p: Op::Item) {
+    fn set<T>(&mut self, pos: usize, p: T)
+    where
+        T: Into<Op>,
+    {
         let idx = self.cap - 1 + pos;
 
         self.push_all(idx);
 
-        self.lazy[idx] = p;
+        self.lazy[idx] = p.into();
     }
 
-    fn update(&mut self, a: usize, b: usize, p: Op::Item) {
+    fn update<T>(&mut self, a: usize, b: usize, p: T)
+    where
+        T: Into<Op>,
+    {
+        let p = p.into();
+
         let mut left_idx = a + self.cap - 1;
         let mut right_idx = b + self.cap - 1;
 
@@ -350,21 +365,21 @@ where
 {
     height: usize,
     cap: usize,
-    values: Vec<M::Item>,
-    lazy: Vec<Op::Item>,
+    values: Vec<M>,
+    lazy: Vec<Op>,
 }
 
 #[snippet("lazysegtree")]
 trait Operator<T>: Monoid {
-    fn apply(op: &Self::Item, v: &T) -> T;
+    fn apply(op: &Self, v: &T) -> T;
 }
 
 #[snippet("lazysegtree")]
 #[allow(dead_code)]
 impl<M, Op> LazySegmentTree<M, Op>
 where
-    M: Monoid,
-    Op: Monoid + Operator<M::Item>,
+    M: Monoid + Clone,
+    Op: Monoid + Operator<M> + Clone,
 {
     fn new(n: usize) -> Self {
         let cap = n.next_power_of_two();
@@ -376,13 +391,16 @@ where
         }
     }
 
-    fn with(vals: &Vec<M::Item>) -> Self {
+    fn with<T>(vals: &[T]) -> Self
+    where
+        T: Into<M> + Clone,
+    {
         let n = vals.len();
         let cap = n.next_power_of_two();
 
         let mut values = Vec::with_capacity(2 * cap - 1);
         values.resize(cap - 1, M::id());
-        values.extend(vals.iter().cloned());
+        values.extend(vals.iter().cloned().map(|x| x.into()));
         values.resize(2 * cap - 1, M::id());
 
         let mut st = LazySegmentTree {
@@ -423,7 +441,7 @@ where
 
     // internal
     // pをidx全体に適用する
-    fn apply(&mut self, idx: usize, p: &Op::Item) {
+    fn apply(&mut self, idx: usize, p: &Op) {
         self.lazy[idx] = Op::op(p, &self.lazy[idx]);
         self.values[idx] = Op::apply(p, &self.values[idx]);
     }
@@ -450,7 +468,7 @@ where
         }
     }
 
-    fn get(&mut self, pos: usize) -> M::Item {
+    fn get(&mut self, pos: usize) -> M {
         let idx = self.cap - 1 + pos;
 
         self.push_all(idx);
@@ -458,18 +476,26 @@ where
         self.values[idx].clone()
     }
 
-    fn set(&mut self, pos: usize, v: M::Item) {
+    fn set<T>(&mut self, pos: usize, v: T)
+    where
+        T: Into<M>,
+    {
         let idx = self.cap - 1 + pos;
 
         self.push_all(idx);
 
-        self.values[idx] = v;
+        self.values[idx] = v.into();
         self.lazy[idx] = Op::id();
 
         self.fix_all(idx);
     }
 
-    fn update(&mut self, a: usize, b: usize, p: Op::Item) {
+    fn update<T>(&mut self, a: usize, b: usize, p: T)
+    where
+        T: Into<Op>,
+    {
+        let p = p.into();
+
         let mut left_idx = a + self.cap - 1;
         let mut right_idx = b + self.cap - 1;
 
@@ -495,7 +521,7 @@ where
         self.fix_all(b + self.cap - 1);
     }
 
-    fn query(&mut self, a: usize, b: usize) -> M::Item {
+    fn query(&mut self, a: usize, b: usize) -> M {
         let mut left = M::id();
         let mut right = M::id();
 
@@ -529,18 +555,22 @@ where
 #[snippet("lazysegtree")]
 macro_rules! define_monoid {
     ($name: ident, $t: ty, $id: expr, $op: expr) => {
-        #[derive(Clone, Debug)]
-        struct $name;
+        #[derive(Clone, Copy, Debug)]
+        struct $name($t);
 
         impl Monoid for $name {
-            type Item = $t;
-
-            fn id() -> Self::Item {
-                $id
+            fn id() -> Self {
+                Self($id)
             }
 
-            fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item {
-                ($op)(*lhs, *rhs)
+            fn op(lhs: &Self, rhs: &Self) -> Self {
+                Self(($op)(lhs.0, rhs.0))
+            }
+        }
+
+        impl From<$t> for $name {
+            fn from(x: $t) -> $name {
+                Self(x)
             }
         }
     };
@@ -549,9 +579,9 @@ macro_rules! define_monoid {
 define_monoid!(Minimum, i64, 1 << 60, i64::min);
 define_monoid!(AddValue, i64, 0, std::ops::Add::add);
 
-impl Operator<i64> for AddValue {
-    fn apply(op: &Self::Item, v: &i64) -> i64 {
-        op + v
+impl Operator<Minimum> for AddValue {
+    fn apply(op: &Self, v: &Minimum) -> Minimum {
+        Minimum(op.0 + v.0)
     }
 }
 
@@ -573,11 +603,11 @@ mod test {
         st.set(3, 4);
         st.set(5, 8);
 
-        assert_eq!(st.query(0, 10), 2);
-        assert_eq!(st.query(1, 4), 2);
-        assert_eq!(st.query(2, 4), 4);
-        assert_eq!(st.query(3, 3), Minimum::id());
-        assert_eq!(st.query(4, 5), Minimum::id());
+        assert_eq!(st.query(0, 10).0, 2);
+        assert_eq!(st.query(1, 4).0, 2);
+        assert_eq!(st.query(2, 4).0, 4);
+        assert_eq!(st.query(3, 3).0, Minimum::id().0);
+        assert_eq!(st.query(4, 5).0, Minimum::id().0);
     }
 
     #[test]
@@ -597,7 +627,7 @@ mod test {
 
             let a0 = std::iter::repeat_with(|| dist.sample(&mut rng))
                 .take(n)
-                .collect();
+                .collect::<Vec<_>>();
 
             let mut st = RMTTree::with(&a0);
             let mut logs = vec![];
@@ -623,8 +653,8 @@ mod test {
                     let r = distidx2.sample(&mut rng);
 
                     assert_eq!(
-                        st.query(l, r),
-                        a[l..r].iter().copied().min().unwrap_or(Minimum::id()),
+                        st.query(l, r).0,
+                        a[l..r].iter().copied().min().unwrap_or(Minimum::id().0),
                         "a0: {:?}, a: {:?}, l: {}, r: {}, ops: {}",
                         a0,
                         a,
@@ -646,17 +676,17 @@ mod test {
 
         // [inf, 2, inf, 4, ...]
 
-        assert_eq!(st.query(1, 4), 2);
-        assert_eq!(st.query(2, 4), 4);
-        assert_eq!(st.query(3, 3), Minimum::id());
-        assert_eq!(st.query(4, 5), Minimum::id());
+        assert_eq!(st.query(1, 4).0, 2);
+        assert_eq!(st.query(2, 4).0, 4);
+        assert_eq!(st.query(3, 3).0, Minimum::id().0);
+        assert_eq!(st.query(4, 5).0, Minimum::id().0);
 
         st.update(1, 5, 2);
 
         // [inf, 4, inf, 6, ...]
 
-        assert_eq!(st.query(1, 4), 4);
-        assert_eq!(st.query(2, 4), 6);
+        assert_eq!(st.query(1, 4).0, 4);
+        assert_eq!(st.query(2, 4).0, 6);
     }
 
     #[test]
@@ -676,7 +706,7 @@ mod test {
 
             let a0 = std::iter::repeat_with(|| dist.sample(&mut rng))
                 .take(n)
-                .collect();
+                .collect::<Vec<_>>();
 
             let mut st = RMTTreeWithAddition::with(&a0);
             let mut logs = vec![];
@@ -706,8 +736,8 @@ mod test {
                     let (l, r) = if l <= r { (l, r) } else { (r, l) };
 
                     assert_eq!(
-                        st.query(l, r),
-                        a[l..r].iter().copied().min().unwrap_or(Minimum::id()),
+                        st.query(l, r).0,
+                        a[l..r].iter().copied().min().unwrap_or(Minimum::id().0),
                         "a0: {:?}, a: {:?}, l: {}, r: {}, ops: {}",
                         a0,
                         a,
@@ -729,7 +759,7 @@ mod test {
                     let pos = std::cmp::min(distidx.sample(&mut rng), n - 1);
 
                     assert_eq!(
-                        st.get(pos),
+                        st.get(pos).0,
                         a[pos],
                         "a0: {:?}, a: {:?}, pos: {}, ops: {}",
                         a0,
@@ -748,9 +778,9 @@ mod test {
         let st = RMTTree::with(&vals);
 
         for i in 0..vals.len() {
-            let mins = std::iter::once((i, Minimum::id()))
+            let mins = std::iter::once((i, Minimum::id().0))
                 .chain(vals.iter().copied().enumerate().skip(i).scan(
-                    Minimum::id(),
+                    Minimum::id().0,
                     |min, (j, v)| {
                         *min = std::cmp::min(*min, v);
                         // minimum in [i, j] = [i, j + 1)
@@ -760,7 +790,7 @@ mod test {
                 .collect::<Vec<_>>();
             for v in 0..20 {
                 assert_eq!(
-                    /* actual */ st.right_partition_point(i, |&u| u >= v),
+                    /* actual */ st.right_partition_point(i, |&u| u.0 >= v),
                     /* expected */
                     mins.iter().copied().find(|&(_, u)| u < v).map(|(j, _)| j),
                     " l={}, v={}, mins={:?}",
