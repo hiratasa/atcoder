@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,9 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -56,7 +62,9 @@ macro_rules! it {
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +72,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +116,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -130,6 +147,15 @@ fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
 #[allow(dead_code)]
 fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
+}
+
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
@@ -291,52 +317,66 @@ mod detail {
             self.out_edges[edge.from].push(edge);
             self.in_edges[edge.to].push(edge);
         }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
     }
 }
 
-use detail::Graph;
+type Graph = detail::UnweightedGraph;
 
-#[allow(dead_code)]
-fn dfs(g: &Graph, s: &[usize], v: usize, p: usize) -> Vec<usize> {
-    g.out_edges[v]
-        .iter()
-        .map(|e| e.to)
-        .filter(|&u| u != p)
-        .map(|u| dfs(g, s, u, v))
-        .fold(vec![0, s[v]], |r, t| {
-            // eprintln!("{:?} {:?}", r, t);
-            iproduct!(r.citer().enumerate().skip(1), t.citer().enumerate()).fold(
-                vvec![0, s[v]; usize::MAX; r.len() + t.len() - 1],
-                |mut a, ((i, rr), (j, tt))| {
-                    a[i + j] = min(a[i + j], rr + tt);
-                    // eprintln!("{:?} {} {} {} {}", a, i + j, a[i + j], rr, tt);
-                    a
+fn dfs(g: &Graph, v: usize, p: usize, s: &[usize]) -> Vec<usize> {
+    let mut t = g
+        .children(v, p)
+        .map(|u| dfs(g, u, v, s))
+        .fold(vec![s[v]], |t0, t1| {
+            iproduct!(t0.citer().enumerate(), t1.citer().enumerate()).fold(
+                vec![usize::MAX; t0.len() + t1.len() - 1],
+                |mut t, ((i, x), (j, y))| {
+                    t[i + j] = min(t[i + j], x + y);
+                    t
                 },
             )
-        })
+        });
+
+    t.push(0);
+
+    t
 }
 
 fn main() {
-    let n: usize = read();
-    let s = read_vec(n, || read::<usize>());
+    let n = read::<usize>();
+    let s = read_col::<usize>(n);
     let ab = read_vec(n - 1, || read_tuple!(usize, usize));
-    let m: usize = read();
-    let t = read_vec(m, || read::<usize>());
+    let m = read::<usize>();
+    let t = read_col::<usize>(m);
 
-    let g = Graph::from_edges1_undirected(n, &ab);
+    let g = Graph::from_edges1_undirected(n, ab);
 
-    let t = t.citer().sorted().collect_vec();
-    let c = once(0).chain(t.citer()).cumsum::<usize>().collect_vec();
+    let dp = dfs(&g, 0, n, &s);
 
-    let total = s.citer().sum::<usize>() + c[m];
+    let tsum = once(0)
+        .chain(t.citer().sorted().rev())
+        .cumsum::<usize>()
+        .collect::<Vec<_>>();
+    let sum = s.citer().sum::<usize>();
 
-    let r = dfs(&g, &s, 0, n);
-
-    let ans = r
-        .citer()
-        .take(m + 1)
-        .enumerate()
-        .map(|(i, rr)| total - rr - c[m - i])
+    let ans = izip!(dp.into_iter().rev(), tsum,)
+        .map(|(x, y)| sum - x + y)
         .max()
         .unwrap();
 
