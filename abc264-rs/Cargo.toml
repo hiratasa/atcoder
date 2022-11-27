@@ -44,3 +44,7 @@ path = "src/f.rs"
 [[bin]]
 name = "abc264-g"
 path = "src/g.rs"
+
+[[bin]]
+name = "abc264-h"
+path = "src/h.rs"

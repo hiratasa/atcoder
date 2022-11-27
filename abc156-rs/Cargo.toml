@@ -1,5 +1,5 @@
 [package]
-name = "abc231-rs"
+name = "abc156-rs"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
 edition = "2018"
@@ -18,29 +18,21 @@ permutohedron = "0.2.4"
 proconio = "0.3.6"
 
 [[bin]]
-name = "abc231-a"
+name = "abc156-a"
 path = "src/a.rs"
 
 [[bin]]
-name = "abc231-b"
+name = "abc156-b"
 path = "src/b.rs"
 
 [[bin]]
-name = "abc231-c"
+name = "abc156-c"
 path = "src/c.rs"
 
 [[bin]]
-name = "abc231-d"
+name = "abc156-d"
 path = "src/d.rs"
 
 [[bin]]
-name = "abc231-e"
-path = "src/e.rs"
-
-[[bin]]
-name = "abc231-f"
+name = "abc156-f"
 path = "src/f.rs"
-
-[[bin]]
-name = "abc231-g"
-path = "src/g.rs"
