@@ -371,7 +371,7 @@ where
 
 #[snippet("lazysegtree")]
 trait Operator<T>: Monoid {
-    fn apply(op: &Self, v: &T) -> T;
+    fn apply(&self, v: &T) -> T;
 }
 
 #[snippet("lazysegtree")]
@@ -580,8 +580,8 @@ define_monoid!(Minimum, i64, 1 << 60, i64::min);
 define_monoid!(AddValue, i64, 0, std::ops::Add::add);
 
 impl Operator<Minimum> for AddValue {
-    fn apply(op: &Self, v: &Minimum) -> Minimum {
-        Minimum(op.0 + v.0)
+    fn apply(&self, v: &Minimum) -> Minimum {
+        Minimum(self.0 + v.0)
     }
 }
 
