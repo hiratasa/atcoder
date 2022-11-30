@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -14,9 +18,13 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -47,14 +55,29 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -96,6 +119,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -121,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -137,4 +177,33 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let s = read_str();
+    let k = read_str();
+
+    let u = "1234567890abcdefghijklmnopqrstuvwxyz"
+        .chars()
+        .filter(|&c| !k.contains(&c))
+        .collect::<Vec<_>>();
+    let m = u.len();
+    let l = s
+        .citer()
+        .filter(|&c| u.contains(&c))
+        .sorted()
+        .dedup()
+        .count();
+
+    let penalty = (0..m)
+        .map(|i| {
+            if i < l {
+                (i as f64) / (i as f64 + 1.0) * 2.0
+            } else {
+                (l as f64) / (l as f64 + 1.0) * 2.0
+            }
+        })
+        .sum::<f64>();
+
+    let ans = s.len() as f64 + penalty;
+
+    println!("{}", ans);
+}
