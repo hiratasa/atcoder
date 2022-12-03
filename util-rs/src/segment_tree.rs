@@ -9,7 +9,7 @@ use cargo_snippet::snippet;
 #[snippet("lazysegtree")]
 trait Monoid {
     fn id() -> Self;
-    fn op(lhs: &Self, rhs: &Self) -> Self;
+    fn op(&self, rhs: &Self) -> Self;
 }
 
 #[snippet("segtree")]
@@ -563,8 +563,8 @@ macro_rules! define_monoid {
                 Self($id)
             }
 
-            fn op(lhs: &Self, rhs: &Self) -> Self {
-                Self(($op)(lhs.0, rhs.0))
+            fn op(&self, rhs: &Self) -> Self {
+                Self(($op)(self.0, rhs.0))
             }
         }
 
