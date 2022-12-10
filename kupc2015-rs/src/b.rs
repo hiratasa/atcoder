@@ -177,4 +177,110 @@ where
 {
 }
 
-fn main() {}
+const N: usize = 10;
+
+fn check(board: &[u16]) -> bool {
+    board
+        .citer()
+        .map(|s| (s, 0))
+        .fold1(|(s1, s2), (col, _)| {
+            // s1: そこまでルートがただ1箇所存在
+            // s2: そこまでのルートが2箇所以上存在
+            let x0 = (s1 << 1) & col;
+            let x1 = s1 & col;
+            let x2 = (s1 >> 1) & col;
+            let y0 = (s2 << 1) & col;
+            let y1 = s2 & col;
+            let y2 = (s2 >> 1) & col;
+
+            let next_s2 = y0 | y1 | y2 | (x0 & x1) | (x1 & x2) | (x2 & x0);
+            let next_s1 = (x0 | x1 | x2) & !next_s2;
+
+            (next_s1, next_s2)
+        })
+        .filter(|&(s1, s2)| s2 == 0 && s1.count_ones() == 1)
+        .is_some()
+}
+
+fn solve(
+    idx: usize,
+    next: usize,
+    counts: &mut [Vec<usize>],
+    board: &mut [u16],
+) -> Option<Vec<Vec<bool>>> {
+    if idx == 4 {
+        if check(board) {
+            Some(vec![vec![false; N]; N])
+        } else {
+            None
+        }
+    } else {
+        (next..N * N).find_map(|current| {
+            let (i, j) = (current / N, current % N);
+
+            let mut ok = true;
+            iproduct!(1..=2, -1i32..=1, -1i32..=1)
+                .map(|(s, di, dj)| (s * di, s * dj))
+                .filter_map(|(di, dj)| {
+                    let ii = Some(i as i32 + di).filter(|&ii| 0 <= ii && ii < N as i32)? as usize;
+                    let jj = Some(j as i32 + dj).filter(|&jj| 0 <= jj && jj < N as i32)? as usize;
+                    Some((ii, jj))
+                })
+                .for_each(|(ii, jj)| {
+                    counts[ii][jj] += 1;
+                    if counts[ii][jj] == 1 {
+                        assert!(board[jj] & (1 << ii) > 0);
+                        board[jj] ^= 1 << ii;
+                        if board[jj] == 0 {
+                            ok = false;
+                        }
+                    }
+                });
+
+            let ret = if ok {
+                solve(idx + 1, current + 1, counts, board)
+            } else {
+                None
+            };
+
+            iproduct!(1..=2, -1i32..=1, -1i32..=1)
+                .map(|(s, di, dj)| (s * di, s * dj))
+                .filter_map(|(di, dj)| {
+                    let ii = Some(i as i32 + di).filter(|&ii| 0 <= ii && ii < N as i32)? as usize;
+                    let jj = Some(j as i32 + dj).filter(|&jj| 0 <= jj && jj < N as i32)? as usize;
+                    Some((ii, jj))
+                })
+                .for_each(|(ii, jj)| {
+                    counts[ii][jj] -= 1;
+                    if counts[ii][jj] == 0 {
+                        assert!(board[jj] & (1 << ii) == 0);
+                        board[jj] ^= 1 << ii;
+                    }
+                });
+
+            ret.map(|mut ans| {
+                ans[i][j] = true;
+                ans
+            })
+        })
+    }
+}
+
+fn main() {
+    let ans = solve(0, 0, &mut vec![vec![0; N]; N], &mut vec![(1 << N) - 1; N]).unwrap();
+
+    for row in ans {
+        println!(
+            "{}",
+            row.citer()
+                .map(|x| {
+                    if x {
+                        'C'
+                    } else {
+                        '.'
+                    }
+                })
+                .join("")
+        );
+    }
+}

@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -14,9 +18,13 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -47,14 +55,29 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -96,6 +119,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -121,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -138,56 +178,44 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-
+    let n = read::<usize>();
     let a = read_row::<usize>();
     let b = read_row::<usize>();
 
-    let a = a
-        .citer()
-        .enumerate()
-        .sorted_by_key(|&(i, _aa)| b[i])
-        .map(|t| t.1)
-        .collect::<Vec<_>>();
-    let b = b.citer().sorted().collect::<Vec<_>>();
+    let (a, b): (Vec<_>, Vec<_>) = izip!(a, b).sorted().unzip();
 
-    let ai_sorted = a
-        .citer()
-        .enumerate()
-        .map(|t| (t.1, t.0))
-        .sorted()
-        .collect::<Vec<_>>();
+    let b_idxs = (0..n).sorted_by_key(|&i| b[i]).collect::<Vec<_>>();
 
-    if let Some(t) =
-        izip!(ai_sorted.citer(), b.citer())
-            .enumerate()
-            .try_fold(true, |t, (i, ((aa, _), bb))| {
-                if aa > bb {
-                    None
-                } else if i < n - 1 && ai_sorted[i + 1].0 <= bb {
-                    Some(false)
-                } else {
-                    Some(t)
-                }
-            })
-    {
-        if t {
-            let p = iterate(0, |&i| ai_sorted[i].1)
-                .skip(1)
-                .position(|idx| idx == 0)
-                .unwrap()
-                + 1;
-            if p == n {
-                println!("No");
-            } else {
-                println!("Yes");
-            }
-        } else {
-            println!("Yes");
-            return;
-        }
-    } else {
+    if !izip!(a.citer(), b_idxs.citer().map(|i| b[i])).all(|(x, y)| x <= y) {
         println!("No");
         return;
-    };
+    }
+
+    if b_idxs
+        .citer()
+        .map(|i| b[i])
+        .scan(0, |i, x| {
+            while *i < n && a[*i] <= x {
+                *i += 1;
+            }
+            Some(*i)
+        })
+        .tuple_windows()
+        .map(|(i, j)| j - i)
+        .any(|d| d != 1)
+    {
+        println!("Yes");
+        return;
+    }
+
+    if successors(Some(0), |&i| Some(b_idxs[i]))
+        .skip(1)
+        .take_while(|&i| i != 0)
+        .count()
+        != n - 1
+    {
+        println!("Yes");
+    } else {
+        println!("No");
+    }
 }
