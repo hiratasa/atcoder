@@ -3,6 +3,8 @@ use itertools::izip;
 use itertools::Itertools;
 use num::complex::Complex64;
 
+use cargo_snippet::snippet;
+
 // in-placeなFFTは以下2種類の方法でできる
 //  - 周波数間引きのバタフライ演算(butterfly) => bit順序反転
 //  - bit順序反転 ⇒ 時間間引きのバタフライ演算(butterfly_inv)
@@ -11,6 +13,7 @@ use num::complex::Complex64;
 // 周波数間引きバタフライ演算
 // w_pow[1]^n = 1
 // w_pow[i] = w_pow[1]^i
+#[snippet("convolution_mod")]
 #[allow(dead_code)]
 fn butterfly<
     T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
@@ -79,6 +82,7 @@ fn butterfly<
 // 時間間引きバタフライ演算
 // w_pow[1]^n = 1
 // w_pow[i] = w_pow[1]^i
+#[snippet("convolution_mod")]
 #[allow(dead_code)]
 fn butterfly_inv<
     T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
@@ -144,6 +148,7 @@ fn butterfly_inv<
     }
 }
 
+#[snippet("convolution_mod")]
 #[allow(dead_code)]
 fn reverse_bits_order<
     T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
@@ -180,6 +185,7 @@ fn fft<
     reverse_bits_order(f);
 }
 
+#[snippet("convolution_mod")]
 #[allow(dead_code)]
 fn convolution_impl<
     T: Copy
@@ -284,6 +290,7 @@ fn convolution_complex<T: Copy + num::ToPrimitive + num::FromPrimitive>(
 
 // 素数mに対して、原始根を求める
 // g^k != 1 (1<=k<m-1), g^(m-1) = 1
+#[snippet("convolution_mod")]
 #[allow(dead_code)]
 fn primitive_root(m: usize) -> usize {
     match m {
@@ -358,6 +365,7 @@ fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
     }
 }
 
+#[snippet("convolution_mod")]
 #[allow(dead_code)]
 pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
     let n0 = p.len();
