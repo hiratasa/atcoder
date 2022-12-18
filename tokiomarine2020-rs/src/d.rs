@@ -179,78 +179,66 @@ where
 
 fn main() {
     let n = read::<usize>();
+    let items = read_vec(n, || read_tuple!(usize, usize));
 
-    let se = read_vec(n, || {
-        let (s, e) = read_tuple!(String, String);
+    let q = read::<usize>();
+    let vl = read_vec(q, || read_tuple!(usize, usize));
 
-        let parse = |t: &str| {
-            let hour = t[..2].parse::<usize>().unwrap();
-            let min = t[3..5].parse::<usize>().unwrap();
-            let sec = t[6..8].parse::<usize>().unwrap();
-            let msec = t[9..12].parse::<usize>().unwrap();
-
-            hour * 3600 * 1000 + min * 60 * 1000 + sec * 1000 + msec
-        };
-
-        (parse(&s), parse(&e))
-    });
-
-    let candidates = se
-        .citer()
-        .flat_map(|(s, e)| it![s, s + 1000, e, e + 1000])
-        .chain(once(1 << 50))
-        .sorted()
-        .dedup()
-        .collect::<Vec<_>>();
-
-    let fix = |t: usize, u: usize| {
-        if u > t {
-            u - 1000
-        } else {
-            u
-        }
-    };
-
-    #[derive(Debug, Clone, Copy)]
-    enum Status {
-        Ok(usize),
-        NotUnique,
-        Invalid,
-    };
-    let ans = candidates
-        .citer()
-        .filter_map(|t| {
-            se.citer()
-                .map(|(s, e)| {
-                    iproduct!(
-                        it![s, s + 1000].filter(|&ss| fix(t, ss) == s),
-                        it![e, e + 1000].filter(|&ee| fix(t, ee) == e)
-                    )
-                    .filter(|&(ss, ee)| ss < ee)
-                    .map(|(ss, ee)| ee - ss)
+    let t = (1..n)
+        .take(1 << 10)
+        .fold(vec![vec![(0, 0), (items[0].1, items[0].0)]], |t, i| {
+            let (v, w) = items[i];
+            pushed!(
+                t,
+                t[(i - 1) / 2]
+                    .citer()
+                    .flat_map(|(ww, vv)| it![(ww, vv), (ww + w, vv + v)])
                     .sorted()
-                    .dedup()
-                    .map(|x| Status::Ok(x))
-                    .fold1(|_, _| Status::NotUnique)
-                    .unwrap_or(Status::Invalid)
-                })
-                .try_fold(vec![], |t, status| match status {
-                    Status::Ok(x) => Some(pushed!(t, Some(x))),
-                    Status::NotUnique => Some(pushed!(t, None)),
-                    Status::Invalid => None,
-                })
-        })
-        .fold1(|t0, t1| {
-            izip!(t0, t1)
-                .map(|(x, y)| match (x, y) {
-                    (Some(x), Some(y)) if x == y => Some(x),
-                    _ => None,
-                })
-                .collect()
-        })
-        .unwrap();
+                    .scan(0, |ma, (ww, vv)| {
+                        *ma = max(*ma, vv);
+                        Some((ww, *ma))
+                    })
+                    .group_by(|&(ww, _)| ww)
+                    .into_iter()
+                    .map(|(ww, it)| (ww, it.last().unwrap().1))
+                    .collect::<Vec<_>>()
+            )
+        });
 
-    for x in ans {
-        println_opt(x);
-    }
+    vl.citer()
+        .map(|(idx, l)| {
+            let mut idx = idx - 1;
+
+            let mut table = vec![(0, 0)];
+            while idx >= t.len() {
+                table = table
+                    .citer()
+                    .flat_map(|(ww, vv)| it![(ww, vv), (ww + items[idx].1, vv + items[idx].0)])
+                    .collect::<Vec<_>>();
+                idx = (idx - 1) / 2;
+            }
+
+            table
+                .into_iter()
+                .sorted()
+                .group_by(|&(ww, _)| ww)
+                .into_iter()
+                .map(|(ww, it)| (ww, it.last().unwrap().1))
+                .scan(t[idx].len(), |i, (ww, vv)| {
+                    while *i > 0 && t[idx][*i - 1].0 + ww > l {
+                        *i -= 1;
+                    }
+
+                    if *i == 0 {
+                        None
+                    } else {
+                        Some(vv + t[idx][*i - 1].1)
+                    }
+                })
+                .max()
+                .unwrap()
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        })
 }

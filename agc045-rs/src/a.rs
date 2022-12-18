@@ -178,79 +178,50 @@ where
 }
 
 fn main() {
-    let n = read::<usize>();
+    let t = read::<usize>();
+    for _ in 0..t {
+        let n = read::<usize>();
+        let a = read_row::<usize>();
+        let s = read_digits();
 
-    let se = read_vec(n, || {
-        let (s, e) = read_tuple!(String, String);
+        let ans = izip!(a.citer().rev(), s.citer().rev())
+            .try_fold(vec![], |mut mat: Vec<usize>, (x, t)| {
+                let x = mat.citer().fold(x, |x, y| {
+                    let idx = y.trailing_zeros();
 
-        let parse = |t: &str| {
-            let hour = t[..2].parse::<usize>().unwrap();
-            let min = t[3..5].parse::<usize>().unwrap();
-            let sec = t[6..8].parse::<usize>().unwrap();
-            let msec = t[9..12].parse::<usize>().unwrap();
+                    if x & (1 << idx) > 0 {
+                        x ^ y
+                    } else {
+                        x
+                    }
+                });
 
-            hour * 3600 * 1000 + min * 60 * 1000 + sec * 1000 + msec
-        };
+                if t == 0 {
+                    if x != 0 {
+                        let idx = x.trailing_zeros();
+                        mat.iter_mut().for_each(|y| {
+                            if *y & (1 << idx) > 0 {
+                                *y ^= x;
+                            }
+                        });
+                        mat.push(x);
+                    }
 
-        (parse(&s), parse(&e))
-    });
+                    Some(mat)
+                } else {
+                    if x == 0 {
+                        Some(mat)
+                    } else {
+                        None
+                    }
+                }
+            })
+            .is_some();
 
-    let candidates = se
-        .citer()
-        .flat_map(|(s, e)| it![s, s + 1000, e, e + 1000])
-        .chain(once(1 << 50))
-        .sorted()
-        .dedup()
-        .collect::<Vec<_>>();
-
-    let fix = |t: usize, u: usize| {
-        if u > t {
-            u - 1000
+        if ans {
+            println!("0");
         } else {
-            u
+            println!("1");
         }
-    };
-
-    #[derive(Debug, Clone, Copy)]
-    enum Status {
-        Ok(usize),
-        NotUnique,
-        Invalid,
-    };
-    let ans = candidates
-        .citer()
-        .filter_map(|t| {
-            se.citer()
-                .map(|(s, e)| {
-                    iproduct!(
-                        it![s, s + 1000].filter(|&ss| fix(t, ss) == s),
-                        it![e, e + 1000].filter(|&ee| fix(t, ee) == e)
-                    )
-                    .filter(|&(ss, ee)| ss < ee)
-                    .map(|(ss, ee)| ee - ss)
-                    .sorted()
-                    .dedup()
-                    .map(|x| Status::Ok(x))
-                    .fold1(|_, _| Status::NotUnique)
-                    .unwrap_or(Status::Invalid)
-                })
-                .try_fold(vec![], |t, status| match status {
-                    Status::Ok(x) => Some(pushed!(t, Some(x))),
-                    Status::NotUnique => Some(pushed!(t, None)),
-                    Status::Invalid => None,
-                })
-        })
-        .fold1(|t0, t1| {
-            izip!(t0, t1)
-                .map(|(x, y)| match (x, y) {
-                    (Some(x), Some(y)) if x == y => Some(x),
-                    _ => None,
-                })
-                .collect()
-        })
-        .unwrap();
-
-    for x in ans {
-        println_opt(x);
     }
 }
