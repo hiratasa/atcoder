@@ -276,7 +276,7 @@ impl BipartiteMatching {
         false
     }
 
-    fn max_flow(&mut self, left: usize, right: usize) -> usize {
+    fn max_flow(&mut self, left: usize, right: usize, limit: usize) -> usize {
         let mut total_flow = 0;
         loop {
             if let Some((levels, levels2)) = self.bfs(left, right) {
@@ -286,6 +286,10 @@ impl BipartiteMatching {
                         && self.dfs(v as u16, &levels, &levels2, left, right, &mut itrs)
                     {
                         total_flow += 1;
+
+                        if total_flow >= limit {
+                            return total_flow;
+                        }
                     }
                 }
             } else {
@@ -323,6 +327,7 @@ fn main() {
 
         let mut f = 0;
         for pos in 0..l {
+            let f0 = f;
             if pos > 0 {
                 if let Some(v) = g.pair[pos - 1] {
                     g.pair[pos - 1] = None;
@@ -331,7 +336,8 @@ fn main() {
                 }
             }
 
-            f += g.max_flow(pos, pos + n);
+            let limit = if pos == 0 { n } else { f0 + 1 - f };
+            f += g.max_flow(pos, pos + n, limit);
 
             if f == n {
                 println!("YES");

@@ -227,6 +227,8 @@ fn main() {
 
         let mut m = 0;
         for pos in 0..l {
+            let m0 = m;
+
             if pos > 0 {
                 if let Some(v) = pair[pos - 1] {
                     pair[pos - 1] = None;
@@ -235,18 +237,24 @@ fn main() {
                 }
             }
 
+            let limit = if pos == 0 { n } else { m0 + 1 - m };
             m += (0..n)
-                .scan(vec![false; n], |used, i| {
+                .scan(vec![], |used, i| {
+                    if used.is_empty() {
+                        used.resize(n, false);
+                    }
                     if pair[pos + i].is_none()
                         && dfs(&idxs, &mut pair, &mut pair2, used, pos + i, pos)
                     {
-                        used.iter_mut().for_each(|u| *u = false);
-                        Some(1)
+                        used.clear();
+                        Some(Some(()))
                     } else {
-                        Some(0)
+                        Some(None)
                     }
                 })
-                .sum::<usize>();
+                .flatten()
+                .take(limit)
+                .count();
 
             if m == n {
                 println!("YES");
