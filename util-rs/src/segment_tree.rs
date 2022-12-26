@@ -7,6 +7,24 @@ use cargo_snippet::snippet;
 #[snippet("segtree")]
 #[snippet("dualsegtree")]
 #[snippet("lazysegtree")]
+fn range(r: impl std::ops::RangeBounds<usize>, n: usize) -> (usize, usize) {
+    let start = match r.start_bound() {
+        std::ops::Bound::Excluded(&i) => i + 1,
+        std::ops::Bound::Included(&i) => i,
+        std::ops::Bound::Unbounded => 0,
+    };
+    let end = match r.end_bound() {
+        std::ops::Bound::Excluded(&i) => i,
+        std::ops::Bound::Included(&i) => i + 1,
+        std::ops::Bound::Unbounded => n,
+    };
+
+    (start, end)
+}
+
+#[snippet("segtree")]
+#[snippet("dualsegtree")]
+#[snippet("lazysegtree")]
 trait Monoid {
     fn id() -> Self;
     fn op(&self, rhs: &Self) -> Self;
@@ -89,7 +107,9 @@ where
         self.fix_all(idx);
     }
 
-    fn query(&self, a: usize, b: usize) -> M {
+    fn query(&self, r: impl std::ops::RangeBounds<usize>) -> M {
+        let (a, b) = range(r, self.cap);
+
         let mut left = M::id();
         let mut right = M::id();
 
@@ -325,10 +345,12 @@ where
         self.lazy[idx] = p.into();
     }
 
-    fn update<T>(&mut self, a: usize, b: usize, p: T)
+    fn update<T>(&mut self, r: impl std::ops::RangeBounds<usize>, p: T)
     where
         T: Into<Op>,
     {
+        let (a, b) = range(r, self.cap);
+
         let p = p.into();
 
         let mut left_idx = a + self.cap - 1;
@@ -490,10 +512,12 @@ where
         self.fix_all(idx);
     }
 
-    fn update<T>(&mut self, a: usize, b: usize, p: T)
+    fn update<T>(&mut self, r: impl std::ops::RangeBounds<usize>, p: T)
     where
         T: Into<Op>,
     {
+        let (a, b) = range(r, self.cap);
+
         let p = p.into();
 
         let mut left_idx = a + self.cap - 1;
@@ -521,7 +545,9 @@ where
         self.fix_all(b + self.cap - 1);
     }
 
-    fn query(&mut self, a: usize, b: usize) -> M {
+    fn query(&mut self, r: impl std::ops::RangeBounds<usize>) -> M {
+        let (a, b) = range(r, self.cap);
+
         let mut left = M::id();
         let mut right = M::id();
 
@@ -603,11 +629,11 @@ mod test {
         st.set(3, 4);
         st.set(5, 8);
 
-        assert_eq!(st.query(0, 10).0, 2);
-        assert_eq!(st.query(1, 4).0, 2);
-        assert_eq!(st.query(2, 4).0, 4);
-        assert_eq!(st.query(3, 3).0, Minimum::id().0);
-        assert_eq!(st.query(4, 5).0, Minimum::id().0);
+        assert_eq!(st.query(0..10).0, 2);
+        assert_eq!(st.query(1..4).0, 2);
+        assert_eq!(st.query(2..4).0, 4);
+        assert_eq!(st.query(3..3).0, Minimum::id().0);
+        assert_eq!(st.query(4..5).0, Minimum::id().0);
     }
 
     #[test]
@@ -653,7 +679,7 @@ mod test {
                     let r = distidx2.sample(&mut rng);
 
                     assert_eq!(
-                        st.query(l, r).0,
+                        st.query(l..r).0,
                         a[l..r].iter().copied().min().unwrap_or(Minimum::id().0),
                         "a0: {:?}, a: {:?}, l: {}, r: {}, ops: {}",
                         a0,
@@ -676,17 +702,17 @@ mod test {
 
         // [inf, 2, inf, 4, ...]
 
-        assert_eq!(st.query(1, 4).0, 2);
-        assert_eq!(st.query(2, 4).0, 4);
-        assert_eq!(st.query(3, 3).0, Minimum::id().0);
-        assert_eq!(st.query(4, 5).0, Minimum::id().0);
+        assert_eq!(st.query(1..4).0, 2);
+        assert_eq!(st.query(2..4).0, 4);
+        assert_eq!(st.query(3..3).0, Minimum::id().0);
+        assert_eq!(st.query(4..5).0, Minimum::id().0);
 
-        st.update(1, 5, 2);
+        st.update(1..5, 2);
 
         // [inf, 4, inf, 6, ...]
 
-        assert_eq!(st.query(1, 4).0, 4);
-        assert_eq!(st.query(2, 4).0, 6);
+        assert_eq!(st.query(1..4).0, 4);
+        assert_eq!(st.query(2..4).0, 6);
     }
 
     #[test]
@@ -723,7 +749,7 @@ mod test {
                     let (l, r) = if l <= r { (l, r) } else { (r, l) };
                     let x = dist.sample(&mut rng);
 
-                    st.update(l, r, x);
+                    st.update(l..r, x);
                     for i in l..r {
                         a[i] += x;
                     }
@@ -736,7 +762,7 @@ mod test {
                     let (l, r) = if l <= r { (l, r) } else { (r, l) };
 
                     assert_eq!(
-                        st.query(l, r).0,
+                        st.query(l..r).0,
                         a[l..r].iter().copied().min().unwrap_or(Minimum::id().0),
                         "a0: {:?}, a: {:?}, l: {}, r: {}, ops: {}",
                         a0,
