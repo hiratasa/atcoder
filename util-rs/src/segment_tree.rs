@@ -36,6 +36,7 @@ struct SegmentTree<M>
 where
     M: Monoid,
 {
+    n: usize,
     cap: usize,
     values: Vec<M>,
 }
@@ -49,6 +50,7 @@ where
     fn new(n: usize) -> Self {
         let cap = n.next_power_of_two();
         SegmentTree {
+            n,
             cap,
             values: vec![M::id(); 2 * cap - 1],
         }
@@ -66,7 +68,7 @@ where
         values.extend(vals.iter().cloned().map(|x| x.into()));
         values.resize(2 * cap - 1, M::id());
 
-        let mut st = SegmentTree { cap, values };
+        let mut st = SegmentTree { n, cap, values };
         for idx in (0..cap - 1).rev() {
             st.fix(idx);
         }
@@ -108,7 +110,7 @@ where
     }
 
     fn query(&self, r: impl std::ops::RangeBounds<usize>) -> M {
-        let (a, b) = range(r, self.cap);
+        let (a, b) = range(r, self.n);
 
         let mut left = M::id();
         let mut right = M::id();
@@ -261,6 +263,7 @@ where
 {
     height: usize,
     cap: usize,
+    n: usize,
     lazy: Vec<Op>,
 }
 
@@ -274,6 +277,7 @@ where
         let cap = n.next_power_of_two();
         DualSegmentTree {
             height: cap.trailing_zeros() as usize + 1,
+            n,
             cap,
             lazy: vec![Op::id(); 2 * cap - 1],
         }
@@ -293,6 +297,7 @@ where
 
         DualSegmentTree {
             height: cap.trailing_zeros() as usize + 1,
+            n,
             cap,
             lazy,
         }
@@ -349,7 +354,7 @@ where
     where
         T: Into<Op>,
     {
-        let (a, b) = range(r, self.cap);
+        let (a, b) = range(r, self.n);
 
         let p = p.into();
 
@@ -386,6 +391,7 @@ where
     Op: Monoid,
 {
     height: usize,
+    n: usize,
     cap: usize,
     values: Vec<M>,
     lazy: Vec<Op>,
@@ -407,6 +413,7 @@ where
         let cap = n.next_power_of_two();
         LazySegmentTree {
             height: cap.trailing_zeros() as usize + 1,
+            n,
             cap,
             values: vec![M::id(); 2 * cap - 1],
             lazy: vec![Op::id(); 2 * cap - 1],
@@ -427,6 +434,7 @@ where
 
         let mut st = LazySegmentTree {
             height: cap.trailing_zeros() as usize + 1,
+            n,
             cap,
             values,
             lazy: vec![Op::id(); 2 * cap - 1],
@@ -516,7 +524,7 @@ where
     where
         T: Into<Op>,
     {
-        let (a, b) = range(r, self.cap);
+        let (a, b) = range(r, self.n);
 
         let p = p.into();
 
@@ -546,7 +554,7 @@ where
     }
 
     fn query(&mut self, r: impl std::ops::RangeBounds<usize>) -> M {
-        let (a, b) = range(r, self.cap);
+        let (a, b) = range(r, self.n);
 
         let mut left = M::id();
         let mut right = M::id();
