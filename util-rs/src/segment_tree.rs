@@ -610,6 +610,79 @@ macro_rules! define_monoid {
     };
 }
 
+use std::collections::BTreeMap;
+
+// 座標圧縮 + Segment木
+#[derive(Debug)]
+struct SparseSegmentTree<M>
+where
+    M: Monoid,
+{
+    pos_idxs: BTreeMap<usize, usize>,
+    segtree: SegmentTree<M>,
+}
+
+#[allow(dead_code)]
+impl<M> SparseSegmentTree<M>
+where
+    M: Monoid + Clone,
+{
+    fn new(poss: impl IntoIterator<Item = usize>) -> SparseSegmentTree<M> {
+        let mut poss = poss.into_iter().collect::<Vec<_>>();
+        poss.sort();
+        poss.dedup();
+        let pos_idxs = poss
+            .iter()
+            .enumerate()
+            .map(|(i, &j)| (j, i))
+            .collect::<BTreeMap<_, _>>();
+        let n = pos_idxs.len();
+
+        SparseSegmentTree {
+            pos_idxs,
+            segtree: SegmentTree::new(n),
+        }
+    }
+
+    fn get(&self, pos: usize) -> M {
+        if let Some(&pos_idx) = self.pos_idxs.get(&pos) {
+            self.segtree.get(pos_idx)
+        } else {
+            M::id()
+        }
+    }
+
+    fn contains(&self, pos: usize) -> bool {
+        self.pos_idxs.contains_key(&pos)
+    }
+
+    fn set<T>(&mut self, pos: usize, v: T)
+    where
+        T: Into<M>,
+    {
+        let pos_idx = *self.pos_idxs.get(&pos).unwrap();
+        self.segtree.set(pos_idx, v);
+    }
+
+    fn query(&self, r: impl std::ops::RangeBounds<usize>) -> M {
+        let (a, b) = range(r, std::usize::MAX);
+
+        let n = self.pos_idxs.len();
+        let pos_idx0 = self
+            .pos_idxs
+            .range(a..)
+            .next()
+            .map_or(n, |(_, &pos_idx)| pos_idx);
+        let pos_idx1 = self
+            .pos_idxs
+            .range(b..)
+            .next()
+            .map_or(n, |(_, &pos_idx)| pos_idx);
+
+        self.segtree.query(pos_idx0..pos_idx1)
+    }
+}
+
 define_monoid!(Minimum, i64, 1 << 60, i64::min);
 define_monoid!(AddValue, i64, 0, std::ops::Add::add);
 
@@ -832,6 +905,74 @@ mod test {
                     v,
                     mins
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn test_sparse_segtree_random() {
+        use rand::distributions::Distribution;
+        use rand::seq::IteratorRandom;
+        use rand::Rng;
+        use rand::SeedableRng;
+
+        let mut rng = rand::rngs::SmallRng::seed_from_u64(42);
+
+        let n = 100;
+        let m = 20;
+
+        let dist_pos = rand::distributions::Uniform::new(0, n);
+        let dist_val = rand::distributions::Uniform::new(0, 100000);
+
+        let poss = (0..n).choose_multiple(&mut rng, m);
+        let pos_set = poss
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<_>>();
+
+        let mut st = SparseSegmentTree::<Minimum>::new(poss);
+        let mut arr = vec![Minimum::id(); n];
+
+        for _ in 0..1000 {
+            let pos = dist_pos.sample(&mut rng);
+
+            // 1点取得
+            assert_eq!(st.get(pos).0, arr[pos].0);
+
+            // 区間取得1
+            assert_eq!(
+                st.query(pos..).0,
+                arr[pos..]
+                    .iter()
+                    .fold(Minimum::id(), |x, y| Minimum::op(&x, y))
+                    .0
+            );
+
+            // 区間取得2
+            assert_eq!(
+                st.query(..pos).0,
+                arr[..pos]
+                    .iter()
+                    .fold(Minimum::id(), |x, y| Minimum::op(&x, y))
+                    .0
+            );
+
+            // 区間取得3
+            let pos2 = rng.gen_range(pos, n + 1);
+            assert_eq!(
+                st.query(pos..pos2).0,
+                arr[pos..pos2]
+                    .iter()
+                    .fold(Minimum::id(), |x, y| Minimum::op(&x, y))
+                    .0
+            );
+
+            // 1点更新
+            if pos_set.contains(&pos) {
+                let val = dist_val.sample(&mut rng);
+
+                st.set(pos, val);
+                arr[pos] = Minimum(val);
             }
         }
     }
