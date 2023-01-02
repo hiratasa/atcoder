@@ -683,6 +683,167 @@ where
     }
 }
 
+// 二次元Segment木
+// あらかじめ指定されたN個の要素だけ値を持つ
+// (queryの引数はそれ以外でもよい)
+#[derive(Debug)]
+struct SparseSegmentTree2D<M>
+where
+    M: Monoid,
+{
+    cap: usize,
+    pos_idxs: BTreeMap<usize, usize>,
+    values: Vec<SparseSegmentTree<M>>,
+}
+
+#[allow(dead_code)]
+impl<M> SparseSegmentTree2D<M>
+where
+    M: Monoid + Clone,
+{
+    fn new(poss: impl IntoIterator<Item = (usize, usize)>) -> Self {
+        let mut poss = poss.into_iter().collect::<Vec<_>>();
+        poss.sort();
+        poss.dedup();
+        let mut poss0 = poss.iter().map(|&(i, _)| i).collect::<Vec<_>>();
+        poss0.dedup();
+        let pos_idxs = poss0
+            .iter()
+            .enumerate()
+            .map(|(pos_idx, &i)| (i, pos_idx))
+            .collect::<BTreeMap<_, _>>();
+        let cap = pos_idxs.len().next_power_of_two();
+
+        let poss = &poss;
+        let poss0 = &poss0;
+
+        let height = cap.trailing_zeros() as usize + 1;
+        let values = (0..height)
+            .flat_map(|depth| {
+                (0..1 << depth)
+                    .scan(0, move |org_idx, nth| {
+                        let w = cap >> depth;
+
+                        let pos_idx_right = (nth + 1) * w;
+
+                        let i_right = poss0.get(pos_idx_right).copied().unwrap_or(std::usize::MAX);
+
+                        let org_idx0 = *org_idx;
+                        while *org_idx < poss.len() && poss[*org_idx].0 < i_right {
+                            *org_idx += 1;
+                        }
+
+                        Some((org_idx0, *org_idx))
+                    })
+                    .map(|(org_idx_left, org_idx_right)| {
+                        SparseSegmentTree::new(
+                            poss[org_idx_left..org_idx_right]
+                                .iter()
+                                .copied()
+                                .map(|(_, j)| j),
+                        )
+                    })
+            })
+            .collect::<Vec<_>>();
+
+        SparseSegmentTree2D {
+            cap,
+            pos_idxs,
+            values,
+        }
+    }
+
+    // internal
+    // 子の値を反映する
+    fn fix(&mut self, idx: usize, j: usize) {
+        if !self.values[idx].contains(j) {
+            return;
+        }
+
+        let left_idx = 2 * (idx + 1) - 1;
+        let right_idx = 2 * (idx + 1);
+        if left_idx < self.values.len() {
+            let x = M::op(
+                &self.values[left_idx].get(j),
+                &self.values[right_idx].get(j),
+            );
+            self.values[idx].set(j, x);
+        }
+    }
+
+    // internal
+    // idxの全ての祖先でfixする
+    fn fix_all(&mut self, mut idx: usize, j: usize) {
+        while idx > 0 {
+            idx = (idx - 1) / 2;
+            self.fix(idx, j);
+        }
+    }
+
+    fn get(&self, i: usize, j: usize) -> M {
+        if let Some(pos_idx) = self.pos_idxs.get(&i) {
+            self.values[self.cap - 1 + pos_idx].get(j)
+        } else {
+            M::id()
+        }
+    }
+
+    fn set<T>(&mut self, i: usize, j: usize, v: T)
+    where
+        T: Into<M>,
+    {
+        let pos_idx = self.pos_idxs.get(&i).unwrap();
+        let idx = self.cap - 1 + pos_idx;
+
+        self.values[idx].set(j, v);
+
+        self.fix_all(idx, j);
+    }
+
+    fn query<IRange, JRange>(&self, i_range: IRange, j_range: JRange) -> M
+    where
+        IRange: std::ops::RangeBounds<usize>,
+        JRange: std::ops::RangeBounds<usize> + Clone,
+    {
+        let (a, b) = range(i_range, std::usize::MAX);
+
+        let n = self.pos_idxs.len();
+        let left_pos_idx = self
+            .pos_idxs
+            .range(a..)
+            .next()
+            .map_or(n, |(_, &pos_idx)| pos_idx);
+        let right_pos_idx = self
+            .pos_idxs
+            .range(b..)
+            .next()
+            .map_or(n, |(_, &pos_idx)| pos_idx);
+
+        let mut left = M::id();
+        let mut right = M::id();
+
+        let mut left_idx = left_pos_idx + self.cap - 1;
+        let mut right_idx = right_pos_idx + self.cap - 1;
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                left = M::op(&left, &self.values[left_idx].query(j_range.clone()));
+                left_idx += 1;
+            }
+
+            if right_idx % 2 == 0 {
+                right = M::op(&self.values[right_idx - 1].query(j_range.clone()), &right);
+                right_idx -= 1;
+            }
+
+            left_idx = left_idx >> 1;
+            right_idx = (right_idx - 1) >> 1;
+        }
+
+        M::op(&left, &right)
+    }
+}
+
 define_monoid!(Minimum, i64, 1 << 60, i64::min);
 define_monoid!(AddValue, i64, 0, std::ops::Add::add);
 
@@ -973,6 +1134,100 @@ mod test {
 
                 st.set(pos, val);
                 arr[pos] = Minimum(val);
+            }
+        }
+    }
+
+    #[test]
+    fn test_sparse_segtree_2d_random() {
+        use rand::distributions::Distribution;
+        use rand::seq::IteratorRandom;
+        use rand::Rng;
+        use rand::SeedableRng;
+
+        let mut rng = rand::rngs::SmallRng::seed_from_u64(42);
+
+        let n = 10;
+        let m = 20;
+
+        let dist_pos = rand::distributions::Uniform::new(0, n);
+        let dist_val = rand::distributions::Uniform::new(0, 100000);
+
+        let poss0 = (0..n).choose_multiple(&mut rng, m);
+        let poss1 = (0..n).choose_multiple(&mut rng, m);
+        let poss = poss0.into_iter().zip(poss1).collect::<Vec<_>>();
+        let pos_set = poss
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<_>>();
+
+        let mut st = SparseSegmentTree2D::<Minimum>::new(poss);
+        let mut values = std::collections::HashMap::<(usize, usize), Minimum>::new();
+
+        for _ in 0..1000 {
+            let pos = (dist_pos.sample(&mut rng), dist_pos.sample(&mut rng));
+
+            // 1点取得
+            assert_eq!(
+                st.get(pos.0, pos.1).0,
+                values.get(&pos).copied().unwrap_or(Minimum::id()).0
+            );
+
+            // 区間取得1
+            assert_eq!(
+                st.query(pos.0.., pos.1..).0,
+                values
+                    .iter()
+                    .filter_map(|(&key, &value)| {
+                        if pos.0 <= key.0 && pos.1 <= key.1 {
+                            Some(value)
+                        } else {
+                            None
+                        }
+                    })
+                    .fold(Minimum::id(), |x, y| Minimum::op(&x, &y))
+                    .0
+            );
+
+            // 区間取得2
+            assert_eq!(
+                st.query(..pos.0, ..pos.1).0,
+                values
+                    .iter()
+                    .filter_map(|(&key, &value)| {
+                        if key.0 < pos.0 && key.1 < pos.1 {
+                            Some(value)
+                        } else {
+                            None
+                        }
+                    })
+                    .fold(Minimum::id(), |x, y| Minimum::op(&x, &y))
+                    .0
+            );
+
+            // 区間取得3
+            let pos2 = (rng.gen_range(pos.0, n + 1), rng.gen_range(pos.1, n + 1));
+            assert_eq!(
+                st.query(pos.0..pos2.0, pos.1..pos2.1).0,
+                values
+                    .iter()
+                    .filter_map(|(&key, &value)| {
+                        if pos.0 <= key.0 && key.0 < pos2.0 && pos.1 <= key.1 && key.1 < pos2.1 {
+                            Some(value)
+                        } else {
+                            None
+                        }
+                    })
+                    .fold(Minimum::id(), |x, y| Minimum::op(&x, &y))
+                    .0
+            );
+
+            // 1点更新
+            if pos_set.contains(&pos) {
+                let val = dist_val.sample(&mut rng);
+
+                st.set(pos.0, pos.1, val);
+                values.insert(pos, Minimum(val));
             }
         }
     }
