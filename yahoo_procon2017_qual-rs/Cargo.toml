@@ -32,3 +32,7 @@ path = "src/c.rs"
 [[bin]]
 name = "yahoo_procon2017_qual-d"
 path = "src/d.rs"
+
+[[bin]]
+name = "yahoo_procon2017_qual-e"
+path = "src/e.rs"

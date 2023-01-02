@@ -137,4 +137,95 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let a = read_col::<usize>(n);
+    let (h, w) = read_tuple!(usize, usize);
+    let b = read_mat::<usize>(h);
+
+    let valid = b.iter().flatten().fold(vec![false; n], |mut valid, x| {
+        valid[*x] = true;
+        valid
+    });
+    let valid_idxs =
+        (0..n)
+            .filter(|&i| valid[i])
+            .enumerate()
+            .fold(vec![None; n], |mut idxs, (idx, i)| {
+                idxs[i] = Some(idx);
+                idxs
+            });
+
+    let bounding_box =
+        b.iter()
+            .enumerate()
+            .fold(vec![(usize::MAX, usize::MAX, 0, 0); n], |bb, (i, row)| {
+                row.citer().enumerate().fold(bb, |mut bb, (j, idx)| {
+                    let idx = valid_idxs[idx].unwrap();
+
+                    bb[idx].0 = min(bb[idx].0, i);
+                    bb[idx].1 = min(bb[idx].1, j);
+                    bb[idx].2 = max(bb[idx].2, i);
+                    bb[idx].3 = max(bb[idx].3, j);
+                    bb
+                })
+            });
+
+    let dependency = (0..n)
+        .map(|idx| {
+            iproduct!(
+                bounding_box[idx].0..=bounding_box[idx].2,
+                bounding_box[idx].1..=bounding_box[idx].3
+            )
+            .map(|(i, j)| valid_idxs[b[i][j]].unwrap())
+            .filter(|&idx2| idx2 != idx)
+            .fold(0, |x, idx2| x | (1 << idx2))
+        })
+        .collect::<Vec<_>>();
+
+    let dp = a
+        .citer()
+        .sorted()
+        .rev()
+        .group_by(|&x| x)
+        .into_iter()
+        .map(|(_, it)| it.count())
+        .scan(0, |s, k| Some((replace(s, *s + k), k)))
+        .fold(vvec![true; false; 1<<n], |dp, (m, k)| {
+            successors(Some((1usize << m) - 1), |&s| {
+                if s == 0 {
+                    None
+                } else {
+                    let z = s.trailing_zeros();
+                    let t = s + (1 << z);
+                    let y = (s & !t).count_ones() - 1;
+
+                    Some(t + (1 << y) - 1)
+                }
+            })
+            .take_while(|&s| s < (1 << n))
+            .fold(dp, |dp, s| {
+                if dp[s] {
+                    let s2 = (0..n)
+                        .filter(|&i| s & (1 << i) == 0 && (s & dependency[i] == dependency[i]))
+                        .fold(0usize, |x, idx| x | (1 << idx));
+
+                    successors(Some(s2), |&t| t.checked_sub(1).map(|t| t & s2))
+                        .filter(|&t| t.count_ones() as usize == k)
+                        .fold(dp, |mut dp, t| {
+                            dp[s | t] = true;
+
+                            dp
+                        })
+                } else {
+                    dp
+                }
+            })
+        });
+
+    if dp[(1 << n) - 1] {
+        println!("1");
+    } else {
+        println!("0");
+    }
+}
