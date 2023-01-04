@@ -177,4 +177,89 @@ where
 {
 }
 
-fn main() {}
+fn advance(u: &mut Vec<usize>, t: &[usize], k: usize) {
+    u.resize(u.len() + k, usize::MAX);
+
+    let n = t.len();
+    let n2 = u.len();
+    for i in 0..n2 {
+        for j in 1..min(n, n2 - i) {
+            u[i + j] = min(u[i + j], u[i] + t[j]);
+        }
+    }
+}
+
+fn calc_impl(t: &[usize], m: usize) -> Vec<usize> {
+    let n = t.len();
+
+    if m == 0 {
+        t.to_vec()
+    } else if m <= n {
+        let mut u = t.to_vec();
+        advance(&mut u, t, m);
+
+        u[m..m + n].to_vec()
+    } else {
+        let m0 = (m / 2).saturating_sub(n);
+        let mut u = calc_impl(t, m0);
+        advance(&mut u, t, t.len() + 2);
+
+        (m..m + n)
+            .map(|i| {
+                (m0 + (i - m)..m0 + n + (i - m))
+                    .map(|j| (j, i - j))
+                    .map(|(j, k)| u[j - m0] + u[k - m0])
+                    .min()
+                    .unwrap()
+            })
+            .collect()
+    }
+}
+
+fn calc(t: &[usize], m: usize) -> usize {
+    calc_impl(t, m)[0]
+}
+
+fn fix(t: &[usize]) -> Vec<usize> {
+    let n = t.len();
+    let mut u = t.to_vec();
+
+    for i in 0..n {
+        for j in 1..n - i {
+            u[i + j] = min(u[i + j], u[i] + t[j]);
+        }
+    }
+
+    u
+}
+
+fn main() {
+    let (n, m, c) = read_tuple!(usize, usize, usize);
+    let ab = read_vec(n, || read_tuple!(usize, usize));
+
+    let k = ab.citer().map(|(a, _b)| a).max().unwrap();
+
+    let ans = (1..=k)
+        .map(|i| {
+            ab.citer()
+                .filter(|&(a, _b)| a >= i)
+                .map(|(_a, b)| b)
+                .min()
+                .unwrap()
+        })
+        .scan(vec![0], |t, x| {
+            t.push(x);
+            *t = fix(t);
+
+            Some(t.clone())
+        })
+        .map(|t| {
+            let x = calc(&t, m);
+
+            x + (t.len() - 2) * c
+        })
+        .min()
+        .unwrap();
+
+    println!("{}", ans);
+}
