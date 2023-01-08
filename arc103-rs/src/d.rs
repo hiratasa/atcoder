@@ -148,4 +148,38 @@ where
 {
 }
 
-fn main() {}
+fn dfs(adjs: &[Vec<usize>], v: usize, d: usize) -> usize {
+    adjs[v].citer().map(|u| dfs(adjs, u, d + 1)).sum::<usize>() + d
+}
+
+fn main() {
+    let n = read::<usize>();
+    let d = read_col::<usize>(n);
+
+    let idxs = (0..n).sorted_by_key(|&i| d[i]).collect::<Vec<_>>();
+    let d = idxs.citer().map(|i| d[i]).collect::<Vec<_>>();
+
+    if let Some((children, _)) = d.citer().enumerate().skip(1).rev().try_fold(
+        (vec![vec![]; n], vec![1; n]),
+        |(mut children, mut sizes), (i, x)| {
+            let s = sizes[i];
+            let z = n.checked_sub(2 * s).filter(|&z| z > 0)?;
+            let y = x.checked_sub(z)?;
+            let parent = d.binary_search(&y).ok()?;
+            children[parent].push(i);
+            sizes[parent] += s;
+
+            Some((children, sizes))
+        },
+    ) {
+        if dfs(&children, 0, 0) == d[0] {
+            for (i, j) in (0..n).flat_map(|i| children[i].citer().map(move |j| (i, j))) {
+                println!("{} {}", idxs[i] + 1, idxs[j] + 1);
+            }
+        } else {
+            println!("-1");
+        }
+    } else {
+        println!("-1");
+    }
+}
