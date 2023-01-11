@@ -177,4 +177,41 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let k = read::<usize>();
+
+    const M: usize = 100;
+
+    let mut ans = vec![vec![false; M]; M];
+    for i in 0..30 {
+        const P: [&[u8]; 3] = [b"..##", b"....", b"##.."];
+        let s = 3 * i;
+        for j in 0..3 {
+            for k in 0..4 {
+                ans[s + j][s + k] = P[j][k] == b'.';
+            }
+        }
+        if k & (1 << (2 * i)) > 0 {
+            for j in s + 2..M {
+                ans[j][s] = true;
+            }
+        }
+        if k & (1 << (2 * i + 1)) > 0 {
+            for j in s + 4..M {
+                ans[s + 1][j] = true;
+            }
+        }
+    }
+    for i in 0..M {
+        ans[M - 1][i] = true;
+        ans[i][M - 1] = true;
+    }
+
+    println!("{} {}", M, M);
+    for row in ans {
+        println!(
+            "{}",
+            row.citer().map(|c| if c { '.' } else { '#' }).join("")
+        );
+    }
+}
