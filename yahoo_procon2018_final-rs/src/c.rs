@@ -177,4 +177,367 @@ where
 {
 }
 
-fn main() {}
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
+        }
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
+            }
+        }
+    }
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<usize>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
+        fn from(t: (usize, usize, usize)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
+        fn from(t: &(usize, usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<usize>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
+    }
+}
+
+type Graph = detail::Graph;
+
+// sizesは重心を根とした部分木だけ正確な値が入ってる
+fn find_centroid(
+    g: &Graph,
+    v: usize,
+    p: usize,
+    used: &[bool],
+    sizes: &mut [usize],
+    n: usize,
+) -> Option<usize> {
+    sizes[v] = 1;
+    g.children(v, p)
+        .filter(|&u| !used[u])
+        .filter_map(|u| {
+            let c = find_centroid(g, u, v, used, sizes, n);
+            sizes[v] += sizes[u];
+            c
+        })
+        .next()
+        .or_else(|| {
+            if 2 * (n - sizes[v]) <= n {
+                Some(v)
+            } else {
+                None
+            }
+        })
+}
+
+fn calc_distances(g: &Graph, v: usize, p: usize, used: &[bool], d: usize, dists: &mut Vec<usize>) {
+    if d >= dists.len() {
+        dists.resize(d + 1, 0);
+    }
+
+    dists[d] += 1;
+    g.children_edge(v, p).for_each(|e| {
+        if !used[e.to] {
+            calc_distances(g, e.to, v, used, d + 1, dists)
+        }
+    })
+}
+
+fn precalc(
+    g: &Graph,
+    v: usize,
+    p: usize,
+    n: usize,
+    parents: &mut [Option<usize>],
+    dists_from_parents: &mut [Vec<usize>],
+    dists: &mut [Vec<usize>],
+    used: &mut [bool],
+    sizes: &mut [usize],
+) -> usize {
+    let c = find_centroid(g, v, usize::MAX, used, sizes, n).unwrap();
+    if p != usize::MAX {
+        parents[c] = Some(p);
+    }
+
+    used[c] = true;
+
+    let cdists = g
+        .adjs(c)
+        .filter(|&v| !used[v])
+        .map(|v| {
+            let mut ds = vec![];
+            calc_distances(g, v, c, used, 1, &mut ds);
+            (v, ds)
+        })
+        .collect::<Vec<_>>();
+    dists[c] = cdists.iter().fold(vec![1], |mut cdists0, (_v, cdists1)| {
+        cdists0.resize(max(cdists0.len(), cdists1.len()), 0);
+        izip!(cdists0.iter_mut(), cdists1.citer()).for_each(|(x, y)| *x += y);
+
+        cdists0
+    });
+
+    cdists.into_iter().for_each(|(v, ds)| {
+        let nn = if sizes[v] > sizes[c] {
+            n - sizes[c]
+        } else {
+            sizes[v]
+        };
+        let next_c = precalc(g, v, c, nn, parents, dists_from_parents, dists, used, sizes);
+        dists_from_parents[next_c] = ds;
+    });
+
+    c
+}
+
+fn dfs(g: &Graph, v: usize, parents: &mut [usize], depth: &mut [usize]) {
+    g.out_edges[v].iter().map(|e| e.to).for_each(|u| {
+        if u != parents[v] {
+            depth[u] = depth[v] + 1;
+            parents[u] = v;
+            dfs(g, u, parents, depth);
+        }
+    })
+}
+
+fn lca(parents: &[Vec<usize>], depth: &[usize], v: usize, u: usize) -> usize {
+    let (mut v, mut u) = if depth[v] > depth[u] { (u, v) } else { (v, u) };
+
+    for i in (0..30).rev() {
+        if depth[parents[i][u]] >= depth[v] {
+            u = parents[i][u];
+        }
+    }
+
+    if u == v {
+        return u;
+    }
+
+    for i in (0..30).rev() {
+        if parents[i][v] != parents[i][u] {
+            v = parents[i][v];
+            u = parents[i][u];
+        }
+    }
+
+    parents[0][v]
+}
+
+fn distance_between(v: usize, u: usize, parents: &[Vec<usize>], depth: &[usize]) -> usize {
+    let p = lca(parents, depth, v, u);
+
+    depth[v] + depth[u] - 2 * depth[p]
+}
+
+fn calc(
+    v: usize,
+    k: usize,
+    parents: &[Vec<usize>],
+    depth: &[usize],
+    cparents: &[Option<usize>],
+    dists_from_parents: &[Vec<usize>],
+    dists: &[Vec<usize>],
+) -> usize {
+    dists[v].get(k).copied().unwrap_or(0)
+        + successors(Some(v), |&u| cparents[u])
+            .tuple_windows()
+            .map(|(u, c)| {
+                let d = distance_between(v, c, parents, depth);
+
+                if d <= k {
+                    dists[c].get(k - d).copied().unwrap_or(0)
+                        - dists_from_parents[u].get(k - d).copied().unwrap_or(0)
+                } else {
+                    0
+                }
+            })
+            .sum::<usize>()
+}
+
+fn main() {
+    let (n, q) = read_tuple!(usize, usize);
+    let ab = read_vec(n - 1, || read_tuple!(usize, usize));
+    let vk = read_vec(q, || read_tuple!(usize, usize));
+
+    let g = Graph::from_edges1_undirected(n, ab);
+
+    let mut cparents = vec![None; n];
+    let mut dists_from_parents = vec![vec![]; n];
+    let mut dists = vec![vec![]; n];
+    precalc(
+        &g,
+        0,
+        usize::MAX,
+        n,
+        &mut cparents,
+        &mut dists_from_parents,
+        &mut dists,
+        &mut vec![false; n],
+        &mut vec![0; n],
+    );
+
+    let mut depth = vec![0; n];
+    let mut parents = vec![vec![0; n]; 30];
+    dfs(&g, 0, &mut parents[0], &mut depth);
+
+    for i in 1..30 {
+        for v in 0..n {
+            parents[i][v] = parents[i - 1][parents[i - 1][v]];
+        }
+    }
+
+    vk.citer()
+        .map(|(v, k)| {
+            calc(
+                v - 1,
+                k,
+                &parents,
+                &depth,
+                &cparents,
+                &dists_from_parents,
+                &dists,
+            )
+        })
+        .for_each(|ans| {
+            println!("{}", ans);
+        });
+}
