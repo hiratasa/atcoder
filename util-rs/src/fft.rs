@@ -597,11 +597,13 @@ fn test_convolution_mod() {
 
 #[test]
 fn test_convolution_crt() {
+    const COEFF: usize = 1000;
+
     // 2^25まで動作確認済み
     // ただし時間かかるので小さめにしておく
     let len = 1usize << 10;
     let a = (0..len).collect::<Vec<_>>();
-    let b = vec![1; len];
+    let b = vec![COEFF; len];
 
     // aとbの畳み込み
     let expected = (0..=2 * len - 2)
@@ -609,7 +611,7 @@ fn test_convolution_crt() {
             // sum[j=max(0,i-(len-1)) to min(len-1,i)] j
             let l = i.saturating_sub(len - 1);
             let u = usize::min(len - 1, i);
-            (u + l) * (u - l + 1) / 2
+            (u + l) * (u - l + 1) / 2 * COEFF
         })
         .collect::<Vec<_>>();
 
@@ -620,9 +622,11 @@ fn test_convolution_crt() {
 fn test_convolution_crt_mod() {
     type Mod = super::modulo::Mod1000000007;
 
+    const COEFF: usize = 100000;
+
     let len = 1usize << 10;
     let a = (0..len).map(|i| Mod::new(i)).collect::<Vec<_>>();
-    let b = vec![Mod::new(1); len];
+    let b = vec![Mod::new(COEFF); len];
 
     // aとbの畳み込み
     let expected = (0..=2 * len - 2)
@@ -630,7 +634,7 @@ fn test_convolution_crt_mod() {
             // sum[j=max(0,i-(len-1)) to min(len-1,i)] j
             let l = i.saturating_sub(len - 1);
             let u = usize::min(len - 1, i);
-            Mod::new((u + l) * (u - l + 1) / 2)
+            Mod::new((u + l) * (u - l + 1) / 2) * COEFF
         })
         .collect::<Vec<_>>();
 
