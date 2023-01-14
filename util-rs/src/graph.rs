@@ -53,8 +53,10 @@ mod detail {
         }
     }
 
+    type Weight = usize;
+
     pub type UnweightedEdge = Edge<()>;
-    pub type WeightedEdge = Edge<usize>;
+    pub type WeightedEdge = Edge<Weight>;
 
     impl std::convert::From<(usize, usize)> for UnweightedEdge {
         fn from(t: (usize, usize)) -> Self {
@@ -67,13 +69,13 @@ mod detail {
         }
     }
 
-    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
-        fn from(t: (usize, usize, usize)) -> Self {
+    impl std::convert::From<(usize, usize, Weight)> for WeightedEdge {
+        fn from(t: (usize, usize, Weight)) -> Self {
             Edge::new_with_label(t.0, t.1, t.2)
         }
     }
-    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
-        fn from(t: &(usize, usize, usize)) -> Self {
+    impl std::convert::From<&(usize, usize, Weight)> for WeightedEdge {
+        fn from(t: &(usize, usize, Weight)) -> Self {
             Edge::from(*t)
         }
     }
@@ -91,7 +93,7 @@ mod detail {
     #[allow(dead_code)]
     pub type UnweightedGraph = Graph<()>;
     #[allow(dead_code)]
-    pub type WeightedGraph = Graph<usize>;
+    pub type WeightedGraph = Graph<Weight>;
 
     #[allow(dead_code)]
     impl<W: Copy> Graph<W> {
