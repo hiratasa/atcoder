@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -14,9 +18,13 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -47,14 +55,29 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
 }
 
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -96,6 +119,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -121,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -137,4 +177,71 @@ where
 {
 }
 
-fn main() {}
+fn check(s: &[char], p: usize, q: usize, fibs: &[usize]) -> bool {
+    assert!(s.len() == fibs[p]);
+
+    if p == 1 {
+        s[0] == 'b'
+    } else if p == 2 {
+        s[0] == 'a'
+    } else if q % 2 == 0 {
+        check(&s[..fibs[p - 1]], p - 1, q / 2, fibs) && check(&s[fibs[p - 1]..], p - 2, q / 4, fibs)
+    } else {
+        check(&s[..fibs[p - 2]], p - 2, q / 4, fibs) && check(&s[fibs[p - 2]..], p - 1, q / 2, fibs)
+    }
+}
+
+fn calc(s: &[char], p: usize, fibs: &[usize]) -> Option<usize> {
+    assert!(s.len() == fibs[p]);
+
+    if p == 1 {
+        if s[0] == 'b' {
+            Some(0)
+        } else {
+            None
+        }
+    } else if p == 2 {
+        if s[0] == 'a' {
+            Some(0)
+        } else {
+            None
+        }
+    } else {
+        if let Some(q) = calc(&s[..fibs[p - 1]], p - 1, fibs) {
+            let qq = 2 * q;
+            if check(&s[fibs[p - 1]..], p - 2, qq / 4, fibs) {
+                return Some(qq);
+            }
+        }
+        if let Some(q) = calc(&s[fibs[p - 2]..], p - 1, fibs) {
+            let qq = 2 * q + 1;
+            if check(&s[..fibs[p - 2]], p - 2, qq / 4, fibs) {
+                return Some(qq);
+            }
+        }
+        None
+    }
+}
+
+fn main() {
+    let s = read_str();
+
+    if s.len() == 1 {
+        if s[0] == 'a' {
+            println!("2 0");
+        } else {
+            println!("1 0");
+        }
+        return;
+    }
+
+    let fibs = iterate((0, 1), |&(x, y)| (y, x + y))
+        .take_while(|&(x, y)| y - x < s.len())
+        .map(|(x, y)| x)
+        .collect::<Vec<_>>();
+
+    let p = fibs.citer().position(|x| x == s.len()).unwrap();
+    let q = calc(&s, p, &fibs).unwrap();
+
+    println!("{} {}", p, q);
+}

@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,9 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,14 +55,19 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +75,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +119,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -148,4 +177,83 @@ where
 {
 }
 
-fn main() {}
+#[derive(Clone, Copy, Debug)]
+enum UnionFindNode {
+    Root { size: usize },
+    Child { parent: usize },
+}
+struct UnionFind {
+    g: Vec<UnionFindNode>,
+}
+#[allow(dead_code)]
+impl UnionFind {
+    fn new(n: usize) -> UnionFind {
+        use UnionFindNode::*;
+        UnionFind {
+            g: (0..n).map(|_| Root { size: 1 }).collect(),
+        }
+    }
+    fn root(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let p = match self.g[v] {
+            Root { size: _ } => return v,
+            Child { parent: p } => p,
+        };
+        let r = self.root(p);
+        self.g[v] = Child { parent: r };
+        r
+    }
+    fn unite(&mut self, v: usize, u: usize) -> bool {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        let ru = self.root(u);
+        if rv == ru {
+            return false;
+        }
+        let size_rv = self.size(rv);
+        let size_ru = self.size(ru);
+        let (rsmall, rlarge) = if size_rv < size_ru {
+            (rv, ru)
+        } else {
+            (ru, rv)
+        };
+        self.g[rsmall] = Child { parent: rlarge };
+        self.g[rlarge] = Root {
+            size: size_rv + size_ru,
+        };
+        true
+    }
+    fn same(&mut self, v: usize, u: usize) -> bool {
+        self.root(v) == self.root(u)
+    }
+    fn size(&mut self, v: usize) -> usize {
+        use UnionFindNode::*;
+        let rv = self.root(v);
+        match self.g[rv] {
+            Root { size } => size,
+            Child { parent: _ } => unreachable!(),
+        }
+    }
+}
+
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let xy = read_vec(m, || read_tuple!(usize, usize));
+
+    let ans = (0..1 << (n - 1))
+        .filter(|&s| {
+            let mut uf = xy
+                .citer()
+                .map(|(x, y)| (x - 1, y - 1))
+                .filter(|&(x, y)| (s & (1 << x) > 0) != (s & (1 << y) > 0))
+                .fold(UnionFind::new(n), |mut uf, (x, y)| {
+                    uf.unite(x, y);
+                    uf
+                });
+
+            uf.size(0) == n
+        })
+        .count();
+
+    println!("{}", ans);
+}
