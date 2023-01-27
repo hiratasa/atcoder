@@ -32,3 +32,7 @@ path = "src/c.rs"
 [[bin]]
 name = "tokiomarine2020-d"
 path = "src/d.rs"
+
+[[bin]]
+name = "tokiomarine2020-e"
+path = "src/e.rs"
