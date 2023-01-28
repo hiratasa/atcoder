@@ -28,6 +28,7 @@ where
     value: M::Item,
 }
 
+#[allow(dead_code)]
 impl<K, M, Op> TreapNode<K, M, Op>
 where
     K: Ord,
@@ -122,8 +123,10 @@ where
         }
     }
 
-    // x以下とxより大きい部分に分ける
-    fn split_upper_bound(t: Option<Box<Self>>, x: &K) -> (Option<Box<Self>>, Option<Box<Self>>) {
+    fn split_with<F>(t: Option<Box<Self>>, mut f: F) -> (Option<Box<Self>>, Option<Box<Self>>)
+    where
+        F: FnMut(&Self) -> bool,
+    {
         let mut t = if let Some(t) = t {
             t
         } else {
@@ -131,63 +134,43 @@ where
         };
 
         t.push();
-        if *x < t.key {
-            let (l, r) = TreapNode::split_upper_bound(t.left, x);
+        if f(&t) {
+            let (l, r) = TreapNode::split_with(t.left, f);
             t.left = r;
             t.fix();
             (l, Some(t))
         } else {
-            let (l, r) = TreapNode::split_upper_bound(t.right, x);
+            let (l, r) = TreapNode::split_with(t.right, f);
             t.right = l;
             t.fix();
             (Some(t), r)
         }
+    }
+
+    // x以下とxより大きい部分に分ける
+    fn split_upper_bound(t: Option<Box<Self>>, x: &K) -> (Option<Box<Self>>, Option<Box<Self>>) {
+        Self::split_with(t, |node| *x < node.key)
     }
 
     // x未満とx以上の部分に分ける
     fn split_lower_bound(t: Option<Box<Self>>, x: &K) -> (Option<Box<Self>>, Option<Box<Self>>) {
-        let mut t = if let Some(t) = t {
-            t
-        } else {
-            return (None, None);
-        };
-
-        t.push();
-        if *x <= t.key {
-            let (l, r) = TreapNode::split_lower_bound(t.left, x);
-            t.left = r;
-            t.fix();
-            (l, Some(t))
-        } else {
-            let (l, r) = TreapNode::split_lower_bound(t.right, x);
-            t.right = l;
-            t.fix();
-            (Some(t), r)
-        }
+        Self::split_with(t, |node| *x <= node.key)
     }
 
     // nth番目以降を分離
     fn split_at(t: Option<Box<Self>>, nth: usize) -> (Option<Box<Self>>, Option<Box<Self>>) {
-        let mut t = if let Some(t) = t {
-            t
-        } else {
-            return (None, None);
-        };
+        let mut offset = 0;
 
-        t.push();
-        let left_size = TreapNode::size(&t.left);
+        Self::split_with(t, |node| {
+            let left_size = Self::size(&node.left);
 
-        if nth <= left_size {
-            let (l, r) = TreapNode::split_at(t.left, nth);
-            t.left = r;
-            t.fix();
-            (l, Some(t))
-        } else {
-            let (l, r) = TreapNode::split_at(t.right, nth - (left_size + 1));
-            t.right = l;
-            t.fix();
-            (Some(t), r)
-        }
+            if nth <= offset + left_size {
+                true
+            } else {
+                offset += left_size + 1;
+                false
+            }
+        })
     }
 
     fn insert(t: Option<Box<Self>>, priority: usize, key: K, value: M::Item) -> Box<Self> {
@@ -356,6 +339,16 @@ where
                 .chain(TreapNode::iter(&mut t.right))
         }))
     }
+
+    fn min_key<'a>(t: &'a Option<Box<Self>>) -> Option<&'a K> {
+        t.as_ref()
+            .map(|t| Self::min_key(&t.left).unwrap_or_else(|| &t.key))
+    }
+
+    fn max_key<'a>(t: &'a Option<Box<Self>>) -> Option<&'a K> {
+        t.as_ref()
+            .map(|t| Self::max_key(&t.right).unwrap_or_else(|| &t.key))
+    }
 }
 
 struct Treap<K, M, Op>
@@ -446,6 +439,98 @@ where
         self.root = TreapNode::merge(t0, TreapNode::merge(t1, t2));
 
         v
+    }
+
+    // 与えられたupperに対してlowerを変数として f(query(lower, upper)) を考えたとき、false, trueの順で区分化されているとする
+    // このとき、木のkeyとして存在するようなlower(<upper)の中で、falseを与えるものの最大値(lower0)、trueを与えるものの最小値(lower1)、
+    // および query(lower1, upper) の値を返す
+    // 全てのlower(<upper)に対してtrueとなる場合は (None, 最小のkey, upper未満の全区間の値) を返す
+    // 全てのlower(<upper)に対してfalseとなる場合は (upper未満の最大のkey, upper, M::id()) を返す
+    // ただし、M::id()に対してはtrueとなるとする
+    fn left_partition_point<F>(&mut self, upper: &K, mut f: F) -> (Option<K>, K, M::Item)
+    where
+        F: FnMut(&M::Item) -> bool,
+    {
+        assert!(f(&M::id()));
+
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t01, t2) = TreapNode::split_lower_bound(root, upper);
+
+        let mut right_offset = M::id();
+        let (t0, t1) = TreapNode::split_with(t01, |node| {
+            // push()済みなのでlazyは無視
+            let x = M::op(
+                &M::op(
+                    &node.value,
+                    node.right.as_deref().map_or(&M::id(), |v| &v.acc),
+                ),
+                &right_offset,
+            );
+            if f(&x) {
+                right_offset = x;
+                true
+            } else {
+                false
+            }
+        });
+
+        let lower0 = TreapNode::max_key(&t0).cloned();
+        let lower1 = TreapNode::min_key(&t1).unwrap_or(upper).clone();
+        let v = t1.as_deref().map_or(M::id(), |t1| t1.acc.clone());
+
+        self.root = TreapNode::merge(t0, TreapNode::merge(t1, t2));
+
+        (lower0, lower1, v)
+    }
+
+    // 与えられたlowerに対してupperを変数として f(query(lower, upper)) を考えたとき、true, falseの順で区分化されているとする
+    // このとき、木のkeyとして存在するようなupper(>=lower)の中で、trueを与えるものの最大値(upper0)、falseを与えるものの最小値(upper1)、
+    // および query(lower, upper1) の値を返す
+    // lower以降の全区間の値に対してtrueとなる場合は None を返す
+    // keyとして存在する全てのupperに対してtrueとなるがlower以降の全区間の値に対してはfalseとなる場合は
+    //  Some((Some(最大のkey), None, lower以降の全区間の値)) を返す
+    // 全てのupperに対してfalseとなる場合は Some((None, lower以上の最小のkey, M::id())) を返す
+    fn right_partition_point<F>(
+        &mut self,
+        lower: &K,
+        mut f: F,
+    ) -> Option<(Option<K>, Option<K>, M::Item)>
+    where
+        F: FnMut(&M::Item) -> bool,
+    {
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t0, t12) = TreapNode::split_lower_bound(root, lower);
+
+        if f(t12.as_deref().map_or(&M::id(), |node| &node.acc)) {
+            self.root = TreapNode::merge(t0, t12);
+
+            None
+        } else {
+            let mut left_offset = M::id();
+            let (t1, t2) = TreapNode::split_with(t12, |node| {
+                // push()済みなのでlazyは無視
+                let x = M::op(
+                    &left_offset,
+                    node.left.as_deref().map_or(&M::id(), |v| &v.acc),
+                );
+                if !f(&x) {
+                    true
+                } else {
+                    left_offset = M::op(&x, &node.value);
+                    false
+                }
+            });
+
+            let upper0 = TreapNode::max_key(&t1).cloned();
+            let upper1 = TreapNode::min_key(&t2).cloned();
+            let v = t1.as_deref().map_or(M::id(), |t1| t1.acc.clone());
+
+            self.root = TreapNode::merge(t0, TreapNode::merge(t1, t2));
+
+            Some((upper0, upper1, v))
+        }
     }
 
     fn update(&mut self, lower: &K, upper: &K, x: Op::Item) {
@@ -719,5 +804,111 @@ mod test {
         assert_eq!(t.query(&1, &3), 100);
         assert_eq!(t.query(&3, &6), 242);
         assert_eq!(t.query(&4, &6), 242);
+    }
+
+    #[test]
+    fn test_left_partition_point() {
+        let mut t = Treap::<usize, Sum, NullMonoid>::new();
+
+        const N: usize = 20;
+        let mut values = vec![];
+        let mut csums = vec![0];
+        for i in 0..N {
+            let x = 2 * i;
+            let y = i * i;
+            t.insert_with_value(x, y);
+            values.push((x, y));
+            csums.push(csums[i] + y);
+        }
+
+        let s = csums[N];
+        for upper in 0..3 * N {
+            let i_upper = values
+                .iter()
+                .enumerate()
+                .rfind(|&(_, &(k, _))| k < upper)
+                .map_or(0, |(i, _)| i + 1);
+            for b in 1..2 * s {
+                let pred = |x: usize| x < b;
+                let expected_i_lower1 = (0..=i_upper)
+                    .find(|&i| {
+                        let v = csums[i_upper] - csums[i];
+                        pred(v)
+                    })
+                    .unwrap();
+                let expected_lower1 = if expected_i_lower1 == N {
+                    // 存在しないkeyにはならない
+                    upper
+                } else {
+                    std::cmp::min(upper, 2 * expected_i_lower1)
+                };
+                let expected_lower0 = expected_i_lower1.checked_sub(1).map(|k| 2 * k);
+                let expected_val = csums[i_upper] - csums[expected_i_lower1];
+
+                assert_eq!(
+                    t.left_partition_point(&upper, |&x| pred(x)),
+                    (expected_lower0, expected_lower1, expected_val),
+                    "{:?}; upper={}, b={}",
+                    values,
+                    upper,
+                    b
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_right_partition_point() {
+        let mut t = Treap::<usize, Sum, NullMonoid>::new();
+
+        const N: usize = 20;
+        let mut values = vec![];
+        let mut csums = vec![0];
+        for i in 0..N {
+            let x = 2 * i;
+            let y = i * i;
+            t.insert_with_value(x, y);
+            values.push((x, y));
+            csums.push(csums[i] + y);
+        }
+
+        let s = csums[N];
+        for lower in 0..3 * N {
+            let i_lower = values
+                .iter()
+                .enumerate()
+                .find(|&(_, &(k, _))| lower <= k)
+                .map_or(N, |(i, _)| i);
+            for b in 0..2 * s {
+                let pred = |x: usize| x < b;
+
+                let expected = if pred(csums[N] - csums[i_lower]) {
+                    None
+                } else {
+                    let expected_i_upper1 = (i_lower..N).find(|&i| {
+                        let v = csums[i] - csums[i_lower];
+                        !pred(v)
+                    });
+                    let expected_upper1 = expected_i_upper1.map(|i| 2 * i);
+                    let expected_upper0 = if lower + 2 <= expected_upper1.unwrap_or(2 * N) {
+                        Some(expected_upper1.unwrap_or(2 * N) - 2)
+                    } else {
+                        None
+                    };
+                    let expected_val = csums[expected_i_upper1.unwrap_or(N)] - csums[i_lower];
+
+                    Some((expected_upper0, expected_upper1, expected_val))
+                };
+
+                assert_eq!(
+                    t.right_partition_point(&lower, |&x| pred(x)),
+                    expected,
+                    "{:?}; lower={}, b={}",
+                    values,
+                    lower,
+                    b
+                );
+            }
+        }
     }
 }
