@@ -190,17 +190,17 @@ where
         }
     }
 
-    // f(query(a, b)) == false となるaが存在すればその最大のもの+1を返す
-    // 存在しない場合は0を返す
-    fn left_partition_point<F>(&self, b: usize, mut f: F) -> usize
+    // f(query(a, b)) == true となるaが存在すればその最小のものを返す
+    // 存在しない場合はNoneを返す
+    fn left_partition_point<F>(&self, b: usize, mut f: F) -> Option<usize>
     where
         F: FnMut(&M) -> bool,
     {
         assert!(b <= self.cap);
         if !f(&M::id()) {
-            b
+            None
         } else if b == 0 {
-            0
+            Some(0)
         } else {
             let mut a = b;
             // [a-2^k, a) が保持されている最初の箇所に移動
@@ -223,7 +223,7 @@ where
 
                 // 最後に計算したidxが左端だった場合
                 if idx == 0 || (idx + 1).is_power_of_two() {
-                    return 0;
+                    return Some(0);
                 }
 
                 // [a-2^k, a) が保持されている最初の箇所に移動
@@ -248,7 +248,7 @@ where
                 idx = 2 * idx + 2;
             }
 
-            a
+            Some(a)
         }
     }
 }
@@ -1061,6 +1061,35 @@ mod test {
                     /* actual */ st.right_partition_point(i, |&u| u.0 >= v),
                     /* expected */
                     mins.iter().copied().find(|&(_, u)| u < v).map(|(j, _)| j),
+                    " l={}, v={}, mins={:?}",
+                    i,
+                    v,
+                    mins
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_left_partition_point() {
+        let vals = vec![10, 13, 7, 8, 15, 2, 4];
+        let st = RMTTree::with(&vals);
+
+        for i in 0..vals.len() {
+            let mins = std::iter::once((i, Minimum::id().0))
+                .chain(vals[..i].iter().copied().enumerate().rev().scan(
+                    Minimum::id().0,
+                    |min, (j, v)| {
+                        *min = std::cmp::min(*min, v);
+                        Some((j, *min))
+                    },
+                ))
+                .collect::<Vec<_>>();
+            for v in 0..20 {
+                assert_eq!(
+                    /* actual */ st.left_partition_point(i, |&u| u.0 >= v),
+                    /* expected */
+                    mins.iter().copied().rfind(|&(_, u)| u >= v).map(|(j, _)| j),
                     " l={}, v={}, mins={:?}",
                     i,
                     v,
