@@ -1,5 +1,3 @@
-fn main() {}
-
 #[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
@@ -178,3 +176,5 @@ where
     T: 'a + Copy,
 {
 }
+
+fn main() {}
