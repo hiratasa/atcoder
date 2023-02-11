@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-ubuntu-20.04
 # Boost
 ENV BOOST_VERSION 1.72.0
 RUN cd /tmp \
-    && curl -L https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_$(echo ${BOOST_VERSION} | sed -e 's/\./_/g').tar.gz | tar xz \
+    && curl -L https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_$(echo ${BOOST_VERSION} | sed -e 's/\./_/g').tar.gz | tar xz \
     && cd boost_$(echo ${BOOST_VERSION} | sed -e 's/\./_/g') \
     && ./bootstrap.sh --with-toolset=gcc --without-libraries=mpi,graph_parallel,python \
     && ./b2 -j6 toolset=gcc variant=release link=static runtime-link=static cxxflags="-std=c++17" stage \
