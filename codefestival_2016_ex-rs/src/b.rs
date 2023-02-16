@@ -177,4 +177,66 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let n = read::<usize>();
+    let a = read_row::<usize>();
+
+    let add = |intervals: &mut Vec<(usize, usize)>, b: usize, e: usize| {
+        let (b, e) = if let Some(idx) = intervals.citer().position(|(b0, e0)| b0 <= b && b < e0) {
+            let (b0, e0) = intervals.swap_remove(idx);
+
+            (b0, max(e0, e))
+        } else {
+            (b, e)
+        };
+
+        if let Some(idx) = intervals.citer().position(|(b0, e0)| b0 <= e && e <= e0) {
+            intervals[idx].0 = min(intervals[idx].0, b);
+        } else {
+            intervals.push((b, e));
+        };
+    };
+
+    let ans = (0..17)
+        .map(|i| {
+            let d = 10usize.pow(i);
+            let d2 = 10 * d;
+
+            let intervals = a
+                .citer()
+                .map(|x| x % d2)
+                .fold(vec![(0, d)], |mut intervals, x| {
+                    let new_intervals = intervals
+                        .citer()
+                        .flat_map(|(b, e)| {
+                            let (b1, e1) = ((b + d2 - x) % d2, (e + d2 - x) % d2);
+
+                            if b1 <= e1 {
+                                it![Some((b1, e1)), None]
+                            } else {
+                                it![Some((b1, d2)), Some((0, e1))]
+                            }
+                        })
+                        .flatten()
+                        .collect::<Vec<_>>();
+
+                    for (b, e) in new_intervals {
+                        add(&mut intervals, b, e);
+                    }
+
+                    intervals
+                });
+
+            (0..10)
+                .rev()
+                .find(|&j| {
+                    intervals
+                        .citer()
+                        .any(|(b, e)| b + d * j == 0 || (b + d * j <= d2 && d2 < e + d * j))
+                })
+                .unwrap()
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
+}
