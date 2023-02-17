@@ -1,0 +1,307 @@
+#[allow(unused_imports)]
+use std::cmp::*;
+#[allow(unused_imports)]
+use std::collections::*;
+#[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
+use std::io;
+#[allow(unused_imports)]
+use std::iter::*;
+#[allow(unused_imports)]
+use std::mem::*;
+#[allow(unused_imports)]
+use std::str::*;
+#[allow(unused_imports)]
+use std::usize;
+
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+#[allow(unused_imports)]
+use rustc_hash::FxHashMap;
+#[allow(unused_imports)]
+use rustc_hash::FxHashSet;
+
+// vec with some initial value
+#[allow(unused_macros)]
+macro_rules! vvec {
+    ($($x:expr),+; $y:expr; $n:expr) => {{
+        let mut v = vec![$y; $n];
+
+        let mut it = v.iter_mut();
+        $(
+            *it.next().unwrap() = $x;
+        )+
+
+        v
+    }}
+}
+
+#[allow(unused_macros)]
+macro_rules! it {
+    ($x:expr) => {
+        once($x)
+    };
+    ($first:expr,$($x:expr),+) => {
+        chain(
+            once($first),
+            it!($($x),+)
+        )
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
+}
+
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! pushed {
+    ($c:expr, $x:expr) => {{
+        let x = $x;
+        let mut c = $c;
+        c.push(x);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! inserted {
+    ($c:expr, $($x:expr),*) => {{
+        let mut c = $c;
+        c.insert($($x),*);
+        c
+    }};
+}
+
+#[allow(unused_macros)]
+macro_rules! read_tuple {
+    ($($t:ty),+) => {{
+        let mut line = String::new();
+        io::stdin().read_line(&mut line).unwrap();
+
+        let mut it = line.trim()
+            .split_whitespace();
+
+        ($(
+            it.next().unwrap().parse::<$t>().ok().unwrap()
+        ),+)
+    }}
+}
+
+#[allow(dead_code)]
+fn read<T: FromStr>() -> T {
+    let mut line = String::new();
+    io::stdin().read_line(&mut line).unwrap();
+    line.trim().to_string().parse().ok().unwrap()
+}
+
+#[allow(dead_code)]
+fn read_str() -> Vec<char> {
+    read::<String>().chars().collect()
+}
+
+#[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
+fn read_row<T: FromStr>() -> Vec<T> {
+    let mut line = String::new();
+    io::stdin().read_line(&mut line).unwrap();
+
+    line.trim()
+        .split_whitespace()
+        .map(|s| s.parse().ok().unwrap())
+        .collect()
+}
+
+#[allow(dead_code)]
+fn read_col<T: FromStr>(n: usize) -> Vec<T> {
+    (0..n).map(|_| read()).collect()
+}
+
+#[allow(dead_code)]
+fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
+    (0..n).map(|_| read_row()).collect()
+}
+
+#[allow(dead_code)]
+fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
+    (0..n).map(|_| f()).collect()
+}
+
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
+trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+where
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+impl<'a, T, I> IterCopyExt<'a, T> for I
+where
+    I: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+}
+
+fn gcd(a: usize, b: usize) -> usize {
+    if a == 0 {
+        b
+    } else {
+        gcd(b % a, a)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Number(Vec<u32>, Vec<u32>, Vec<u32>);
+
+impl Number {
+    fn from_str(s: &str) -> Self {
+        let i0 = s.chars().position(|c| c == '.').unwrap();
+        let i1_opt = s.chars().position(|c| c == '(');
+
+        let a = s[..i0]
+            .chars()
+            .map(|c| c.to_digit(10).unwrap())
+            .collect::<Vec<_>>();
+        let b = s[i0 + 1..i1_opt.unwrap_or(s.len())]
+            .chars()
+            .map(|c| c.to_digit(10).unwrap())
+            .collect::<Vec<_>>();
+
+        let n = if let Some(i1) = i1_opt {
+            let c = s[i1 + 1..s.len() - 1]
+                .chars()
+                .map(|c| c.to_digit(10).unwrap())
+                .collect::<Vec<_>>();
+
+            Number(a, b, c)
+        } else {
+            Number(a, b, vec![0])
+        };
+
+        n.normalize()
+    }
+
+    fn normalize(self) -> Self {
+        let Number(mut a, mut b, mut c) = self;
+
+        while !a.is_empty() && a[0] == 0 {
+            a.remove(0);
+        }
+
+        if c.citer().all(|x| x == 9) {
+            c = vec![0];
+            let mut carry = 1;
+            for d in chain(b.iter_mut().rev(), a.iter_mut().rev()) {
+                if *d < 9 {
+                    *d += carry;
+                    carry = 0;
+                    break;
+                } else {
+                    *d = 0;
+                    carry = 1;
+                }
+            }
+            if carry > 0 {
+                a.insert(0, carry);
+            }
+
+            Number(a, b, c)
+        } else {
+            Number(a, b, c)
+        }
+    }
+}
+
+impl std::cmp::PartialEq for Number {
+    fn eq(&self, other: &Self) -> bool {
+        let Number(a, b, c) = self;
+        let Number(a2, b2, c2) = other;
+
+        if a != a2 {
+            return false;
+        }
+
+        let p1 = c.len();
+        let p2 = c2.len();
+        assert!(p1 > 0);
+        assert!(p2 > 0);
+
+        let p = gcd(p1, p2);
+
+        if !c.citer().enumerate().all(|(i, x)| x == c[i % p]) {
+            return false;
+        }
+
+        if !c2.citer().enumerate().all(|(i, x)| x == c2[i % p]) {
+            return false;
+        }
+
+        let l = max(b.len() + c.len(), b2.len() + c2.len());
+
+        izip!(
+            b.citer().chain(c.citer().cycle()),
+            b2.citer().chain(c2.citer().cycle()),
+        )
+        .take(l)
+        .all(|(x, y)| x == y)
+    }
+}
+
+fn main() {
+    let n = read::<usize>();
+    let a = read_vec(n, || read::<String>());
+
+    let a = a
+        .into_iter()
+        .map(|s| Number::from_str(&s))
+        .collect::<Vec<_>>();
+
+    let ans = a
+        .into_iter()
+        .scan(vec![], |u: &mut Vec<Number>, x| {
+            if u.iter().any(|y| x.eq(y)) {
+                Some(0)
+            } else {
+                u.push(x);
+                Some(1)
+            }
+        })
+        .sum::<usize>();
+
+    println!("{}", ans);
+}
