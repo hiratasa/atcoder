@@ -177,4 +177,94 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (x, y, n) = read_tuple!(usize, usize, usize);
+    let ab = read_vec(n, || read_tuple!(i64, i64));
+
+    let z = (x + y) / n;
+    let z = z as i64;
+
+    let (plus, minus, offset) = ab.citer().fold(
+        (vec![], vec![], 0),
+        |(mut plus, mut minus, mut offset), (a, b)| {
+            if a >= b {
+                plus.push((z * b, a - b));
+            } else {
+                minus.push((z * a, b - a));
+                offset -= z;
+            }
+
+            (plus, minus, offset)
+        },
+    );
+
+    let tplus = plus
+        .citer()
+        .flat_map(|(c, d)| (1..=z).map(move |i| c + i * d))
+        .sorted()
+        .collect::<Vec<_>>();
+    let tminus = minus
+        .citer()
+        .flat_map(|(c, d)| (1..=z).map(move |i| c + i * d))
+        .sorted()
+        .collect::<Vec<_>>();
+
+    let mut q = chain(
+        plus.citer().map(|(c, d)| (c, d, 1, 0)),
+        minus.citer().map(|(c, d)| (c, d, -1, 0)),
+    )
+    .map(|(c, d, e, f)| Reverse((c, d, e, f)))
+    .collect::<BinaryHeap<_>>();
+
+    let mut ans = i64::MAX;
+    let mut s = x as i64 + offset;
+    let mut ma = chain(plus.citer(), minus.citer())
+        .map(|(c, _)| c)
+        .max()
+        .unwrap();
+    let mut sp = 0;
+    let mut sm = 0;
+    while let Some(Reverse((c, d, e, f))) = q.pop() {
+        let ans1 = if s == 0 {
+            ma - c
+        } else if s > 0 {
+            let idx = tplus
+                .binary_search_by(|&t| t.cmp(&ma).then(Ordering::Less))
+                .unwrap_err();
+            if idx - sp >= s as usize {
+                ma - c
+            } else {
+                tplus.get(s as usize + sp - 1).copied().unwrap_or(1 << 50) - c
+            }
+        } else {
+            let idx = tminus
+                .binary_search_by(|&t| t.cmp(&ma).then(Ordering::Less))
+                .unwrap_err();
+            if idx - sm >= (-s) as usize {
+                ma - c
+            } else {
+                tminus
+                    .get((-s) as usize + sm - 1)
+                    .copied()
+                    .unwrap_or(1 << 50)
+                    - c
+            }
+        };
+        ans = min(ans, ans1);
+
+        if f == z {
+            break;
+        }
+
+        q.push(Reverse((c + d, d, e, f + 1)));
+        s -= e;
+        ma = max(ma, c + d);
+        if e > 0 {
+            sp += 1;
+        } else {
+            sm += 1;
+        }
+    }
+
+    println!("{}", ans);
+}
