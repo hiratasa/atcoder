@@ -178,106 +178,40 @@ where
 }
 
 fn main() {
-    let (n, q) = read_tuple!(usize, usize);
-    let a = read_row::<i64>();
-    let b = read_row::<i64>();
-    let pxy = read_vec(q, || read_tuple!(usize, i64, i64));
+    let (n, m, k) = read_tuple!(usize, usize, usize);
+    let a = read_row::<usize>();
 
-    let mut offsets = izip!(a.citer(), b.citer())
-        .map(|(x, y)| x + y)
-        .collect::<Vec<_>>();
-    let mut t = izip!(a.citer(), b.citer())
-        .map(|(x, y)| x - y)
-        .collect::<Vec<_>>();
-
-    let mut plus = (1..2 * n - 1)
-        .filter(|&i| t[i] >= 0)
-        .map(|i| (Reverse(t[i]), i))
-        .collect::<BinaryHeap<_>>();
-    let mut minus = (1..2 * n - 1)
-        .filter(|&i| t[i] < 0)
-        .map(|i| (t[i], i))
-        .collect::<BinaryHeap<_>>();
-
-    let mut numplus = plus.len();
-    let mut numminus = minus.len();
-
-    let mut sumoffset = offsets.citer().sum::<i64>();
-
-    let mut sumplus = (1..2 * n - 1)
-        .filter(|&i| t[i] >= 0)
-        .map(|i| t[i])
-        .sum::<i64>();
-    let mut summinus = (1..2 * n - 1)
-        .filter(|&i| t[i] < 0)
-        .map(|i| t[i])
-        .sum::<i64>();
-
-    let fix = |t: &[i64],
-               plus: &mut BinaryHeap<(Reverse<i64>, usize)>,
-               minus: &mut BinaryHeap<(i64, usize)>| {
-        while matches!(plus.peek(), Some(&(Reverse(x), i)) if t[i] != x) {
-            plus.pop();
-        }
-
-        while matches!(minus.peek(), Some(&(x, i)) if t[i] != x) {
-            minus.pop();
+    let fix = |v: &mut VecDeque<(usize, usize)>, i: usize| {
+        while matches!(v.front(), Some(&(j, _)) if j + m < i) {
+            v.pop_front();
         }
     };
 
-    let calc = |t: &[i64],
-                plus: &BinaryHeap<(Reverse<i64>, usize)>,
-                minus: &BinaryHeap<(i64, usize)>,
-                numplus: usize,
-                _numminus: usize,
-                sumplus: i64,
-                summinus: i64| {
-        if numplus % 2 == 0 {
-            t[0] + t[2 * n - 1] + sumplus - summinus
-        } else if n == 1 {
-            t[0] + t[2 * n - 1]
-        } else {
-            let (Reverse(x), _) = plus.peek().unwrap();
-            let (y, _) = minus.peek().unwrap();
-
-            t[0] + t[2 * n - 1] + (sumplus - x) - (summinus - y) + (x + y).abs()
+    let push = |v: &mut VecDeque<(usize, usize)>, i: usize, x: usize| {
+        while matches!(v.back(), Some(&(_, y)) if y <= x) {
+            v.pop_back();
         }
+        v.push_back((i, x));
     };
 
-    for (p, x, y) in pxy {
-        let p = p - 1;
-
-        sumoffset -= offsets[p];
-        if p != 0 && p != 2 * n - 1 {
-            if t[p] >= 0 {
-                sumplus -= t[p];
-                numplus -= 1;
-            } else {
-                summinus -= t[p];
-                numminus -= 1;
+    let maxs = a.citer().enumerate().fold(
+        vvec![once((0, 0)).collect::<VecDeque<_>>(); VecDeque::new(); k + 1],
+        |mut maxs, (i, x)| {
+            for j in 1..k {
+                fix(&mut maxs[j], i + 1);
             }
-        }
 
-        offsets[p] = x + y;
-        t[p] = x - y;
-
-        sumoffset += offsets[p];
-        if p != 0 && p != 2 * n - 1 {
-            if t[p] >= 0 {
-                sumplus += t[p];
-                numplus += 1;
-                plus.push((Reverse(t[p]), p));
-            } else {
-                summinus += t[p];
-                numminus += 1;
-                minus.push((t[p], p));
+            for j in (1..=k).rev() {
+                if let Some(&(_, y)) = maxs[j - 1].front() {
+                    push(&mut maxs[j], i + 1, y + j * x);
+                }
             }
-        }
 
-        fix(&t, &mut plus, &mut minus);
+            maxs
+        },
+    );
 
-        let ans = (sumoffset + calc(&t, &plus, &minus, numplus, numminus, sumplus, summinus)) / 2;
+    let ans = maxs[k][0].1;
 
-        println!("{}", ans);
-    }
+    println!("{}", ans);
 }
