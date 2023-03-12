@@ -177,4 +177,32 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let k = read::<usize>();
+    let s = read::<String>();
+
+    let n = s.len();
+
+    // 部分点2
+    assert!(n <= 16);
+
+    let ans = (0usize..1 << (n - 1))
+        .filter(|&t| t.count_ones() as usize <= k)
+        .map(|t| {
+            let delims = once(0)
+                .chain((0..n - 1).filter(|&i| t & (1 << i) > 0).map(|i| i + 1))
+                .chain(once(n))
+                .collect::<Vec<_>>();
+
+            delims
+                .citer()
+                .tuple_windows()
+                .map(|(l, r)| s[l..r].parse::<usize>().unwrap())
+                .max()
+                .unwrap()
+        })
+        .min()
+        .unwrap();
+
+    println!("{}", ans);
+}

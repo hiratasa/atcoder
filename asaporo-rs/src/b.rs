@@ -182,30 +182,187 @@ fn main() {
     let a = read_row::<usize>();
     let s = read_str();
 
-    // 部分点400
-    let l = s.citer().position(|c| c == 'm').unwrap();
-    assert!(s[l..].citer().all(|c| c == 'm'));
-
-    let b = a
+    let mut b = a
         .citer()
-        .enumerate()
-        .scan(VecDeque::new(), |q, (i, x)| {
-            while matches!(q.back(), Some(&(_, y)) if y <= x) {
-                q.pop_back();
-            }
-
-            q.push_back((i, x));
-
-            while matches!(q.front(), Some(&(j, _)) if j + l < i) {
-                q.pop_front();
-            }
-
-            Some(q.front().unwrap().1)
-        })
-        .skip(l)
+        .group_by(|&x| x)
+        .into_iter()
+        .map(|(x, it)| (x, 0, it.count() as i64, None, None, true))
         .collect::<Vec<_>>();
 
-    let ans = b.citer().min().unwrap();
+    let m = b.len();
 
-    println!("{}", ans);
+    if m == 1 {
+        println!("{}", a[0]);
+        return;
+    }
+
+    let mut maxs = BinaryHeap::new();
+    let mut mins = BinaryHeap::new();
+    for i in 0..m {
+        if i > 0 {
+            b[i].3 = Some(i - 1);
+        }
+        if i < m - 1 {
+            b[i].4 = Some(i + 1);
+        }
+        if i > 0 && i < m - 1 && b[i - 1].0 < b[i].0 && b[i].0 > b[i + 1].0 {
+            maxs.push((Reverse(b[i].2), i));
+            b[i].1 = 1;
+        } else if i > 0 && i < m - 1 && b[i - 1].0 > b[i].0 && b[i].0 < b[i + 1].0 {
+            mins.push((Reverse(b[i].2), i));
+            b[i].1 = -1;
+        }
+    }
+
+    let mut f = 0;
+    let mut first = 0;
+    let mut last = m - 1;
+
+    let prev = |b: &[(usize, i64, i64, Option<usize>, Option<usize>, bool)], idx: usize| {
+        b[idx].3.map(|next_idx| b[next_idx])
+    };
+    let next = |b: &[(usize, i64, i64, Option<usize>, Option<usize>, bool)], idx: usize| {
+        b[idx].4.map(|next_idx| b[next_idx])
+    };
+
+    let fix =
+        |b: &mut [(usize, i64, i64, Option<usize>, Option<usize>, bool)], idx: usize, f: i64| {
+            b[idx].2 += f * b[idx].1;
+            b[idx].1 = 0;
+
+            let prev = prev(b, idx)?;
+            let next = next(b, idx)?;
+
+            let x = b[idx].0;
+
+            if prev.0 <= x && x > next.0 {
+                b[idx].1 = 1;
+                b[idx].2 -= f;
+            } else if prev.0 > x && x <= next.0 {
+                b[idx].1 = -1;
+                b[idx].2 += f;
+            }
+
+            Some(b[idx].1)
+        };
+
+    for c in s {
+        let mut to_fix = vec![];
+
+        if c == 'M' {
+            f += 1;
+
+            if b[first].0 <= next(&b, first).unwrap().0 {
+                b[first].2 -= 1;
+            }
+
+            if b[last].0 < prev(&b, last).unwrap().0 {
+                b[last].2 -= 1;
+            }
+
+            if b[first].2 == 0 {
+                b[first].5 = false;
+                first = b[first].4.unwrap();
+                b[first].3 = None;
+                to_fix.push(first);
+            }
+
+            if b[last].2 == 0 {
+                b[first].5 = false;
+                last = b[last].3.unwrap();
+                b[last].4 = None;
+                to_fix.push(last);
+            }
+
+            while matches!(
+                mins.peek(),
+                Some(&(Reverse(x), i))
+                if
+                b[i].2 != x || b[i].1 != -1 || !b[i].5 || x - f <= 0
+            ) {
+                let (Reverse(x), i) = mins.pop().unwrap();
+
+                if !(b[i].2 == x && b[i].1 == -1 && b[i].5) {
+                    continue;
+                }
+
+                assert!(x - f == 0);
+
+                b[i].5 = false;
+
+                let left = b[i].3.unwrap();
+                let right = b[i].4.unwrap();
+
+                b[left].4 = Some(right);
+                b[right].3 = Some(left);
+
+                to_fix.push(left);
+                to_fix.push(right);
+            }
+        } else {
+            f -= 1;
+
+            if b[first].0 > next(&b, first).unwrap().0 {
+                b[first].2 -= 1;
+            }
+
+            if b[last].0 >= prev(&b, last).unwrap().0 {
+                b[last].2 -= 1;
+            }
+
+            if b[first].2 == 0 {
+                b[first].5 = false;
+                first = b[first].4.unwrap();
+                b[first].3 = None;
+                to_fix.push(first);
+            }
+
+            if b[last].2 == 0 {
+                b[last].5 = false;
+                last = b[last].3.unwrap();
+                b[last].4 = None;
+                to_fix.push(last);
+            }
+
+            while matches!(
+                maxs.peek(),
+                Some(&(Reverse(x), i))
+                if
+                b[i].2 != x || b[i].1 != 1 || !b[i].5 || x + f <= 0
+            ) {
+                let (Reverse(x), i) = maxs.pop().unwrap();
+
+                if !(b[i].2 == x && b[i].1 == 1 && b[i].5) {
+                    continue;
+                }
+
+                assert!(x + f == 0);
+
+                b[i].5 = false;
+
+                let left = b[i].3.unwrap();
+                let right = b[i].4.unwrap();
+
+                b[left].4 = Some(right);
+                b[right].3 = Some(left);
+
+                to_fix.push(left);
+                to_fix.push(right);
+            }
+        }
+
+        for idx in to_fix {
+            match fix(&mut b, idx, f) {
+                Some(-1) => mins.push((Reverse(b[idx].2), idx)),
+                Some(1) => maxs.push((Reverse(b[idx].2), idx)),
+                _ => {}
+            }
+        }
+
+        if first == last {
+            break;
+        }
+    }
+
+    println!("{}", b[first].0);
 }
