@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -144,7 +153,7 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
 }
 
 #[allow(dead_code)]
-fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     if let Some(ans) = ans {
         println!("{}", ans);
     } else {
@@ -170,32 +179,26 @@ where
 
 fn main() {
     let n = read::<usize>();
-    let mut a = read_row::<String>();
+    let a = read_row::<usize>();
 
-    a.sort_by(|s, t| {
-        chain(s.chars(), t.chars())
-            .cmp(chain(t.chars(), s.chars()))
-            .reverse()
-    });
+    let b = a
+        .citer()
+        .sorted_by_key(|&x| Reverse(x))
+        .take(3)
+        .collect::<Vec<_>>();
 
-    const K: usize = 20;
-    let dp = a.iter().fold(
-        vvec![vvec![Some(String::new()); None; K + 1]; vec![None; K + 1]; 4],
-        |mut dp, s| {
-            for i in (0..3).rev() {
-                for j in 0..=K {
-                    if let Some(t) = &dp[i][j] {
-                        dp[i + 1][j + s.len()] = max(
-                            dp[i + 1][j + s.len()].clone(),
-                            Some(chain(t.chars(), s.chars()).collect::<String>()),
-                        );
-                    }
-                }
-            }
+    let ans = b
+        .citer()
+        .permutations(3)
+        .map(|p| {
+            p.citer().fold(0, |x, y| {
+                let d = iterate(y, |&z| z / 10).take_while(|&z| z > 0).count();
 
-            dp
-        },
-    );
-    let ans = dp[3].iter().rev().find_map(|x| x.clone()).unwrap();
+                x * 10usize.pow(d as u32) + y
+            })
+        })
+        .max()
+        .unwrap();
+
     println!("{}", ans);
 }

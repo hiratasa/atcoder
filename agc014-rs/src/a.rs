@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,9 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,14 +55,19 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -108,6 +119,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -133,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -149,4 +177,25 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (a, b, c) = read_tuple!(usize, usize, usize);
+
+    let ans = successors(Some((a, b, c)), |&(x, y, z)| {
+        if x % 2 == 0 && y % 2 == 0 && z % 2 == 0 {
+            Some(((y + z) / 2, (x + z) / 2, (x + y) / 2))
+        } else {
+            None
+        }
+    })
+    .try_fold(FxHashSet::default(), |mut seen, (x, y, z)| {
+        if seen.contains(&(x, y, z)) {
+            None
+        } else {
+            seen.insert((x, y, z));
+            Some(seen)
+        }
+    })
+    .map(|seen| seen.len() - 1);
+
+    println_opt(ans);
+}

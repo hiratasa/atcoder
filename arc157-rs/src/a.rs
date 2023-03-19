@@ -180,21 +180,13 @@ where
 fn main() {
     let (n, a, b, c, d) = read_tuple!(usize, usize, usize, usize, usize);
 
-    let out_deg_x = a + b;
-    let in_deg_x = a + c;
-    let out_deg_y = c + d;
-    let in_deg_y = b + d;
-
-    if b == 0 && c == 0 && a > 0 && d > 0 {
-        println!("No");
-        return;
-    }
-
-    let ans = (out_deg_x == in_deg_x && out_deg_y == in_deg_y)
-        || (out_deg_x == in_deg_x + 1 && out_deg_y + 1 == in_deg_y)
-        || (out_deg_x + 1 == in_deg_x && out_deg_y == in_deg_y + 1);
-
-    if ans {
+    if b == 0 && c == 0 {
+        if a * d > 0 {
+            println!("No");
+        } else {
+            println!("Yes");
+        }
+    } else if max(b, c) - min(b, c) <= 1 {
         println!("Yes");
     } else {
         println!("No");

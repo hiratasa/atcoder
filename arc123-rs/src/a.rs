@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -143,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -160,19 +178,16 @@ where
 }
 
 fn main() {
-    let a = read_row::<i64>();
+    let (a0, a1, a2) = read_tuple!(i64, i64, i64);
+    let c = a2 - 2 * a1 + a0;
 
-    let c = (a[2] - a[1]) - (a[1] - a[0]);
-
-    let ans = if c >= 0 {
+    if c >= 0 {
         if c % 2 == 0 {
-            c / 2
+            println!("{}", c / 2);
         } else {
-            c / 2 + 2
+            println!("{}", c / 2 + 2);
         }
     } else {
-        c.abs()
-    };
-
-    println!("{}", ans);
+        println!("{}", c.abs());
+    }
 }

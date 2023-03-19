@@ -24,6 +24,8 @@ use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+#[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
 use rustc_hash::FxHashSet;
@@ -53,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -148,7 +153,7 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
 }
 
 #[allow(dead_code)]
-fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     if let Some(ans) = ans {
         println!("{}", ans);
     } else {
@@ -174,42 +179,34 @@ where
 
 fn main() {
     let n = read::<usize>();
-
     let s = read_digits();
     let t = read_digits();
 
-    let k = izip!(s.citer(), t.citer())
-        .filter(|&(d0, d1)| d0 != d1)
-        .count();
+    let h = izip!(s.citer(), t.citer()).filter(|&(x, y)| x != y).count();
 
-    let ans = if k % 2 > 0 {
-        None
-    } else {
-        Some(
-            izip!(s.citer(), t.citer())
-                .positions(|(d0, d1)| d0 != d1)
-                .enumerate()
-                .fold((vec![0; n], k / 2), |(mut u, r), (i, pos)| {
-                    if k - i == r {
-                        u[pos] = t[pos];
-                        (u, r - 1)
-                    } else if r == 0 {
-                        u[pos] = s[pos];
-                        (u, r)
-                    } else if s[pos] == 0 {
-                        (u, r)
-                    } else {
-                        assert!(t[pos] == 0);
-                        (u, r - 1)
-                    }
-                })
-                .0,
-        )
-    };
-
-    if let Some(ans) = ans {
-        println!("{}", ans.citer().join(""));
-    } else {
+    if h % 2 > 0 {
         println!("-1");
+        return;
     }
+
+    let ans = izip!(s.citer(), t.citer())
+        .scan((0, 0), |(a, b), (x, y)| {
+            if x == y {
+                Some(0)
+            } else if *a == h / 2 {
+                Some(x)
+            } else if *b == h / 2 {
+                Some(y)
+            } else {
+                if x == 0 {
+                    *b += 1;
+                } else {
+                    *a += 1;
+                }
+                Some(0)
+            }
+        })
+        .collect::<Vec<_>>();
+
+    println!("{}", ans.citer().join(""));
 }
