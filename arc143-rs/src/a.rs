@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -143,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -159,77 +177,18 @@ where
 {
 }
 
-#[allow(dead_code)]
-fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
-where
-    T: std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Div<T, Output = T>
-        + std::cmp::PartialOrd<T>
-        + std::convert::TryFrom<i32>,
-    F: Fn(T) -> std::cmp::Ordering,
-{
-    let two = T::try_from(2).ok().unwrap();
-    while end - begin >= epsilon {
-        let mid = begin + (end - begin) / two;
-        match f(mid) {
-            std::cmp::Ordering::Less => {
-                begin = mid + epsilon;
-            }
-            _ => {
-                end = mid;
-            }
-        }
-    }
-    begin
-}
-#[allow(dead_code)]
-fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
-where
-    T: std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Div<T, Output = T>
-        + std::cmp::PartialOrd<T>
-        + std::convert::TryFrom<i32>,
-    F: Fn(T) -> std::cmp::Ordering,
-{
-    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
-}
-
 fn main() {
-    let (a, b, c) = read_tuple!(usize, usize, usize);
+    let (a, b, c) = read_tuple!(i64, i64, i64);
 
-    let s = a + b + c;
+    let ma = max(a, max(b, c));
 
-    let k = lower_bound_int(0usize, 1 << 60, |k| {
-        let k1 = if s % 2 == 0 { 2 * k } else { 2 * k + 1 };
+    let d = (ma - a) + (ma - b) + (ma - c);
 
-        if it![a, b, c].any(|x| x < k1) {
-            Ordering::Greater
-        } else {
-            let s1 = s - 3 * k1;
-            assert!(s1 % 2 == 0);
+    let s = a + b + c - 2 * d;
 
-            let m = s1 / 2;
-
-            if it![a, b, c].all(|x| x - k1 <= m) {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
-        }
-    });
-
-    if k == 0 {
+    if s < 0 {
         println!("-1");
-        return;
+    } else {
+        println!("{}", d + s / 3);
     }
-
-    let k = k - 1;
-    let k1 = if s % 2 == 0 { 2 * k } else { 2 * k + 1 };
-
-    let ans = k1 + (s - 3 * k1) / 2;
-    println!("{}", ans);
 }

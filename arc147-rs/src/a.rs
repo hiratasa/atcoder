@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,9 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, unfold, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -144,7 +153,7 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
 }
 
 #[allow(dead_code)]
-fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     if let Some(ans) = ans {
         println!("{}", ans);
     } else {
@@ -170,43 +179,30 @@ where
 
 fn main() {
     let n = read::<usize>();
-
     let a = read_row::<usize>();
 
-    let mut s = a
-        .citer()
-        .sorted()
-        .group_by(|&x| x)
-        .into_iter()
-        .map(|(x, it)| (x, it.count()))
-        .collect::<BTreeMap<_, _>>();
+    let ans = unfold(
+        a.citer()
+            .enumerate()
+            .map(|(i, x)| (x, i))
+            .collect::<BTreeSet<_>>(),
+        |set| {
+            if set.len() == 1 {
+                None
+            } else {
+                let (mi, i0) = set.citer().next().unwrap();
+                let (ma, i1) = set.citer().next_back().unwrap();
+                set.remove(&(ma, i1));
 
-    let insert = |s: &mut BTreeMap<usize, usize>, x: usize| {
-        *s.entry(x).or_insert(0) += 1;
-    };
-    let remove = |s: &mut BTreeMap<usize, usize>, x: usize| {
-        *s.get_mut(&x).unwrap() -= 1;
-        if s[&x] == 0 {
-            s.remove(&x);
-        }
-    };
+                if ma % mi > 0 {
+                    set.insert((ma % mi, i1));
+                }
 
-    let mut ans = 0;
-    while s.len() > 1 {
-        let mi = *s.iter().next().unwrap().0;
-        let ma = *s.iter().next_back().unwrap().0;
-
-        remove(&mut s, ma);
-
-        let r = ma % mi;
-        if r > 0 {
-            insert(&mut s, r);
-        }
-
-        ans += 1;
-    }
-
-    ans += s.iter().next().unwrap().1 - 1;
+                Some(())
+            }
+        },
+    )
+    .count();
 
     println!("{}", ans);
 }

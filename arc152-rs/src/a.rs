@@ -55,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -180,20 +183,18 @@ fn main() {
 
     let ans = a
         .citer()
-        .scan((0, 0), |(n1, n2), x| {
+        .try_fold(0, |s, x| {
+            let s = s + x + 1;
+
             if x == 1 {
-                *n1 += 1;
-                Some(true)
+                Some(s)
+            } else if s - 1 > l {
+                None
             } else {
-                if l.saturating_sub(2 * *n1 + 3 * *n2) < 2 {
-                    Some(false)
-                } else {
-                    *n2 += 1;
-                    Some(true)
-                }
+                Some(s)
             }
         })
-        .all(|x| x);
+        .is_some();
 
     if ans {
         println!("Yes");

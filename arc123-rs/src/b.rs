@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -143,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -171,37 +189,35 @@ fn main() {
 
     let d = a
         .citer()
-        .scan(0, |idx, x| {
-            while *idx < n && b[*idx] <= x {
-                *idx += 1;
+        .scan(0, |i, x| {
+            while *i < n && x >= b[*i] {
+                *i += 1;
             }
 
-            if *idx < n {
-                *idx += 1;
-                Some(b[*idx - 1])
-            } else {
+            if *i == n {
                 None
+            } else {
+                *i += 1;
+                Some(b[*i - 1])
             }
         })
         .collect::<Vec<_>>();
 
-    let e = d
+    let ans = d
         .citer()
-        .scan(0, |idx, x| {
-            while *idx < n && c[*idx] <= x {
-                *idx += 1;
+        .scan(0, |i, x| {
+            while *i < n && x >= c[*i] {
+                *i += 1;
             }
 
-            if *idx < n {
-                *idx += 1;
-                Some(c[*idx - 1])
-            } else {
+            if *i == n {
                 None
+            } else {
+                *i += 1;
+                Some(c[*i - 1])
             }
         })
-        .collect::<Vec<_>>();
-
-    let ans = e.len();
+        .count();
 
     println!("{}", ans);
 }
