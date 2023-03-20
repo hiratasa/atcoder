@@ -178,51 +178,31 @@ where
 }
 
 fn main() {
-    let (n, m, k) = read_tuple!(usize, usize, usize);
-    let a = read_row::<usize>();
+    let t = read::<usize>();
+    for _ in 0..t {
+        let (n, k) = read_tuple!(usize, usize);
+        let s = read_str();
 
-    let ans = (0..32)
-        .rev()
-        .scan((a, m), |(a, m), i| {
-            let l = a.citer().filter(|&x| x & (1 << i) > 0).count();
+        let k = k % (2 * n);
 
-            if l >= k {
-                a.retain(|&x| x & (1 << i) > 0);
+        let ss = s
+            .citer()
+            .chain(s.citer().rev())
+            .chain(s.citer())
+            .take(n + k)
+            .collect::<Vec<_>>();
+        let ss2 = s
+            .citer()
+            .rev()
+            .chain(s.citer())
+            .take(k)
+            .chain(s.citer())
+            .collect::<Vec<_>>();
 
-                Some(1 << i)
-            } else {
-                a.sort_by_key(|&x| Reverse(x & ((1 << (i + 1)) - 1)));
-
-                let r = a
-                    .citer()
-                    .take(k)
-                    .map(|x| {
-                        if x & (1 << i) > 0 {
-                            0
-                        } else {
-                            (1 << i) - (x & ((1 << i) - 1))
-                        }
-                    })
-                    .sum::<usize>();
-
-                if r <= *m {
-                    *m -= r;
-
-                    a.resize_with(k, || unreachable!());
-
-                    a.iter_mut().for_each(|x| {
-                        if *x & (1 << i) == 0 {
-                            *x = 0;
-                        }
-                    });
-
-                    Some(1 << i)
-                } else {
-                    Some(0)
-                }
-            }
-        })
-        .sum::<usize>();
-
-    println!("{}", ans);
+        if ss.citer().eq(ss.citer().rev()) && ss2.citer().eq(ss2.citer().rev()) {
+            println!("Yes");
+        } else {
+            println!("No");
+        }
+    }
 }

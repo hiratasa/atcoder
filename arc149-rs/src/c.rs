@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -144,7 +153,7 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
 }
 
 #[allow(dead_code)]
-fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     if let Some(ans) = ans {
         println!("{}", ans);
     } else {
@@ -172,99 +181,38 @@ fn main() {
     let n = read::<usize>();
 
     let ans = if n == 3 {
-        vec![vec![5, 1, 9], vec![4, 8, 6], vec![2, 7, 3]]
-    } else if n % 2 == 0 {
-        chain(
-            (0..n / 2).map(|i| {
-                if i == 0 {
-                    once(n * n)
-                        .chain((2..).step_by(2).take(n - 1))
-                        .collect::<Vec<_>>()
-                } else {
-                    (2 * n * i..).step_by(2).take(n).collect::<Vec<_>>()
-                }
-            }),
-            (0..n / 2).map(|i| {
-                (0..=2 * n - 1 + 2 * n * i)
-                    .rev()
-                    .step_by(2)
-                    .take(n)
-                    .collect::<Vec<_>>()
-            }),
-        )
-        .collect::<Vec<_>>()
+        vec![vec![9, 5, 1], vec![3, 7, 8], vec![6, 2, 4]]
+    } else if n == 4 {
+        vec![
+            vec![1, 3, 5, 7],
+            vec![9, 11, 13, 15],
+            vec![16, 14, 12, 10],
+            vec![8, 6, 4, 2],
+        ]
+    } else if n == 5 {
+        vec![
+            vec![1, 3, 5, 7, 9],
+            vec![11, 17, 19, 13, 15],
+            vec![25, 21, 23, 22, 24],
+            vec![20, 18, 16, 14, 12],
+            vec![10, 8, 6, 4, 2],
+        ]
     } else {
-        let mut evens = (1..=n * n).skip(1).step_by(2).collect::<FxHashSet<_>>();
-        let mut odds = (1..=n * n).step_by(2).collect::<FxHashSet<_>>();
-
-        let mut ans = vec![vec![0; n]; n];
-
-        ans[n / 2][n / 2] = 1;
-        assert!(odds.contains(&1));
-        odds.remove(&1);
-
-        ans[n / 2][n / 2 - 1] = n * n - 5;
-        assert!(evens.contains(&(n * n - 5)));
-        evens.remove(&(n * n - 5));
-
-        ans[n / 2 + 1][n / 2 - 1] = 5;
-        assert!(odds.contains(&5));
-        odds.remove(&5);
-
-        ans[n / 2 - 1][n / 2] = n * n - 1;
-        assert!(evens.contains(&(n * n - 1)));
-        evens.remove(&(n * n - 1));
-
-        for i in 0..n / 2 - 1 {
-            let x = if i == 0 { 2 * i + 3 } else { 2 * i + 5 };
-            let y = n * n - x;
-
-            assert!(evens.contains(&y));
-            assert!(odds.contains(&x));
-            ans[n / 2][i] = y;
-            ans[n / 2 + 1][i] = x;
-
-            evens.remove(&y);
-            odds.remove(&x);
-        }
-
-        for i in n / 2 + 1..n {
-            let x = 2 * i + 1;
-            let y = n * n - x;
-
-            assert!(evens.contains(&y));
-            assert!(odds.contains(&x));
-            ans[n / 2 - 1][i] = y;
-            ans[n / 2][i] = x;
-
-            evens.remove(&y);
-            odds.remove(&x);
-        }
-
-        let mut evens = evens.citer().collect::<Vec<_>>();
-        let mut odds = odds.citer().collect::<Vec<_>>();
-
-        for i in 0..n {
-            for j in 0..n {
-                if ans[i][j] == 0 {
-                    if i < n / 2 {
-                        let x = evens.pop().unwrap();
-                        ans[i][j] = x;
-                    } else {
-                        let x = odds.pop().unwrap();
-                        ans[i][j] = x;
-                    }
+        (1..=n * n)
+            .sorted_by_key(|&x| {
+                if x % 2 == 0 {
+                    (0, 3 - x % 3)
+                } else {
+                    (1, x % 3)
                 }
-            }
-        }
-
-        ans
+            })
+            .chunks(n)
+            .into_iter()
+            .map(|it| it.collect::<Vec<_>>())
+            .collect::<Vec<_>>()
     };
 
-    use io::Write;
-    let stdout = io::stdout();
-    let mut stdout = io::BufWriter::new(stdout.lock());
-    for row in ans {
-        writeln!(stdout, "{}", row.citer().join(" ")).unwrap();
+    for row in ans.iter() {
+        println!("{}", row.citer().join(" "));
     }
 }

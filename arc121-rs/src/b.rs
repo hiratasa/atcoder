@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -16,9 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,14 +55,19 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
@@ -64,8 +75,9 @@ macro_rules! bitset {
 #[allow(unused_macros)]
 macro_rules! pushed {
     ($c:expr, $x:expr) => {{
+        let x = $x;
         let mut c = $c;
-        c.push($x);
+        c.push(x);
         c
     }};
 }
@@ -107,6 +119,14 @@ fn read_str() -> Vec<char> {
 }
 
 #[allow(dead_code)]
+fn read_digits() -> Vec<usize> {
+    read::<String>()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap() as usize)
+        .collect()
+}
+
+#[allow(dead_code)]
 fn read_row<T: FromStr>() -> Vec<T> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
@@ -132,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -149,66 +178,48 @@ where
 }
 
 fn main() {
-    let n: usize = read();
-
+    let n = read::<usize>();
     let ac = read_vec(2 * n, || read_tuple!(i64, char));
 
-    let mut nums = ac.citer().fold(vec![vec![]; 3], |mut nums, (a, c)| {
-        match c {
-            'R' => nums[0].push(a),
-            'G' => nums[1].push(a),
-            'B' => nums[2].push(a),
+    let mut t = ac.citer().fold(vec![vec![]; 3], |mut t, (a, c)| {
+        let idx = match c {
+            'R' => 0,
+            'G' => 1,
+            'B' => 2,
             _ => unreachable!(),
         };
-        nums
+
+        t[idx].push(a);
+        t
     });
 
-    if nums.iter().all(|v| v.len() % 2 == 0) {
-        println!("0");
-        return;
+    for i in 0..3 {
+        t[i].sort();
     }
 
-    if nums[0].len() % 2 == 0 {
-        nums.swap(0, 2);
-    }
+    let ans = if t.iter().all(|tt| tt.len() % 2 == 0) {
+        0
+    } else {
+        t.sort_by_key(|tt| tt.len() % 2);
 
-    if nums[1].len() % 2 == 0 {
-        nums.swap(1, 2);
-    }
+        let calc = |a: &[i64], b: &[i64]| {
+            a.citer()
+                .scan(0, |i, x| {
+                    while *i < b.len() && b[*i] < x {
+                        *i += 1;
+                    }
 
-    assert!(nums[0].len() % 2 > 0);
-    assert!(nums[1].len() % 2 > 0);
-    assert!(nums[2].len() % 2 == 0);
+                    Some(min(
+                        (x - b[i.saturating_sub(1)]).abs(),
+                        (x - b[min(*i, b.len() - 1)]).abs(),
+                    ))
+                })
+                .min()
+                .unwrap_or(1 << 60)
+        };
 
-    nums[0].sort();
-    nums[1].sort();
-    nums[2].sort();
-
-    let calc_min_match = |nums0: &[i64], nums1: &[i64]| {
-        assert!(!nums0.is_empty());
-        nums0
-            .citer()
-            .map(|a| {
-                let idx = nums1
-                    .binary_search_by(|&b| b.cmp(&a).then(Ordering::Greater))
-                    .unwrap_err();
-
-                let x = nums1.get(idx).map_or(std::i64::MAX, |b| (a - b).abs());
-                let y = idx
-                    .checked_sub(1)
-                    .and_then(|j| nums1.get(j))
-                    .map_or(std::i64::MAX, |b| (a - b).abs());
-
-                min(x, y)
-            })
-            .min()
-            .unwrap()
+        min(calc(&t[1], &t[2]), calc(&t[0], &t[1]) + calc(&t[0], &t[2]))
     };
-
-    let ans0 = calc_min_match(&nums[0], &nums[1]);
-    let ans1 =
-        calc_min_match(&nums[0], &nums[2]).saturating_add(calc_min_match(&nums[1], &nums[2]));
-    let ans = min(ans0, ans1);
 
     println!("{}", ans);
 }

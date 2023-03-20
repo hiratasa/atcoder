@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -143,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -159,46 +177,43 @@ where
 {
 }
 
-fn query(u: usize, v: usize) -> usize {
-    println!("? {} {}", u + 1, v + 1);
-    read::<usize>()
-}
-
 fn main() {
     let n = read::<usize>();
 
-    let dists0 = it![0, 0]
-        .chain((2..n).map(|i| query(0, i)))
-        .collect::<Vec<_>>();
-    let dists1 = it![0, 0]
-        .chain((2..n).map(|i| query(1, i)))
-        .collect::<Vec<_>>();
+    let mut memo = FxHashMap::default();
 
-    let adj0 = if let Some(adj0) = dists0
-        .citer()
-        .positions(|d| d == 1)
-        .min_by_key(|&i| dists1[i])
-    {
-        adj0
-    } else {
-        println!("! {}", 1);
-        return;
-    };
+    let mut ans = usize::MAX;
+    for i in 3..=n {
+        println!("? {} {}", 1, i);
+        let d1 = read::<usize>();
+        memo.insert((1, i), d1);
 
-    let adj1 = if let Some(adj1) = dists1
-        .citer()
-        .positions(|d| d == 1)
-        .min_by_key(|&i| dists0[i])
-    {
-        adj1
-    } else {
-        println!("! {}", 1);
-        return;
-    };
+        println!("? {} {}", 2, i);
+        let d2 = read::<usize>();
+        memo.insert((2, i), d2);
 
-    if (query(adj0, adj1), query(0, adj1), query(1, adj0)) == (3, 2, 2) {
-        println!("! 1");
-    } else {
-        println!("! {}", dists1[adj0] + 1);
+        ans = min(ans, d1 + d2);
     }
+
+    if ans == 3 {
+        let v1 = (3..=n)
+            .filter(|&i| memo[&(1, i)] == 1 && memo[&(2, i)] == 2)
+            .collect::<Vec<_>>();
+        let v2 = (3..=n)
+            .filter(|&i| memo[&(1, i)] == 2 && memo[&(2, i)] == 1)
+            .collect::<Vec<_>>();
+
+        if v1.len() == 1 && v2.len() == 1 {
+            println!("? {} {}", v1[0], v2[0]);
+            let d = read::<usize>();
+
+            if d != 1 {
+                ans = 1;
+            }
+        } else {
+            ans = 1;
+        }
+    }
+
+    println!("! {}", ans);
 }

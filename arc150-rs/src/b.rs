@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -144,7 +153,7 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
 }
 
 #[allow(dead_code)]
-fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     if let Some(ans) = ans {
         println!("{}", ans);
     } else {
@@ -171,32 +180,20 @@ where
 fn main() {
     let t = read::<usize>();
 
-    repeat_with(|| read_tuple!(i64, i64))
-        .take(t)
-        .map(|(a, b)| {
-            min(
-                (0..1000000)
-                    .map(|x| {
-                        let r = b % (a + x);
+    for _ in 0..t {
+        let (a, b) = read_tuple!(usize, usize);
 
-                        if r == 0 {
-                            x
-                        } else {
-                            x + (a + x - r)
-                        }
-                    })
-                    .min()
-                    .unwrap(),
-                (2..100000)
-                    .map(|k| {
-                        let d = k * a - (a + b);
-                        let x = if d >= 0 { 0 } else { (-d + k - 2) / (k - 1) };
+        let ans0 = (1..100000)
+            .map(|i| (b.saturating_sub(i * a) + i - 1) / i * (i + 1) + i * a - b)
+            .min()
+            .unwrap();
+        let ans1 = (min(a, 100000)..100000)
+            .map(|z| z - a + (b + z - 1) / z * z - b)
+            .min()
+            .unwrap_or(usize::MAX);
 
-                        d + k * x
-                    })
-                    .min()
-                    .unwrap(),
-            )
-        })
-        .for_each(|ans| println!("{}", ans))
+        let ans = min(ans0, ans1);
+
+        println!("{}", ans);
+    }
 }

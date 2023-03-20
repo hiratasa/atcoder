@@ -177,164 +177,54 @@ where
 {
 }
 
-#[allow(dead_code)]
-fn lower_bound<T, F>(mut begin: T, mut end: T, epsilon: T, f: F) -> T
-where
-    T: std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Div<T, Output = T>
-        + std::cmp::PartialOrd<T>
-        + std::convert::TryFrom<i32>,
-    F: Fn(T) -> std::cmp::Ordering,
-{
-    let two = T::try_from(2).ok().unwrap();
-    while end - begin >= epsilon {
-        let mid = begin + (end - begin) / two;
-        match f(mid) {
-            std::cmp::Ordering::Less => {
-                begin = mid + epsilon;
-            }
-            _ => {
-                end = mid;
-            }
-        }
-    }
-    begin
-}
-#[allow(dead_code)]
-fn lower_bound_int<T, F>(begin: T, end: T, f: F) -> T
-where
-    T: std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Div<T, Output = T>
-        + std::cmp::PartialOrd<T>
-        + std::convert::TryFrom<i32>,
-    F: Fn(T) -> std::cmp::Ordering,
-{
-    lower_bound(begin, end, T::try_from(1).ok().unwrap(), f)
-}
-
-fn solve0(k: usize, s: &[char]) -> usize {
-    let n = s.len();
-
-    (0usize..1 << n)
-        .filter(|&t| t.count_ones() as usize == k)
-        .map(|t| {
-            let mut ss = s.to_vec();
-
-            for i in 0..n {
-                if t & (1 << i) > 0 {
-                    ss[i] = if ss[i] == 'X' { 'Y' } else { 'X' };
-                }
-            }
-
-            ss
-        })
-        .map(|ss| {
-            ss.citer()
-                .tuple_windows()
-                .filter(|&(c0, c1)| c0 == 'Y' && c1 == 'Y')
-                .count()
-        })
-        .max()
-        .unwrap()
-}
-
 fn main() {
     let (n, k) = read_tuple!(usize, usize);
     let s = read_str();
 
-    if s.citer().all(|c| c == 'X') {
-        println!("{}", k.saturating_sub(1));
-        return;
-    }
-    if s.citer().all(|c| c == 'Y') {
-        println!("{}", (n - k).saturating_sub(1));
-        return;
-    }
+    let num_x = s.citer().filter(|&c| c == 'X').count();
+    let num_y = s.citer().filter(|&c| c == 'Y').count();
 
-    let blocks = s
-        .citer()
-        .enumerate()
-        .group_by(|&(_, c)| c)
-        .into_iter()
-        .filter(|(c, _)| *c == 'X')
-        .map(|(_, it)| {
-            let v = it.collect::<Vec<_>>();
-
-            let edge = v.citer().any(|(i, _)| i == 0 || i == n - 1);
-
-            (edge, v.len())
-        })
-        .sorted()
-        .collect::<Vec<_>>();
-
-    let ans = if k <= blocks.citer().map(|(_, i)| i).sum::<usize>() {
-        s.citer()
-            .tuple_windows()
-            .filter(|&(c0, c1)| c0 == 'Y' && c1 == 'Y')
-            .count()
-            + blocks
-                .citer()
-                .scan(k, |kk, (edge, b)| {
-                    if *kk == 0 {
-                        None
-                    } else if *kk < b {
-                        Some(replace(kk, 0))
-                    } else {
-                        *kk -= b;
-
-                        if edge {
-                            Some(b)
-                        } else {
-                            Some(b + 1)
-                        }
-                    }
-                })
-                .sum::<usize>()
+    let (k_fix, target) = if k <= num_x {
+        (k, 'X')
     } else {
-        let ky = k - blocks.citer().map(|(_, b)| b).sum::<usize>();
-
-        let y_blocks = s
-            .citer()
-            .enumerate()
-            .group_by(|&(_, c)| c)
-            .into_iter()
-            .filter(|(c, _)| *c == 'Y')
-            .map(|(_, it)| {
-                let v = it.collect::<Vec<_>>();
-
-                let edge = v.citer().any(|(i, _)| i == 0 || i == n - 1);
-
-                (edge, v.len())
-            })
-            .sorted_by_key(|&(edge, b)| (!edge, Reverse(b)))
-            .collect::<Vec<_>>();
-
-        n - 1
-            - y_blocks
-                .citer()
-                .scan(ky, |kk, (edge, b)| {
-                    if *kk == 0 {
-                        None
-                    } else if *kk < b {
-                        if edge {
-                            Some(replace(kk, 0))
-                        } else {
-                            Some(replace(kk, 0) + 1)
-                        }
-                    } else if edge {
-                        *kk -= b;
-                        Some(b)
-                    } else {
-                        *kk -= b;
-                        Some(b + 1)
-                    }
-                })
-                .sum::<usize>()
+        (num_y - (k - num_x), 'Y')
     };
+
+    let t = s
+        .citer()
+        .tuple_windows()
+        .filter(|&(c, d)| c != target && d != target)
+        .count();
+
+    let ans = t + s
+        .citer()
+        .group_by(|&c| c)
+        .into_iter()
+        .scan(0, |pos, (c, it)| {
+            let l = it.count();
+            *pos += l;
+
+            if c != target {
+                Some(None)
+            } else {
+                Some(Some(((*pos == l) as usize + (*pos == n) as usize, l)))
+            }
+        })
+        .flatten()
+        .sorted()
+        .scan(k_fix, |kk, (fix, l)| {
+            if *kk < l {
+                let kkk = *kk;
+                *kk = 0;
+
+                Some(kkk.saturating_sub(fix / 2))
+            } else {
+                *kk -= l;
+
+                Some(l + 1 - fix)
+            }
+        })
+        .sum::<usize>();
 
     println!("{}", ans);
 }
