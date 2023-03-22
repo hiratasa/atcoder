@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -143,6 +152,15 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
+}
+
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
@@ -159,126 +177,48 @@ where
 {
 }
 
-fn calc_adj_lis(x: usize, v: &[usize]) -> usize {
-    once(x)
-        .chain(v.citer())
-        .tuple_windows()
-        .map(|(x0, x1)| max(x0, x1) - min(x0, x1))
-        .fold(vec![0], |mut t, x| {
-            let idx = t
-                .binary_search_by(|&y| y.cmp(&x).then(Ordering::Greater))
-                .unwrap_err();
-            if idx == t.len() {
-                t.push(x);
-            } else {
-                t[idx] = x;
-            }
-
-            t
-        })
-        .len()
-        - 1
-}
-
-#[allow(dead_code)]
-fn solve0(n: usize, x: usize) -> (usize, Vec<usize>) {
-    (1..=n)
-        .filter(|&i| i != x)
-        .permutations(n - 1)
-        .map(|p| {
-            let l = calc_adj_lis(x, &p);
-            (l, p)
-        })
-        .max()
-        .unwrap()
-}
-
-fn solve(n: usize, x: usize) -> (usize, Vec<usize>) {
-    iproduct!(
-        it![false, true],
-        it![x, n / 2, n / 2 + 1, n / 2 + 2]
-            .filter(|&y| y <= n)
-            .sorted()
-            .dedup()
-    )
-    .map(|(b0, p0)| {
-        let init = it![x, p0].dedup().collect::<Vec<_>>();
-        (0..)
-            .try_fold(
-                (init, vec![], p0, p0, 0, b0),
-                |(mut p, mut q, l, r, d, b), _| {
-                    let l = if x + 1 == l { x } else { l };
-                    let r = if r + 1 == x { x } else { r };
-
-                    if l == 1 {
-                        if r + d + 1 <= n && r + d + 1 != x {
-                            q.extend(r + 1..r + d + 1);
-                            p.push(r + d + 1);
-
-                            Ok((p, q, l, r + d + 1, d + 1, b))
-                        } else if r + d + 2 <= n {
-                            assert!(r + d + 2 != x);
-
-                            q.extend(r + 1..r + d + 1);
-                            p.push(r + d + 2);
-
-                            Ok((p, q, l, r + d + 2, d + 2, b))
-                        } else {
-                            Err(p
-                                .into_iter()
-                                .chain(q.into_iter())
-                                .chain((r + 1..=n).filter(|&y| y != x))
-                                .collect::<Vec<_>>())
-                        }
-                    } else if r == n {
-                        if l > d + 1 && l - d - 1 != x {
-                            q.extend(l - d..l);
-                            p.push(l - d - 1);
-
-                            Ok((p, q, l - d - 1, r, d + 1, b))
-                        } else if l > d + 2 {
-                            assert!(l - d - 2 != x);
-                            q.extend(l - d..l);
-                            p.push(l - d - 2);
-
-                            Ok((p, q, l - d - 2, r, d + 2, b))
-                        } else {
-                            Err(p
-                                .into_iter()
-                                .chain(q.into_iter())
-                                .chain((1..l).filter(|&y| y != x))
-                                .collect::<Vec<_>>())
-                        }
-                    } else if b {
-                        p.push(r + 1);
-
-                        let d = p[p.len() - 1] - p[p.len() - 2];
-                        Ok((p, q, l, r + 1, d, !b))
-                    } else {
-                        p.push(l - 1);
-
-                        let d = p[p.len() - 2] - p[p.len() - 1];
-                        Ok((p, q, l - 1, r, d, !b))
-                    }
-                },
-            )
-            .unwrap_err()
-    })
-    .map(|p| {
-        let l = calc_adj_lis(x, &p[1..]);
-        (l, p)
-    })
-    .max()
-    .unwrap()
-}
-
 fn main() {
     let (n, x) = read_tuple!(usize, usize);
 
-    let ans = solve(n, x);
-    // let ans0 = solve0(n, x);
+    let ans = if n % 2 == 0 {
+        if x > n / 2 {
+            once(x)
+                .chain(
+                    (1..=n / 2)
+                        .rev()
+                        .interleave((n / 2 + 1..=n).filter(|&y| y != x)),
+                )
+                .collect::<Vec<_>>()
+        } else {
+            once(x)
+                .chain((n / 2 + 1..=n).interleave((1..=n / 2).rev().filter(|&y| y != x)))
+                .collect::<Vec<_>>()
+        }
+    } else {
+        if x > (n + 1) / 2 {
+            once(x)
+                .chain(once((n + 1) / 2))
+                .chain(
+                    (1..(n + 1) / 2)
+                        .rev()
+                        .interleave(((n + 1) / 2 + 1..=n).filter(|&y| y != x)),
+                )
+                .collect::<Vec<_>>()
+        } else if x == (n + 1) / 2 {
+            once(x)
+                .chain(
+                    (1..(n + 1) / 2)
+                        .rev()
+                        .interleave(((n + 1) / 2 + 1..=n).filter(|&y| y != x)),
+                )
+                .collect::<Vec<_>>()
+        } else {
+            once(x)
+                .chain(once((n + 1) / 2))
+                .chain(((n + 1) / 2 + 1..=n).interleave((1..(n + 1) / 2).rev().filter(|&y| y != x)))
+                .collect::<Vec<_>>()
+        }
+    };
 
-    assert!((ans.1).len() == n, "{} {} {:?}", n, x, ans.1);
-
-    println!("{}", (ans.1).citer().join(" "));
+    println!("{}", ans.citer().join(" "));
 }
