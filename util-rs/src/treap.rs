@@ -1,3 +1,7 @@
+use std::cmp::Ordering;
+
+use rand::{Rng, SeedableRng};
+
 trait Monoid {
     type Item: Clone;
 
@@ -251,7 +255,6 @@ where
 
         t.push();
 
-        use std::cmp::Ordering;
         match t.key.cmp(&key) {
             Ordering::Less => {
                 t.right = TreapNode::remove(t.right, key);
@@ -369,8 +372,6 @@ where
     Op: Monoid + Operator<M::Item>,
 {
     fn new() -> Treap<K, M, Op> {
-        use rand::SeedableRng;
-
         Treap {
             rng: std::rc::Rc::new(std::cell::RefCell::new(rand::rngs::SmallRng::from_entropy())),
             root: None,
@@ -396,8 +397,6 @@ where
     }
 
     fn insert_with_value(&mut self, key: K, value: M::Item) {
-        use rand::Rng;
-
         self.root = Some(TreapNode::insert(
             std::mem::replace(&mut self.root, None),
             self.rng.borrow_mut().gen(),
@@ -423,6 +422,63 @@ where
     // 内部的に変更走るのでmut
     fn at(&mut self, nth: usize) -> Option<(&K, &M::Item)> {
         TreapNode::at(&mut self.root, nth)
+    }
+
+    fn find_last_below(&mut self, upper: &K) -> Option<(&K, &M::Item)> {
+        let s0 = self.count_below(upper);
+
+        s0.checked_sub(1).and_then(move |idx| self.at(idx))
+    }
+
+    fn find_first_above(&mut self, lower: &K) -> Option<(&K, &M::Item)> {
+        let s0 = self.count_below(lower);
+
+        self.at(s0)
+    }
+
+    // 指定要素未満の要素数
+    // 内部的に変更走るのでmut
+    fn count_below(&mut self, upper: &K) -> usize {
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t0, t1) = TreapNode::split_lower_bound(root, upper);
+
+        let s = TreapNode::size(&t0);
+
+        self.root = TreapNode::merge(t0, t1);
+
+        s
+    }
+
+    // 指定要素以上の要素数
+    // 内部的に変更走るのでmut
+    fn count_above(&mut self, lower: &K) -> usize {
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t0, t1) = TreapNode::split_lower_bound(root, lower);
+
+        let s = TreapNode::size(&t1);
+
+        self.root = TreapNode::merge(t0, t1);
+
+        s
+    }
+
+    // 指定区間の要素数
+    // 内部的に変更走るのでmut
+    fn count_between(&mut self, lower: &K, upper: &K) -> usize {
+        assert!(*lower <= *upper);
+
+        let root = std::mem::replace(&mut self.root, None);
+
+        let (t0, t12) = TreapNode::split_lower_bound(root, lower);
+        let (t1, t2) = TreapNode::split_lower_bound(t12, upper);
+
+        let s = TreapNode::size(&t1);
+
+        self.root = TreapNode::merge(t0, TreapNode::merge(t1, t2));
+
+        s
     }
 
     // 内部的に変更走るのでmut
@@ -573,8 +629,6 @@ where
     Op: Monoid + Operator<M::Item>,
 {
     fn new() -> ImplicitTreap<M, Op> {
-        use rand::SeedableRng;
-
         ImplicitTreap {
             rng: std::rc::Rc::new(std::cell::RefCell::new(rand::rngs::SmallRng::from_entropy())),
             root: None,
@@ -596,8 +650,6 @@ where
     }
 
     fn insert_at(&mut self, nth: usize, value: M::Item) {
-        use rand::Rng;
-
         self.root = Some(TreapNode::insert_at(
             std::mem::replace(&mut self.root, None),
             nth,
