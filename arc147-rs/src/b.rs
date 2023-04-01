@@ -3,6 +3,10 @@ use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
 #[allow(unused_imports)]
+use std::f64;
+#[allow(unused_imports)]
+use std::i64;
+#[allow(unused_imports)]
 use std::io;
 #[allow(unused_imports)]
 use std::iter::*;
@@ -19,6 +23,8 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -49,7 +55,10 @@ macro_rules! it {
             once($first),
             it!($($x),+)
         )
-    }
+    };
+    ($($x:expr),+,) => {
+        it![$($x),+]
+    };
 }
 
 #[allow(unused_macros)]
@@ -82,69 +91,8 @@ macro_rules! inserted {
     }};
 }
 
-#[allow(unused_macros)]
-macro_rules! read_tuple {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
-}
-
 #[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
-}
-
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
-}
-
-#[allow(dead_code)]
-fn read_digits() -> Vec<usize> {
-    read::<String>()
-        .chars()
-        .map(|c| c.to_digit(10).unwrap() as usize)
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_row<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_col<T: FromStr>(n: usize) -> Vec<T> {
-    (0..n).map(|_| read()).collect()
-}
-
-#[allow(dead_code)]
-fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
-    (0..n).map(|_| read_row()).collect()
-}
-
-#[allow(dead_code)]
-fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
-    (0..n).map(|_| f()).collect()
-}
-
-#[allow(dead_code)]
-fn println_opt<T: Copy + std::fmt::Display>(ans: Option<T>) {
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     if let Some(ans) = ans {
         println!("{}", ans);
     } else {
@@ -168,62 +116,57 @@ where
 {
 }
 
+use proconio::input;
+use proconio::marker::*;
+
 fn main() {
-    let n = read::<usize>();
-    let mut p = read_row::<usize>();
+    input! {
+        n: usize,
+        mut p: [Usize1; n]
+    }
 
     #[derive(Debug, Clone, Copy)]
     enum Op {
         A(usize),
         B(usize),
-    };
-
-    let ok = |pos: usize, x: usize| (pos + x) % 2 == 1;
+    }
 
     let mut ans = vec![];
-    (0..=1).for_each(|s| {
-        for i in (s..n).step_by(2) {
-            if i + 2 >= n {
-                break;
-            }
-            for j in (i + 2..n).step_by(2).rev() {
-                if ok(j - 2, p[j - 2]) && !ok(j, p[j]) {
-                    p.swap(j - 2, j);
-                    ans.push(Op::B(j - 2));
+
+    for i in 0..2 {
+        let l = (n + 1 - i) / 2;
+        for j in 0..l {
+            for k in 0..l - j - 1 {
+                if p[2 * k + i] % 2 == i && p[2 * (k + 1) + i] % 2 != i {
+                    ans.push(Op::B(2 * k + i));
+                    p.swap(2 * k + i, 2 * (k + 1) + i);
                 }
             }
         }
-    });
-
-    (0..n).step_by(2).for_each(|i| {
-        if !ok(i, p[i]) {
-            assert!(!ok(i + 1, p[i + 1]));
-            p.swap(i, i + 1);
-            ans.push(Op::A(i));
+    }
+    for i in 0..n / 2 {
+        if p[2 * i] % 2 != 0 && p[2 * i + 1] % 2 != 1 {
+            ans.push(Op::A(2 * i));
+            p.swap(2 * i, 2 * i + 1);
         }
-    });
-
-    (0..=1).for_each(|s| {
-        for i in (s..n).step_by(2) {
-            if i + 2 >= n {
-                break;
-            }
-            for j in (i + 2..n).step_by(2).rev() {
-                if p[j - 2] > p[j] {
-                    p.swap(j - 2, j);
-                    ans.push(Op::B(j - 2));
+    }
+    for i in 0..2 {
+        let l = (n + 1 - i) / 2;
+        for j in 0..l {
+            for k in 0..l - j - 1 {
+                if p[2 * k + i] > p[2 * (k + 1) + i] {
+                    ans.push(Op::B(2 * k + i));
+                    p.swap(2 * k + i, 2 * (k + 1) + i);
                 }
             }
         }
-    });
-
-    eprintln!("{:?}", p);
+    }
 
     println!("{}", ans.len());
     for op in ans {
         match op {
-            Op::A(pos) => println!("A {}", pos + 1),
-            Op::B(pos) => println!("B {}", pos + 1),
+            Op::A(idx) => println!("A {}", idx + 1),
+            Op::B(idx) => println!("B {}", idx + 1),
         }
     }
 }
