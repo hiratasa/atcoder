@@ -19,7 +19,15 @@ src/%.rs:
 
 .PHONY: gen-impl
 gen-impl:
-	$(foreach target,$(TARGET),$(MAKE) src/$(CONTEST)/$(target).rs;)
+	@for target in $(TARGET); do \
+		if [[ $$target == *..* ]]; then \
+			for t in $$(eval echo {$${target}}); do \
+				$(MAKE) src/$(CONTEST)/$$t.rs; \
+			done \
+		else \
+			$(MAKE) src/$(CONTEST)/$${target}.rs; \
+		fi \
+	done
 
 .PHONY: gen
 gen:
