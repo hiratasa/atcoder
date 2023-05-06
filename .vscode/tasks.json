@@ -15,8 +15,8 @@
                 "echo": true,
                 "reveal": "silent",
                 "focus": false,
-                "panel": "shared",
-            },
+                "panel": "shared"
+            }
         }
     ],
     "inputs": [
