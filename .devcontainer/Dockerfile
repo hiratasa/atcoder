@@ -31,8 +31,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
 
-ENV RUST_VERSION 1.42.0
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${RUST_VERSION} \
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     # This should be done BEFORE chmod (because this modifies permission.)
     && cargo install cargo-snippet --features="binaries" --locked \
     && chmod a+w -R ${CARGO_HOME} ${RUSTUP_HOME}

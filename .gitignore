@@ -1,14 +1,3 @@
-*/*
-!*/*.cpp
-!*/*.rs
-!*/src/
-!*/src/*.rs
-!Cargo.toml*
-!Makefile
-!/.cargo/**/*
-!/.devcontainer/**/*
-/past*
-/ahc*
-/pgbattle*
-!/ahc001-rs
-!/ahc002-rs
+past*
+ahc*
+pgbattle*

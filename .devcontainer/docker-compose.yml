@@ -5,12 +5,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    
+
     volumes:
       - ..:/atcoder:cached
       - ~/.vimrc:/home/vscode/.vimrc
-      - rust-target:/atcoder/target
-    
+      - rust-target:/atcoder/rs/target
+
     command: sleep infinity
 
     environment:

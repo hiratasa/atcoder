@@ -3,20 +3,30 @@
 	"dockerComposeFile": "docker-compose.yml",
 	"service": "atcoder",
 	"workspaceFolder": "/atcoder",
-	// Set *default* container specific settings.json values on container create.
-	"settings": {
-		"terminal.integrated.shell.linux": "/bin/bash",
-		"rust.target_dir": "${containerWorkspaceFolder}/target/rls"
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"terminal.integrated.profiles.linux": {
+					"bash": {
+						"path": "bash",
+						"icon": "terminal-bash"
+					}
+				},
+				"terminal.integrated.defaultProfile.linux": "bash",
+				"rust-analyzer.linkedProjects": [
+					"rs/Cargo.toml"
+				],
+				"editor.formatOnSave": true
+			},
+			"extensions": [
+				"ms-azuretools.vscode-docker",
+				"rust-lang.rust-analyzer"
+			]
+		}
 	},
 	"remoteEnv": {
 		"RUST_BACKTRACE": "1"
 	},
-	// Add the IDs of extensions you want installed when the container is created.
-	"extensions": [
-		"ms-vscode.cpptools",
-		"ms-azuretools.vscode-docker",
-		"rust-lang.rust",
-	],
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Use 'postCreateCommand' to run commands after the container is created.

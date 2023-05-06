@@ -1,0 +1,6 @@
+*/*
+!*/*.cpp
+!Makefile
+past*
+ahc*
+/pgbattle*

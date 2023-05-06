@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "rs/Cargo.toml"
+    ],
+    "editor.formatOnSave": true
+}
