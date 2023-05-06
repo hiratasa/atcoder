@@ -17,7 +17,8 @@
 			},
 			"extensions": [
 				"ms-azuretools.vscode-docker",
-				"rust-lang.rust-analyzer"
+				"rust-lang.rust-analyzer",
+				"spadin.memento-inputs"
 			]
 		}
 	},

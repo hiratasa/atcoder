@@ -17,11 +17,15 @@ src/%.rs:
 	mkdir -p $(dir $@)
 	cp src/.template.rs $@
 
-.PHONY: generate
-generate:
+.PHONY: gen-impl
+gen-impl:
+	$(foreach target,$(TARGET),$(MAKE) src/$(CONTEST)/$(target).rs;)
+
+.PHONY: gen
+gen:
 	$(eval CONTEST := $(shell read -e -p "Contest name: " -i "$(shell cat .last-contest 2> /dev/null)" CONTEST && echo "$${CONTEST}" | tee .last-contest))
 	$(eval TARGET := $(shell read -e -p "Target name (space separated): " TARGET && echo "$${TARGET}"))
-	$(foreach target,$(TARGET),$(MAKE) src/$(CONTEST)/$(target).rs;)
+	$(MAKE) gen-impl CONTEST="$(CONTEST)" TARGET="$(TARGET)"
 
 .PHONY: snippet
 snippet:

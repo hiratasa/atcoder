@@ -4,9 +4,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "generate",
+            "label": "gen",
             "type": "shell",
-            "command": "make generate",
+            "command": "make gen-impl CONTEST=${input:contest} TARGET=\"${input:target}\"",
             "options": {
                 "cwd": "${workspaceFolder}/rs"
             },
@@ -14,9 +14,26 @@
             "presentation": {
                 "echo": true,
                 "reveal": "silent",
-                "focus": true,
+                "focus": false,
                 "panel": "shared",
             },
         }
     ],
+    "inputs": [
+        {
+            "id": "contest",
+            "type": "command",
+            "command": "memento.promptString",
+            "args": {
+                "id": "contest",
+                "description": "Contest name"
+            }
+        },
+        {
+            "id": "target",
+            "type": "promptString",
+            "default": "",
+            "description": "Target name (space separated)"
+        },
+    ]
 }
