@@ -14400,3 +14400,35 @@ path = "src/zone2021/f.rs"
 [[bin]]
 name = "zone2021-f2"
 path = "src/zone2021/f2.rs"
+
+[[bin]]
+name = "abc299-a"
+path = "src/abc299/a.rs"
+
+[[bin]]
+name = "abc299-b"
+path = "src/abc299/b.rs"
+
+[[bin]]
+name = "abc299-c"
+path = "src/abc299/c.rs"
+
+[[bin]]
+name = "abc299-d"
+path = "src/abc299/d.rs"
+
+[[bin]]
+name = "abc299-e"
+path = "src/abc299/e.rs"
+
+[[bin]]
+name = "abc299-f"
+path = "src/abc299/f.rs"
+
+[[bin]]
+name = "abc299-g"
+path = "src/abc299/g.rs"
+
+[[bin]]
+name = "abc299-h"
+path = "src/abc299/h.rs"
