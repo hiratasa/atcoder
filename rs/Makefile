@@ -23,9 +23,11 @@ gen-impl:
 		if [[ $$target == *..* ]]; then \
 			for t in $$(eval echo {$${target}}); do \
 				$(MAKE) src/$(CONTEST)/$$t.rs; \
+				code src/$(CONTEST)/$$t.rs; \
 			done \
 		else \
 			$(MAKE) src/$(CONTEST)/$${target}.rs; \
+			code src/$(CONTEST)/$${target}.rs; \
 		fi \
 	done
 
