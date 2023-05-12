@@ -177,4 +177,69 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let a = read_row::<usize>();
+
+    let mut nums = a
+        .citer()
+        .rev()
+        .scan((vec![false; m + 1], 0), |(seen, num_seen), x| {
+            if !seen[x] {
+                seen[x] = true;
+                *num_seen += 1;
+            }
+
+            Some(*num_seen)
+        })
+        .collect::<Vec<_>>();
+    nums.reverse();
+    nums.push(0);
+
+    let lasts = a
+        .citer()
+        .enumerate()
+        .fold(vec![0; m + 1], |mut lasts, (i, x)| {
+            lasts[x] = i;
+            lasts
+        });
+
+    let ans = (1..=m)
+        .rev()
+        .scan(
+            (
+                0,
+                0,
+                nums,
+                vec![0; n + 1],
+                vec![false; m + 1],
+                BinaryHeap::new(),
+            ),
+            |(idx, idx2, nums, t, used, q), i| {
+                while (nums[*idx] as i64 + t[*idx]) as usize >= i {
+                    q.push(Reverse((a[*idx], *idx)));
+                    *idx += 1;
+                    t[*idx] += t[*idx - 1];
+                }
+
+                while matches!(q.peek(), Some(&Reverse((x, j))) if used[x] || j < *idx2) {
+                    q.pop();
+                }
+
+                let (x, j) = q.pop().unwrap().0;
+
+                used[x] = true;
+                *idx2 = j;
+
+                if *idx < n {
+                    t[*idx] -= 1i64;
+                    t[lasts[x] + 1] += 1i64;
+                }
+
+                Some(x)
+            },
+        )
+        .collect::<Vec<_>>();
+
+    println!("{}", ans.citer().join(" "));
+}
