@@ -1,5 +1,17 @@
 {
     "rust-analyzer.linkedProjects": [
         "./rs/Cargo.toml"
-    ]
+    ],
+    "rust-analyzer.debug.engineSettings": {
+        "cppdbg": {
+            "miDebuggerPath": "/usr/local/cargo/bin/rust-gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": false
+                }
+            ],
+        }
+    },
 }
