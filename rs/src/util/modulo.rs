@@ -280,6 +280,7 @@ where
 impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
+        assert!(!rhs.is_zero());
         if self.0 == 0 {
             self
         } else {
@@ -292,6 +293,7 @@ impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: usize) -> Self {
+        assert_ne!(rhs, 0);
         if self.0 == 0 {
             self
         } else {
@@ -304,6 +306,7 @@ impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
 impl<M: Modulus> std::ops::Div<Mod<M>> for usize {
     type Output = Mod<M>;
     fn div(self, rhs: Mod<M>) -> Mod<M> {
+        assert!(!rhs.is_zero());
         if self == 0 {
             Mod::new(self)
         } else {
