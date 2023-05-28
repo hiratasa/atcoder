@@ -15,6 +15,7 @@ mod multiset;
 mod point;
 mod prime;
 mod segment_tree;
+mod slide_min;
 mod stringutil;
 mod suffix_array;
 mod treap;

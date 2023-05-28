@@ -1688,6 +1688,36 @@
       "}"
     ]
   },
+  "slidemin": {
+    "prefix": "slidemin",
+    "body": [
+      "#[allow(dead_code)]",
+      "fn slide_min<'a, T: PartialOrd + Copy>(a: &'a [T], len: usize) -> impl 'a + Iterator<Item = T> {",
+      "    assert!(len <= a.len());",
+      "    let q = a[..len - 1]",
+      "        .iter()",
+      "        .enumerate()",
+      "        .fold(VecDeque::new(), |mut q, (i, &x)| {",
+      "            while matches ! (q . back () , Some (& (_ , y ) ) if y >= x ) {",
+      "                q.pop_back();",
+      "            }",
+      "            q.push_back((i, x));",
+      "            q",
+      "        });",
+      "    a[len - 1..].iter().enumerate().scan(q, move |q, (i, &x)| {",
+      "        while matches ! (q . back () , Some (& (_ , y ) ) if y >= x ) {",
+      "            q.pop_back();",
+      "        }",
+      "        q.push_back((i + len - 1, x));",
+      "        let r = q.front().unwrap().1;",
+      "        if q.front().unwrap().0 == i {",
+      "            q.pop_front();",
+      "        }",
+      "        Some(r)",
+      "    })",
+      "}"
+    ]
+  },
   "stringutil": {
     "prefix": "stringutil",
     "body": [
