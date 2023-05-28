@@ -207,6 +207,32 @@ fn solve0(n: usize, a: i64, b: usize, c: i64, d: usize, x: &[i64]) -> i64 {
     r
 }
 
+#[allow(dead_code)]
+fn slide_min<'a, T: PartialOrd + Copy>(a: &'a [T], len: usize) -> impl 'a + Iterator<Item = T> {
+    assert!(len <= a.len());
+    let q = a[..len - 1]
+        .iter()
+        .enumerate()
+        .fold(VecDeque::new(), |mut q, (i, &x)| {
+            while matches ! (q . back () , Some (& (_ , y ) ) if y >= x ) {
+                q.pop_back();
+            }
+            q.push_back((i, x));
+            q
+        });
+    a[len - 1..].iter().enumerate().scan(q, move |q, (i, &x)| {
+        while matches ! (q . back () , Some (& (_ , y ) ) if y >= x ) {
+            q.pop_back();
+        }
+        q.push_back((i + len - 1, x));
+        let r = q.front().unwrap().1;
+        if q.front().unwrap().0 == i {
+            q.pop_front();
+        }
+        Some(r)
+    })
+}
+
 fn main() {
     let (n, a, b, c, d) = read_tuple!(usize, i64, usize, i64, usize);
     let x = read_row::<i64>();
@@ -228,53 +254,27 @@ fn main() {
 
             // 操作2
             let mut s = s0;
-            let mut q = VecDeque::new();
             let ii = i.saturating_sub(b);
-            let bb = min(i, b + 1);
-            for j in 0..bb {
-                while matches!(q.back(), Some(&(_, u)) if u >= dp[ii][j]) {
-                    q.pop_back();
-                }
-                q.push_back((j, dp[ii][j]));
-            }
-            for l in 0..=n - i {
-                dp[i][l] = max(dp[i][l], s - a + s - q.front().unwrap().1);
+            let prev = take(&mut dp[ii]);
+            for (l, z) in slide_min(&prev[..n + 1 - ii], i - ii + 1).enumerate() {
+                dp[i][l] = max(dp[i][l], s - a + s - z);
                 if l + i < n {
-                    if q.front().unwrap().0 == l {
-                        q.pop_front();
-                    }
-                    while matches!(q.back(), Some(&(_, u)) if u >= dp[ii][l + bb]) {
-                        q.pop_back();
-                    }
-                    q.push_back((l + bb, dp[ii][l + bb]));
                     s += x[l + i] - x[l];
                 }
             }
+            dp[ii] = prev;
 
             // 操作3
             let mut s = s0;
-            let mut q = VecDeque::new();
             let ii = i.saturating_sub(d);
-            let dd = min(i, d + 1);
-            for j in 0..dd {
-                while matches!(q.back(), Some(&(_, u)) if u >= dp[ii][j]) {
-                    q.pop_back();
-                }
-                q.push_back((j, dp[ii][j]));
-            }
-            for l in 0..=n - i {
-                dp[i][l] = max(dp[i][l], s - c + s - q.front().unwrap().1);
+            let prev = take(&mut dp[ii]);
+            for (l, z) in slide_min(&prev[..n + 1 - ii], i - ii + 1).enumerate() {
+                dp[i][l] = max(dp[i][l], s - c + s - z);
                 if l + i < n {
-                    if q.front().unwrap().0 == l {
-                        q.pop_front();
-                    }
-                    while matches!(q.back(), Some(&(_, u)) if u >= dp[ii][l + dd]) {
-                        q.pop_back();
-                    }
-                    q.push_back((l + dd, dp[ii][l + dd]));
                     s += x[l + i] - x[l];
                 }
             }
+            dp[ii] = prev;
 
             dp
         },
