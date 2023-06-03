@@ -17,6 +17,21 @@
                 "focus": false,
                 "panel": "shared"
             }
+        },
+        {
+            "label": "gen-ignored",
+            "type": "shell",
+            "command": "make gen-impl CONTEST=${input:contest-ignored} TARGET=\"${input:target}\"",
+            "options": {
+                "cwd": "${workspaceFolder}/rs-ignored"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared"
+            }
         }
     ],
     "inputs": [
@@ -26,6 +41,15 @@
             "command": "memento.promptString",
             "args": {
                 "id": "contest",
+                "description": "Contest name"
+            }
+        },
+        {
+            "id": "contest-ignored",
+            "type": "command",
+            "command": "memento.promptString",
+            "args": {
+                "id": "contest-ignored",
                 "description": "Contest name"
             }
         },
