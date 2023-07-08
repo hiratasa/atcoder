@@ -14756,3 +14756,31 @@ path = "src/arc163/c.rs"
 [[bin]]
 name = "arc163-d"
 path = "src/arc163/d.rs"
+
+[[bin]]
+name = "abc309-a"
+path = "src/abc309/a.rs"
+
+[[bin]]
+name = "abc309-b"
+path = "src/abc309/b.rs"
+
+[[bin]]
+name = "abc309-c"
+path = "src/abc309/c.rs"
+
+[[bin]]
+name = "abc309-d"
+path = "src/abc309/d.rs"
+
+[[bin]]
+name = "abc309-e"
+path = "src/abc309/e.rs"
+
+[[bin]]
+name = "abc309-f"
+path = "src/abc309/f.rs"
+
+[[bin]]
+name = "abc309-g"
+path = "src/abc309/g.rs"
