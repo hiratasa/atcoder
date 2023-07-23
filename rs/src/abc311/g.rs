@@ -177,4 +177,54 @@ where
 {
 }
 
-fn main() {}
+fn main() {
+    let (n, m) = read_tuple!(usize, usize);
+    let a = read_mat::<i64>(n);
+
+    let ans = (0..n)
+        .map(|i0| {
+            (i0 + 1..=n)
+                .scan(vec![(0i64, i64::MAX); m], |t, i| {
+                    let mut s = 0;
+                    for j in 0..m {
+                        s += a[i - 1][j];
+                        t[j].0 += s;
+                        t[j].1 = min(t[j].1, a[i - 1][j]);
+                    }
+
+                    Some(t.clone())
+                })
+                .map(|t| {
+                    let mut st = vec![(0, 0)];
+                    let mut l = vec![0; m];
+
+                    for j in 0..m {
+                        while st[st.len() - 1].1 >= t[j].1 {
+                            st.pop();
+                        }
+                        l[j] += -st[st.len() - 1].0;
+                        st.push(t[j]);
+                    }
+
+                    let mut st = vec![(0, 0)];
+
+                    for j in (0..m).rev() {
+                        let mut s = t[j].0;
+                        while st[st.len() - 1].1 >= t[j].1 {
+                            s = st[st.len() - 1].0;
+                            st.pop();
+                        }
+                        l[j] += s;
+                        st.push((s, t[j].1));
+                    }
+
+                    izip!(t, l).map(|((_, mi), s)| mi * s).max().unwrap()
+                })
+                .max()
+                .unwrap()
+        })
+        .max()
+        .unwrap();
+
+    println!("{}", ans);
+}
