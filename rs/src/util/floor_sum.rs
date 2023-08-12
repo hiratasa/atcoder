@@ -1,6 +1,10 @@
 // calc sum[x=0 to n-1] floor((a+x*b)/c)
 #[allow(dead_code)]
 fn floor_sum(n: usize, mut a: usize, mut b: usize, c: usize) -> usize {
+    if n == 0 {
+        return 0;
+    }
+
     let mut ret = 0;
 
     // if c < 0 {
