@@ -26,45 +26,45 @@ pub trait Modulus: Copy + Eq {
     fn modulus() -> usize;
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct StaticModulus<const M: usize>();
+
+impl<const M: usize> Modulus for StaticModulus<M> {
+    fn modulus() -> usize {
+        M
+    }
+}
+
 #[snippet("modulo")]
 macro_rules! define_static_mod {
-    ($m:expr, $modulus:ident, $mod:ident) => {
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-        pub struct $modulus();
-
-        impl Modulus for $modulus {
-            fn modulus() -> usize {
-                $m
-            }
-        }
-
+    ($m:expr, $mod:ident) => {
         #[allow(dead_code)]
-        pub type $mod = Mod<$modulus>;
+        pub type $mod = Mod<StaticModulus<$m>>;
     };
 }
 
 // 2^27
 #[snippet("modulo")]
-define_static_mod!(2013265921, Modulus2013265921, Mod2013265921);
+define_static_mod!(2013265921, Mod2013265921);
 
 // 2^26
 #[snippet("modulo")]
-define_static_mod!(1811939329, Modulus1811939329, Mod1811939329);
+define_static_mod!(1811939329, Mod1811939329);
 
 // 2^26
 #[snippet("modulo")]
-define_static_mod!(469762049, Modulus469762049, Mod469762049);
+define_static_mod!(469762049, Mod469762049);
 
 // 2^23
 #[snippet("modulo")]
-define_static_mod!(998244353, Modulus998244353, Mod998244353);
+define_static_mod!(998244353, Mod998244353);
 
 // 2^24
 #[snippet("modulo")]
-define_static_mod!(1224736769, Modulus1224736769, Mod1224736769);
+define_static_mod!(1224736769, Mod1224736769);
 
 #[snippet("modulo")]
-define_static_mod!(1000000007, Modulus1000000007, Mod1000000007);
+define_static_mod!(1000000007, Mod1000000007);
 
 // for dynamic modulus
 use std::sync::atomic::{AtomicUsize, Ordering};
