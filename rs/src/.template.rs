@@ -103,20 +103,17 @@ fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     }
 }
 
-trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+use easy_ext::ext;
+
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
 where
+    Self: IntoIterator<Item = &'a T>,
     T: 'a + Copy,
 {
     fn citer(self) -> std::iter::Copied<Self::IntoIter> {
         self.into_iter().copied()
     }
-}
-
-impl<'a, T, I> IterCopyExt<'a, T> for I
-where
-    I: IntoIterator<Item = &'a T>,
-    T: 'a + Copy,
-{
 }
 
 fn main() {}
