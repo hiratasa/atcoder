@@ -224,9 +224,7 @@ fn fft_complex(f: &mut Vec<Complex64>) {
     fft(
         f,
         &(0..n)
-            .map(|i| {
-                Complex64::from_polar(&1.0, &(2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
-            })
+            .map(|i| Complex64::from_polar(1.0, 2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
             .collect::<Vec<_>>(),
     );
 }
@@ -239,7 +237,7 @@ fn inv_fft_complex(f: &mut Vec<Complex64>) {
         f,
         &(0..n)
             .map(|i| {
-                Complex64::from_polar(&1.0, &(-2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
+                Complex64::from_polar(1.0, -2.0 * i as f64 * std::f64::consts::PI / (n as f64))
             })
             .collect::<Vec<_>>(),
     );
@@ -273,12 +271,10 @@ fn convolution_complex<T: Copy + num::ToPrimitive + num::FromPrimitive>(
         .collect::<Vec<_>>();
 
     let w_pow = (0..n)
-        .map(|i| Complex64::from_polar(&1.0, &(2.0 * i as f64 * std::f64::consts::PI / (n as f64))))
+        .map(|i| Complex64::from_polar(1.0, 2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
         .collect::<Vec<_>>();
     let iw_pow = (0..n)
-        .map(|i| {
-            Complex64::from_polar(&1.0, &(-2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
-        })
+        .map(|i| Complex64::from_polar(1.0, -2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
         .collect::<Vec<_>>();
     convolution_impl(&mut pf, &mut qf, &w_pow, &iw_pow, Complex64::from(n as f64));
 
@@ -510,7 +506,7 @@ fn test_fft_complex() {
     let mut b = a.clone();
     fft_complex(&mut b);
 
-    let e = Complex64::from_polar(&1.0, &(2.0 * std::f64::consts::PI / 4.0));
+    let e = Complex64::from_polar(1.0, 2.0 * std::f64::consts::PI / 4.0);
     let expected_vec = vec![
         a[0] + a[1] + a[2] + a[3],
         a[0] + e * a[1] + e.powi(2) * a[2] + e.powi(3) * a[3],

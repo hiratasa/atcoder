@@ -404,9 +404,7 @@ fn fft_complex(f: &mut Vec<Complex64>) {
     fft(
         f,
         &(0..n)
-            .map(|i| {
-                Complex64::from_polar(&1.0, &(2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
-            })
+            .map(|i| Complex64::from_polar(1.0, 2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
             .collect::<Vec<_>>(),
     );
 }
@@ -419,7 +417,7 @@ fn inv_fft_complex(f: &mut Vec<Complex64>) {
         f,
         &(0..n)
             .map(|i| {
-                Complex64::from_polar(&1.0, &(-2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
+                Complex64::from_polar(1.0, -2.0 * i as f64 * std::f64::consts::PI / (n as f64))
             })
             .collect::<Vec<_>>(),
     );

@@ -2,28 +2,34 @@
 name = "atcoder"
 version = "0.1.0"
 authors = ["hiratasa <36002166+hiratasa@users.noreply.github.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 cargo-snippet = "0.6"
-num = "=0.2.1"
-num-bigint = "=0.2.6"
-num-complex = "=0.2.4"
-num-integer = "=0.1.42"
-num-iter = "=0.1.40"
-num-rational = "=0.2.4"
-num-traits = "=0.2.11"
-num-derive = "=0.3.0"
-rustc-hash = "1.1.0"
-bitset-fixed = "0.1.0"
-itertools = "0.9.0"
-ordered-float = "1.0.2"
-itertools-num = "0.1.3"
-rand = { version = "0.7.3", features = ["small_rng"] }
-permutohedron = "0.2.4"
-proconio = { version = "=0.3.6", features = ["derive"] }
+
+once_cell = "=1.18.0"
+static_assertions = "=1.1.0"
+easy-ext = "=1.0.1"
+num = "=0.4.1"
+num-bigint = "=0.4.3"
+num-complex = "=0.4.3"
+num-integer = "=0.1.45"
+num-iter = "=0.1.43"
+num-rational = "=0.4.1"
+num-traits = "=0.2.15"
+num-derive = "=0.4.0"
+rand = { version = "=0.8.5", features = ["small_rng", "min_const_gen"] }
+lazy_static = "=1.4.0"
+ordered-float = "=3.7.0"
+permutohedron = "=0.2.4"
+itertools = "=0.11.0"
+itertools-num = "=0.1.3"
+bitset-fixed = "=0.1.0"
+proconio = { version = "=0.4.5", features = ["derive"] }
+rustc-hash = "=1.1.0"
+
 
 [[bin]]
 name = "abc001-a"

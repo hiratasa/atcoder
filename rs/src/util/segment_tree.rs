@@ -1150,7 +1150,7 @@ mod test {
             );
 
             // 区間取得3
-            let pos2 = rng.gen_range(pos, n + 1);
+            let pos2 = rng.gen_range(pos..=n);
             assert_eq!(
                 st.query(pos..pos2).0,
                 arr[pos..pos2]
@@ -1237,7 +1237,7 @@ mod test {
             );
 
             // 区間取得3
-            let pos2 = (rng.gen_range(pos.0, n + 1), rng.gen_range(pos.1, n + 1));
+            let pos2 = (rng.gen_range(pos.0..=n), rng.gen_range(pos.1..=n));
             assert_eq!(
                 st.query(pos.0..pos2.0, pos.1..pos2.1).0,
                 values

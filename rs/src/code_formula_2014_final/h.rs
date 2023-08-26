@@ -157,7 +157,7 @@ fn main() {
     use rand::Rng;
     use rand::SeedableRng;
     let mut rng = SmallRng::seed_from_u64(42);
-    let mut ab = repeat_with(|| (rng.gen_range(1, 50001), rng.gen_range(1, 50001)))
+    let mut ab = repeat_with(|| (rng.gen_range(1..50001), rng.gen_range(1..50001)))
         .take(n)
         .collect::<Vec<_>>();
     let start = std::time::Instant::now();

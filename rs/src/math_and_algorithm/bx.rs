@@ -228,7 +228,7 @@ fn main() {
                 );
             }
 
-            let m = min(rng.gen_range(1, 10), n * (n - 1));
+            let m = min(rng.gen_range(1..10), n * (n - 1));
 
             buf.clear();
             buf.extend(

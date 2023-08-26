@@ -45,7 +45,7 @@ mod test {
     fn test_slide_min() {
         let mut rng = SmallRng::seed_from_u64(42);
         let n = 100;
-        let a = repeat_with(|| rng.gen_range(0, 1000))
+        let a = repeat_with(|| rng.gen_range(0..1000))
             .take(n)
             .collect::<Vec<_>>();
         let len = 20;
@@ -60,7 +60,7 @@ mod test {
     fn test_slide_min_maxlen() {
         let mut rng = SmallRng::seed_from_u64(42);
         let n = 100;
-        let a = repeat_with(|| rng.gen_range(0, 1000))
+        let a = repeat_with(|| rng.gen_range(0..1000))
             .take(n)
             .collect::<Vec<_>>();
         let len = n;

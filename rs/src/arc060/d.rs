@@ -505,11 +505,11 @@ fn check() {
     use rand::{Rng, SeedableRng};
     let mut rng = rand::rngs::SmallRng::from_entropy();
     for _ in 0..10000000 {
-        let n = rng.gen_range(1, 5);
-        let t = repeat_with(|| rng.gen_range(b'a', b'z' + 1) as char)
+        let n = rng.gen_range(1..5);
+        let t = repeat_with(|| rng.gen_range(b'a'..=b'z') as char)
             .take(n)
             .collect::<Vec<_>>();
-        let m = rng.gen_range(2, 5);
+        let m = rng.gen_range(2..5);
         let w = repeat(t.citer())
             .take(m)
             .flatten()
