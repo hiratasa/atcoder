@@ -30,6 +30,9 @@ use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
 use rustc_hash::FxHashSet;
 
+#[allow(unused_imports)]
+use proconio::input;
+
 // vec with some initial value
 #[allow(unused_macros)]
 macro_rules! vvec {
