@@ -7780,22 +7780,6 @@ name = "agc061-d"
 path = "src/agc061/d.rs"
 
 [[bin]]
-name = "ahc001-a"
-path = "src/ahc001/a.rs"
-
-[[bin]]
-name = "ahc001-a2"
-path = "src/ahc001/a2.rs"
-
-[[bin]]
-name = "ahc002-a"
-path = "src/ahc002/a.rs"
-
-[[bin]]
-name = "ahc002-a2"
-path = "src/ahc002/a2.rs"
-
-[[bin]]
 name = "aising2019-a"
 path = "src/aising2019/a.rs"
 
@@ -13462,66 +13446,6 @@ path = "src/panasonic2020/d.rs"
 [[bin]]
 name = "panasonic2020-e"
 path = "src/panasonic2020/e.rs"
-
-[[bin]]
-name = "past202303-a"
-path = "src/past202303/a.rs"
-
-[[bin]]
-name = "past202303-b"
-path = "src/past202303/b.rs"
-
-[[bin]]
-name = "past202303-c"
-path = "src/past202303/c.rs"
-
-[[bin]]
-name = "past202303-d"
-path = "src/past202303/d.rs"
-
-[[bin]]
-name = "past202303-e"
-path = "src/past202303/e.rs"
-
-[[bin]]
-name = "past202303-f"
-path = "src/past202303/f.rs"
-
-[[bin]]
-name = "past202303-g"
-path = "src/past202303/g.rs"
-
-[[bin]]
-name = "past202303-h"
-path = "src/past202303/h.rs"
-
-[[bin]]
-name = "past202303-i"
-path = "src/past202303/i.rs"
-
-[[bin]]
-name = "past202303-j"
-path = "src/past202303/j.rs"
-
-[[bin]]
-name = "past202303-k"
-path = "src/past202303/k.rs"
-
-[[bin]]
-name = "past202303-l"
-path = "src/past202303/l.rs"
-
-[[bin]]
-name = "past202303-m"
-path = "src/past202303/m.rs"
-
-[[bin]]
-name = "past202303-n"
-path = "src/past202303/n.rs"
-
-[[bin]]
-name = "past202303-o"
-path = "src/past202303/o.rs"
 
 [[bin]]
 name = "practice2-a"
