@@ -26,9 +26,11 @@ pub trait Modulus: Copy + Eq {
     fn modulus() -> usize;
 }
 
+#[snippet("modulo")]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct StaticModulus<const M: usize>();
 
+#[snippet("modulo")]
 impl<const M: usize> Modulus for StaticModulus<M> {
     fn modulus() -> usize {
         M
@@ -152,7 +154,6 @@ where
     T: num::traits::Unsigned,
 {
     fn from(v: T) -> Self {
-        use std::convert::TryFrom;
         Mod::new(usize::try_from(v).ok().unwrap())
     }
 }
