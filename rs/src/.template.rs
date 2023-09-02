@@ -32,6 +32,10 @@ use rustc_hash::FxHashSet;
 
 #[allow(unused_imports)]
 use proconio::input;
+#[allow(unused_imports)]
+use proconio::marker::{Bytes, Chars, Isize1, Usize1};
+#[allow(unused_imports)]
+use proconio::source::{Readable, Source};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -113,6 +117,19 @@ where
 {
     fn citer(self) -> std::iter::Copied<Self::IntoIter> {
         self.into_iter().copied()
+    }
+}
+
+enum Digits {}
+
+impl Readable for Digits {
+    type Output = Vec<usize>;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> Vec<usize> {
+        source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect()
     }
 }
 
