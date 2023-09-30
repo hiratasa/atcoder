@@ -15090,3 +15090,31 @@ path = "src/abc321/f.rs"
 [[bin]]
 name = "abc321-g"
 path = "src/abc321/g.rs"
+
+[[bin]]
+name = "abc322-a"
+path = "src/abc322/a.rs"
+
+[[bin]]
+name = "abc322-b"
+path = "src/abc322/b.rs"
+
+[[bin]]
+name = "abc322-c"
+path = "src/abc322/c.rs"
+
+[[bin]]
+name = "abc322-d"
+path = "src/abc322/d.rs"
+
+[[bin]]
+name = "abc322-e"
+path = "src/abc322/e.rs"
+
+[[bin]]
+name = "abc322-f"
+path = "src/abc322/f.rs"
+
+[[bin]]
+name = "abc322-g"
+path = "src/abc322/g.rs"
