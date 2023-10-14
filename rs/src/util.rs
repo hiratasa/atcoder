@@ -21,4 +21,5 @@ mod stringutil;
 mod suffix_array;
 mod treap;
 mod union_find;
+mod wavelet_matrix;
 mod z_algorithm;
