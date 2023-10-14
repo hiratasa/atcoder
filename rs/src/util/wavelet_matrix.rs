@@ -231,6 +231,26 @@ impl WaveletMatrix {
         end_idx - begin_idx
     }
 
+    // [begin, end)でのval未満の値の出現回数
+    // O(W)
+    fn rank_below(&self, begin: usize, end: usize, val: Value) -> usize {
+        self.bits
+            .iter()
+            .enumerate()
+            .fold((0, begin, end), |(num, begin, end), (i, bv)| {
+                if val & (1 << (Self::W - 1 - i)) == 0 {
+                    (num, bv.rank0(begin), bv.rank0(end))
+                } else {
+                    (
+                        num + bv.rank0(end) - bv.rank0(begin),
+                        bv.num0() + bv.rank1(begin),
+                        bv.num0() + bv.rank1(end),
+                    )
+                }
+            })
+            .0
+    }
+
     // nth番目のvalの出現位置
     // O(W * log(n))
     fn select(&self, nth: usize, val: Value) -> Option<usize> {
@@ -355,6 +375,26 @@ mod tests {
                     assert_eq!(
                         rank,
                         wm.rank(i, j, value),
+                        "start={i}, end={j}, value={value}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_rank_below() {
+        let a = [1, 100, 34, 22, 9, 8, 77777, 6, 5, 34, 22, 9, 1, 4];
+        let wm = WaveletMatrix::new(&a);
+
+        for i in 0..a.len() {
+            for j in i + 1..a.len() {
+                for value in a.iter().copied().flat_map(|x| [x, x + 1]).chain(once(42)) {
+                    let rank = a[i..j].iter().filter(|&&x| x < value).count();
+
+                    assert_eq!(
+                        rank,
+                        wm.rank_below(i, j, value),
                         "start={i}, end={j}, value={value}"
                     );
                 }
