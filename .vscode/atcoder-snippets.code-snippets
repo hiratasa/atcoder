@@ -1281,6 +1281,11 @@
       "    fn is_one(&self) -> bool {",
       "        self.0 == 1",
       "    }",
+      "}",
+      "impl<M: Modulus> rand::distributions::Distribution<Mod<M>> for rand::distributions::Standard {",
+      "    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Mod<M> {",
+      "        Mod::new(rng.gen_range(0..M::modulus()))",
+      "    }",
       "}"
     ]
   },

@@ -368,6 +368,13 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
+#[snippet("modulo")]
+impl<M: Modulus> rand::distributions::Distribution<Mod<M>> for rand::distributions::Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Mod<M> {
+        Mod::new(rng.gen_range(0..M::modulus()))
+    }
+}
+
 #[snippet("modulo_fact")]
 #[allow(dead_code)]
 fn generate_fact<M: Modulus>(n: usize) -> (Vec<Mod<M>>, Vec<Mod<M>>, Vec<Mod<M>>) {
