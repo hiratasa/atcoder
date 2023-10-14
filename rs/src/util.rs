@@ -8,6 +8,7 @@ mod floor_sum;
 mod fps;
 mod graph;
 mod iterext;
+mod matrix;
 mod max_flow;
 mod min_cost_flow;
 mod modulo;
