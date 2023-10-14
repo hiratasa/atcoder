@@ -272,11 +272,7 @@ impl WaveletMatrix {
                     bv.select1(idx.checked_sub(bv.num0())?)?
                 };
 
-                let b = bv.get(idx);
-
-                if (val & (1 << i) > 0) != b {
-                    return None;
-                }
+                assert_eq!((val & (1 << i) > 0), bv.get(idx));
 
                 Some(idx)
             })
