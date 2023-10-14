@@ -49,12 +49,12 @@ impl BitVector {
     }
 
     // [0, i)の0の個数
-    fn rank0(&self, i: usize) -> usize {
-        i - self.rank1(i)
+    fn count0(&self, i: usize) -> usize {
+        i - self.count1(i)
     }
 
     // [0, i)の1の個数
-    fn rank1(&self, i: usize) -> usize {
+    fn count1(&self, i: usize) -> usize {
         if i / Self::W >= self.blocks.len() {
             self.ranks[self.ranks.len() - 1]
         } else {
@@ -201,9 +201,9 @@ impl WaveletMatrix {
                 let b = bv.get(idx);
 
                 if !b {
-                    (2 * val, bv.rank0(idx))
+                    (2 * val, bv.count0(idx))
                 } else {
-                    (2 * val + 1, bv.num0() + bv.rank1(idx))
+                    (2 * val + 1, bv.num0() + bv.count1(idx))
                 }
             })
             .0
@@ -215,16 +215,16 @@ impl WaveletMatrix {
     fn value_idx(&self, idx: usize, val: Value) -> usize {
         self.bits.iter().enumerate().fold(idx, |idx, (i, bv)| {
             if val & (1 << (Self::W - 1 - i)) == 0 {
-                bv.rank0(idx)
+                bv.count0(idx)
             } else {
-                bv.num0() + bv.rank1(idx)
+                bv.num0() + bv.count1(idx)
             }
         })
     }
 
     // [begin, end)でのvalの出現回数
     // O(W)
-    fn rank(&self, begin: usize, end: usize, val: Value) -> usize {
+    fn count(&self, begin: usize, end: usize, val: Value) -> usize {
         let begin_idx = self.value_idx(begin, val);
         let end_idx = self.value_idx(end, val);
 
@@ -233,18 +233,18 @@ impl WaveletMatrix {
 
     // [begin, end)でのval未満の値の出現回数
     // O(W)
-    fn rank_below(&self, begin: usize, end: usize, val: Value) -> usize {
+    fn count_below(&self, begin: usize, end: usize, val: Value) -> usize {
         self.bits
             .iter()
             .enumerate()
             .fold((0, begin, end), |(num, begin, end), (i, bv)| {
                 if val & (1 << (Self::W - 1 - i)) == 0 {
-                    (num, bv.rank0(begin), bv.rank0(end))
+                    (num, bv.count0(begin), bv.count0(end))
                 } else {
                     (
-                        num + bv.rank0(end) - bv.rank0(begin),
-                        bv.num0() + bv.rank1(begin),
-                        bv.num0() + bv.rank1(end),
+                        num + bv.count0(end) - bv.count0(begin),
+                        bv.num0() + bv.count1(begin),
+                        bv.num0() + bv.count1(end),
                     )
                 }
             })
@@ -286,16 +286,16 @@ impl WaveletMatrix {
         self.bits
             .iter()
             .fold((0, begin, end, r), |(val, begin, end, r), bv| {
-                let num1 = bv.rank1(end) - bv.rank1(begin);
+                let num1 = bv.count1(end) - bv.count1(begin);
                 let num0 = (end - begin) - num1;
 
                 if r < num0 {
-                    (val * 2, bv.rank0(begin), bv.rank0(end), r)
+                    (val * 2, bv.count0(begin), bv.count0(end), r)
                 } else {
                     (
                         val * 2 + 1,
-                        bv.num0() + bv.rank1(begin),
-                        bv.num0() + bv.rank1(end),
+                        bv.num0() + bv.count1(begin),
+                        bv.num0() + bv.count1(end),
                         r - num0,
                     )
                 }
@@ -321,8 +321,8 @@ mod tests {
         let mut rank0 = 0;
         let mut rank1 = 0;
         for i in 0..=v.len() {
-            assert_eq!(rank0, bv.rank0(i));
-            assert_eq!(rank1, bv.rank1(i));
+            assert_eq!(rank0, bv.count0(i));
+            assert_eq!(rank1, bv.count1(i));
 
             if i < v.len() {
                 if v[i] {
@@ -370,7 +370,7 @@ mod tests {
 
                     assert_eq!(
                         rank,
-                        wm.rank(i, j, value),
+                        wm.count(i, j, value),
                         "start={i}, end={j}, value={value}"
                     );
                 }
@@ -390,7 +390,7 @@ mod tests {
 
                     assert_eq!(
                         rank,
-                        wm.rank_below(i, j, value),
+                        wm.count_below(i, j, value),
                         "start={i}, end={j}, value={value}"
                     );
                 }
