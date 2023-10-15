@@ -7,6 +7,7 @@ use std::iter::once;
 
 trait MatrixElement:
     Copy
+    + std::fmt::Debug
     + std::ops::Add<Output = Self>
     + std::ops::AddAssign
     + std::ops::Sub<Output = Self>
@@ -23,6 +24,7 @@ trait MatrixElement:
 
 impl<T> MatrixElement for T where
     T: Copy
+        + std::fmt::Debug
         + std::ops::Add<Output = Self>
         + std::ops::AddAssign
         + std::ops::Sub<Output = Self>
@@ -153,10 +155,11 @@ where
     std::mem::take(&mut dets[n])
 }
 
-// 行列Bを基本変形で単位行列に変換し、そのときのAと変換の行列式を返す
+// det(A+xB)をdet(A'+xI)/(d*x^k)の形に変換し、(d, k)を返す
+// 恒等的に0の場合はNoneを返す
 // O(N^3)
 #[allow(dead_code)]
-fn b_to_identity<T>(a: &mut [Vec<T>], b: &mut [Vec<T>]) -> Option<T>
+fn xb_to_xidentity<T>(a: &mut [Vec<T>], b: &mut [Vec<T>]) -> Option<(T, usize)>
 where
     T: MatrixElement,
 {
@@ -164,8 +167,31 @@ where
     assert!(b.len() == n);
 
     let mut det = T::one();
+    let mut deg = 0;
     for idx in 0..n {
-        let idx2 = (idx..n).find(|&i| !b[i][idx].is_zero())?;
+        let idx2 = if let Some(idx2) = (idx..n).find(|&i| !b[i][idx].is_zero()) {
+            idx2
+        } else {
+            // Bのidx番目の列が全て0なので、A+xB全体のidx番目の列にxを掛け、Aから項を持ってくる
+            deg += 1;
+            for i in 0..n {
+                assert!(b[i][idx].is_zero());
+                b[i][idx] = a[i][idx];
+                a[i][idx] = T::zero();
+            }
+
+            // idx行目より前を再度履き出す
+            for idx2 in 0..idx {
+                let c = -b[idx2][idx];
+                for i in 0..n {
+                    a[i][idx] = a[i][idx] + a[i][idx2] * c;
+                    b[i][idx] = b[i][idx] + b[i][idx2] * c;
+                }
+            }
+
+            // 改めて非零の行を探す
+            (idx..n).find(|&i| !b[i][idx].is_zero())?
+        };
         a.swap(idx, idx2);
         b.swap(idx, idx2);
 
@@ -193,19 +219,26 @@ where
         }
     }
 
-    Some(det)
+    Some((det, deg))
 }
 
-// det(A+xB) (Bが正則の場合)
+// det(A+xB)
+// O(N^3)
 #[allow(dead_code)]
-fn calc_det_a_xb_if_b_regular<T>(a: &[Vec<T>], b: &[Vec<T>]) -> Option<Vec<T>>
+fn calc_det_a_xb<T>(a: &[Vec<T>], b: &[Vec<T>]) -> Vec<T>
 where
     T: MatrixElement,
 {
+    let n = a.len();
+    assert!(b.len() == n);
+
     let mut a = a.to_vec();
     let mut b = b.to_vec();
 
-    let d = b_to_identity(&mut a, &mut b)?;
+    // 適当な変形でdet(A'+xI)/(d*x^k) の形にする
+    let Some((d, k)) = xb_to_xidentity(&mut a, &mut b) else {
+        return vec![T::zero()];
+    };
 
     // det(A'-xI)
     let mut poly = characteristic_polynomial(&a);
@@ -220,64 +253,9 @@ where
     poly.iter_mut().for_each(|v| {
         *v = *v / d;
     });
+    poly.drain(0..k);
 
-    Some(poly)
-}
-
-// det(A+xB)
-// O(N^3)
-#[allow(dead_code)]
-fn calc_det_a_xb<T>(a: &[Vec<T>], b: &[Vec<T>]) -> Vec<T>
-where
-    T: MatrixElement + std::convert::From<usize>,
-{
-    let n = a.len();
-    assert!(b.len() == n);
-
-    if b.iter().all(|row| row.iter().all(|v| v.is_zero())) {
-        return vec![calc_det(a)];
-    }
-
-    // Bが正則であれば、適当な変形でdet(C+xI)の形にできる
-    // Bが正則でない場合でも、乱数rに対してz=(x-r)^(-1)として、det(B+z(A+rB))/z^n を求めればよい
-    for r in 0.. {
-        let r = T::from(r);
-
-        // C=A+rB
-        let c = (0..n)
-            .map(|i| (0..n).map(|j| a[i][j] + r * b[i][j]).collect::<Vec<_>>())
-            .collect::<Vec<_>>();
-
-        let mut poly = match calc_det_a_xb_if_b_regular(b, &c) {
-            Some(poly) => poly,
-            _ => continue,
-        };
-
-        // y = z^(-1) として det()/z^n
-        poly.reverse();
-
-        // y = x - r
-        let mut det = vec![T::zero(); n + 1];
-        let mut t = vec![T::one()];
-        det[0] = poly[0];
-        for i in 1..=n {
-            // * (x-r)
-            t = izip!(
-                once(T::zero()).chain(t.iter().copied()),
-                t.iter().copied().map(|v| -v * r).chain(once(T::zero()))
-            )
-            .map(|(v, u)| v + u)
-            .collect::<Vec<_>>();
-
-            for (j, &v) in t.iter().enumerate() {
-                det[j] += v * poly[i];
-            }
-        }
-
-        return det;
-    }
-
-    unreachable!()
+    poly
 }
 
 #[cfg(test)]
@@ -352,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn test_b_to_identity() {
+    fn test_xb_to_xidentity() {
         let mut a = vec![
             vec![Mod::new(1), Mod::new(2)],
             vec![Mod::new(3), Mod::new(4)],
@@ -364,7 +342,7 @@ mod tests {
 
         let det = calc_det(&b);
 
-        assert_eq!(1 / det, b_to_identity(&mut a, &mut b).unwrap());
+        assert_eq!((1 / det, 0), xb_to_xidentity(&mut a, &mut b).unwrap());
         assert_eq!(
             vec![vec![Mod::one(), Mod::zero()], vec![Mod::zero(), Mod::one()]],
             b
@@ -379,43 +357,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calc_det_a_xb_if_b_regular() {
-        let a = vec![
-            vec![Mod::new(1), Mod::new(2)],
-            vec![Mod::new(3), Mod::new(4)],
-        ];
-        let b = vec![
-            vec![Mod::new(5), Mod::new(6)],
-            vec![Mod::new(7), Mod::new(8)],
-        ];
-
-        assert_eq!(
-            Some(vec![-Mod::new(2), -Mod::new(4), -Mod::new(2)]),
-            calc_det_a_xb_if_b_regular(&a, &b)
-        );
-    }
-
-    #[test]
-    fn test_calc_det_a_xb_if_b_regular3() {
-        let a = vec![
-            vec![Mod::new(2), Mod::new(2), Mod::new(3)],
-            vec![Mod::new(4), Mod::new(5), Mod::new(6)],
-            vec![Mod::new(7), Mod::new(8), Mod::new(9)],
-        ];
-        let b = vec![
-            vec![Mod::new(10), Mod::new(11), Mod::new(12)],
-            vec![Mod::new(13), Mod::new(14), Mod::new(15)],
-            vec![Mod::new(16), Mod::new(17), Mod::new(19)],
-        ];
-
-        assert_eq!(
-            Some(vec![-Mod::new(3), -Mod::new(4), Mod::new(5), -Mod::new(3)]),
-            calc_det_a_xb_if_b_regular(&a, &b)
-        );
-    }
-
-    #[test]
-    fn test_calc_det_a_xb2() {
+    fn test_calc_det_a_xb_b_regular_deg2() {
         let a = vec![
             vec![Mod::new(1), Mod::new(2)],
             vec![Mod::new(3), Mod::new(4)],
@@ -432,7 +374,7 @@ mod tests {
     }
 
     #[test]
-    fn test_calc_det_a_xb3() {
+    fn test_calc_det_a_xb_b_regular_deg3() {
         let a = vec![
             vec![Mod::new(2), Mod::new(2), Mod::new(3)],
             vec![Mod::new(4), Mod::new(5), Mod::new(6)],
@@ -448,5 +390,72 @@ mod tests {
             vec![-Mod::new(3), -Mod::new(4), Mod::new(5), -Mod::new(3)],
             calc_det_a_xb(&a, &b)
         );
+    }
+
+    #[test]
+    fn test_calc_det_a_xb_b_nonregular_deg3_1() {
+        let a = vec![
+            vec![Mod::new(2), Mod::new(2), Mod::new(3)],
+            vec![Mod::new(4), Mod::new(5), Mod::new(6)],
+            vec![Mod::new(7), Mod::new(8), Mod::new(9)],
+        ];
+        let b = vec![
+            vec![Mod::new(10), Mod::new(0), Mod::new(12)],
+            vec![Mod::new(13), Mod::new(0), Mod::new(15)],
+            vec![Mod::new(16), Mod::new(0), Mod::new(19)],
+        ];
+
+        assert_eq!(
+            vec![-Mod::new(3), -Mod::new(28), Mod::new(24)],
+            calc_det_a_xb(&a, &b)
+        );
+    }
+
+    #[test]
+    fn test_calc_det_a_xb3_b_nonregular_deg3_2() {
+        let a = vec![
+            vec![Mod::new(2), Mod::new(2), Mod::new(3)],
+            vec![Mod::new(4), Mod::new(5), Mod::new(6)],
+            vec![Mod::new(7), Mod::new(8), Mod::new(9)],
+        ];
+        let b = vec![
+            vec![Mod::new(1), Mod::new(2), Mod::new(3)],
+            vec![Mod::new(2), Mod::new(4), Mod::new(6)],
+            vec![Mod::new(3), Mod::new(6), Mod::new(9)],
+        ];
+
+        assert_eq!(vec![-Mod::new(3), -Mod::new(3)], calc_det_a_xb(&a, &b));
+    }
+
+    #[test]
+    fn test_calc_det_a_xb3_b_nonregular_deg3_equal0_1() {
+        let a = vec![
+            vec![Mod::new(2), Mod::new(0), Mod::new(3)],
+            vec![Mod::new(4), Mod::new(0), Mod::new(6)],
+            vec![Mod::new(7), Mod::new(0), Mod::new(9)],
+        ];
+        let b = vec![
+            vec![Mod::new(10), Mod::new(0), Mod::new(12)],
+            vec![Mod::new(13), Mod::new(0), Mod::new(15)],
+            vec![Mod::new(16), Mod::new(0), Mod::new(19)],
+        ];
+
+        assert_eq!(vec![Mod::new(0)], calc_det_a_xb(&a, &b));
+    }
+
+    #[test]
+    fn test_calc_det_a_xb3_b_nonregular_deg3_equal0_2() {
+        let a = vec![
+            vec![Mod::new(2), Mod::new(2), Mod::new(3)],
+            vec![Mod::new(4), Mod::new(4), Mod::new(6)],
+            vec![Mod::new(7), Mod::new(6), Mod::new(9)],
+        ];
+        let b = vec![
+            vec![Mod::new(1), Mod::new(2), Mod::new(3)],
+            vec![Mod::new(2), Mod::new(4), Mod::new(6)],
+            vec![Mod::new(3), Mod::new(6), Mod::new(9)],
+        ];
+
+        assert_eq!(vec![Mod::new(0)], calc_det_a_xb(&a, &b));
     }
 }
