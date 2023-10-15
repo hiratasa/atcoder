@@ -165,7 +165,7 @@ where
 
     let mut det = T::one();
     for idx in 0..n {
-        let idx2 = (idx..n).find(|&idx| !b[idx][idx].is_zero())?;
+        let idx2 = (idx..n).find(|&i| !b[i][idx].is_zero())?;
         a.swap(idx, idx2);
         b.swap(idx, idx2);
 
