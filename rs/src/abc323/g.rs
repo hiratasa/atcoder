@@ -445,7 +445,10 @@ where
             _ => return T::zero(),
         };
 
-        a.swap(i, idx);
+        if i != idx {
+            a.swap(i, idx);
+            det *= -T::one();
+        }
 
         det *= a[i][i];
         let c = T::one() / a[i][i];
@@ -590,8 +593,11 @@ where
                 // 非零の行がなかった場合でも、再度の履き出しによりAのidx列目に0以外の値が出現している場合があるので、再度同様の手順を繰り返す
             }
         };
-        a.swap(idx, idx2);
-        b.swap(idx, idx2);
+        if idx != idx2 {
+            a.swap(idx, idx2);
+            b.swap(idx, idx2);
+            det *= -T::one();
+        }
 
         let c = T::one() / b[idx][idx];
         det *= c;
