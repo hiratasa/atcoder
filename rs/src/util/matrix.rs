@@ -3,8 +3,6 @@ use itertools::{izip, Itertools};
 #[allow(unused_imports)]
 use num::{One, Zero};
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, Rng, SeedableRng};
-#[allow(unused_imports)]
 use std::iter::once;
 
 trait MatrixElement:
@@ -231,17 +229,19 @@ where
 #[allow(dead_code)]
 fn calc_det_a_xb<T>(a: &[Vec<T>], b: &[Vec<T>]) -> Vec<T>
 where
-    T: MatrixElement,
-    rand::distributions::Standard: rand::distributions::Distribution<T>,
+    T: MatrixElement + std::convert::From<usize>,
 {
     let n = a.len();
     assert!(b.len() == n);
 
+    if b.iter().all(|row| row.iter().all(|v| v.is_zero())) {
+        return vec![calc_det(a)];
+    }
+
     // Bが正則であれば、適当な変形でdet(C+xI)の形にできる
     // Bが正則でない場合でも、乱数rに対してz=(x-r)^(-1)として、det(B+z(A+rB))/z^n を求めればよい
-    let mut rng = SmallRng::seed_from_u64(42);
-    loop {
-        let r: T = rng.gen();
+    for r in 0.. {
+        let r = T::from(r);
 
         // C=A+rB
         let c = (0..n)
@@ -276,6 +276,8 @@ where
 
         return det;
     }
+
+    unreachable!()
 }
 
 #[cfg(test)]
