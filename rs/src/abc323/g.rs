@@ -563,24 +563,32 @@ where
             idx2
         } else {
             // Bのidx番目の列が全て0なので、A+xB全体のidx番目の列にxを掛け、Aから項を持ってくる
-            deg += 1;
-            for i in 0..n {
-                assert!(b[i][idx].is_zero());
-                b[i][idx] = a[i][idx];
-                a[i][idx] = T::zero();
-            }
-
-            // idx行目より前を再度履き出す
-            for idx2 in 0..idx {
-                let c = -b[idx2][idx];
-                for i in 0..n {
-                    a[i][idx] = a[i][idx] + a[i][idx2] * c;
-                    b[i][idx] = b[i][idx] + b[i][idx2] * c;
+            loop {
+                deg += 1;
+                if deg > n {
+                    return None;
                 }
-            }
+                for i in 0..n {
+                    assert!(b[i][idx].is_zero());
+                    b[i][idx] = a[i][idx];
+                    a[i][idx] = T::zero();
+                }
 
-            // 改めて非零の行を探す
-            (idx..n).find(|&i| !b[i][idx].is_zero())?
+                // idx行目より前を再度履き出す
+                for idx2 in 0..idx {
+                    let c = -b[idx2][idx];
+                    for i in 0..n {
+                        a[i][idx] = a[i][idx] + a[i][idx2] * c;
+                        b[i][idx] = b[i][idx] + b[i][idx2] * c;
+                    }
+                }
+
+                // 改めて非零の行を探す
+                if let Some(idx2) = (idx..n).find(|&i| !b[i][idx].is_zero()) {
+                    break idx2;
+                }
+                // 非零の行がなかった場合でも、再度の履き出しによりAのidx列目に0以外の値が出現している場合があるので、再度同様の手順を繰り返す
+            }
         };
         a.swap(idx, idx2);
         b.swap(idx, idx2);
