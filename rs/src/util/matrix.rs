@@ -272,6 +272,40 @@ where
     poly
 }
 
+// det(A+xB)をラグランジュ補間で求める
+// O(N^4)
+#[allow(dead_code)]
+fn calc_det_a_xb_by_lagrange_interpolation<T>(a: &[Vec<T>], b: &[Vec<T>]) -> Vec<T>
+where
+    T: crate::util::lagrange_interpolation::FieldValue + std::convert::From<usize>,
+{
+    use crate::util::lagrange_interpolation::*;
+
+    let n = a.len();
+    let xy = (0..=n)
+        .map(|x| {
+            let x = T::from(x);
+
+            // A+xB
+            let c = a
+                .iter()
+                .zip(b.iter())
+                .map(|(row_a, row_b)| {
+                    row_a
+                        .iter()
+                        .zip(row_b.iter())
+                        .map(|(&c, &d)| c + x * d)
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+
+            (x, calc_det(&c))
+        })
+        .collect::<Vec<_>>();
+
+    lagrange_interpolation(&xy)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -499,5 +533,78 @@ mod tests {
         ];
 
         assert_eq!(vec![Mod::new(0)], calc_det_a_xb(&a, &b));
+    }
+
+    #[test]
+    fn test_calc_det_a_xb_vs_lagrange_interpolation() {
+        use rand::{rngs::SmallRng, Rng, SeedableRng};
+
+        let mut rng = SmallRng::seed_from_u64(42);
+
+        for _ in 0..1000 {
+            let n = rng.gen_range(2..=4);
+            let a = (0..n)
+                .map(|_| (0..n).map(|_| rng.gen::<Mod>()).collect::<Vec<_>>())
+                .collect::<Vec<_>>();
+            let b = (0..n)
+                .map(|_| (0..n).map(|_| rng.gen::<Mod>()).collect::<Vec<_>>())
+                .collect::<Vec<_>>();
+
+            let mut d0 = calc_det_a_xb(&a, &b);
+            let mut d1 = calc_det_a_xb_by_lagrange_interpolation(&a, &b);
+
+            // 末尾0の差を詰める
+            d0.resize(n + 1, Mod::zero());
+            d1.resize(n + 1, Mod::zero());
+
+            assert_eq!(d0, d1);
+        }
+    }
+
+    // 完全に一様な入力だと非正則な例があまり出ないので、0の割合を増やす
+    #[test]
+    fn test_calc_det_a_xb_vs_lagrange_interpolation_zero() {
+        use rand::{rngs::SmallRng, Rng, SeedableRng};
+
+        let mut rng = SmallRng::seed_from_u64(42);
+
+        for _ in 0..1000 {
+            let n = rng.gen_range(2..=4);
+            let a = (0..n)
+                .map(|_| {
+                    (0..n)
+                        .map(|_| {
+                            if rng.gen() {
+                                rng.gen::<Mod>()
+                            } else {
+                                Mod::zero()
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+            let b = (0..n)
+                .map(|_| {
+                    (0..n)
+                        .map(|_| {
+                            if rng.gen() {
+                                rng.gen::<Mod>()
+                            } else {
+                                Mod::zero()
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+
+            let mut d0 = calc_det_a_xb(&a, &b);
+            let mut d1 = calc_det_a_xb_by_lagrange_interpolation(&a, &b);
+
+            // 末尾0の差を詰める
+            d0.resize(n + 1, Mod::zero());
+            d1.resize(n + 1, Mod::zero());
+
+            assert_eq!(d0, d1, "a={:?}, b={:?}", a, b);
+        }
     }
 }
