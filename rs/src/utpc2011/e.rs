@@ -135,26 +135,30 @@ impl Readable for Digits {
 
 fn main() {
     input! {
-        a: [usize]
+        n: usize,
+        mut ab: [(usize, usize); n]
     }
 
-    let ans = a
+    ab.sort_by_key(|&(_, b)| b);
+
+    let dp = ab
         .citer()
-        .chain(once(0))
-        .scan(vec![], |q, y| {
-            let mut num = 0;
-            while matches!(q.last(), Some(&z) if z > y) {
-                num += 1;
-                q.pop();
+        .enumerate()
+        .fold(vvec![0; usize::MAX; n + 1], |prev, (i, (a, b))| {
+            let mut next = vec![usize::MAX; n + 1];
+
+            for j in 0..=n {
+                next[j] = min(next[j], prev[j]);
+
+                if j + 1 <= n && prev[j].saturating_add(a) <= b {
+                    next[j + 1] = min(next[j + 1], prev[j].saturating_add(a));
+                }
             }
 
-            if !matches!(q.last(), Some(&z) if z == y) {
-                q.push(y);
-            }
+            next
+        });
 
-            Some(num)
-        })
-        .sum::<usize>();
+    let ans = (0..=n).filter(|&i| dp[i] != usize::MAX).max().unwrap();
 
     println!("{ans}");
 }

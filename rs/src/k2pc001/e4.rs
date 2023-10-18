@@ -135,26 +135,30 @@ impl Readable for Digits {
 
 fn main() {
     input! {
-        a: [usize]
+        k: usize,
+        n: usize,
+        pq: [(usize, usize); n]
     }
 
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .scan(vec![], |q, y| {
-            let mut num = 0;
-            while matches!(q.last(), Some(&z) if z > y) {
-                num += 1;
-                q.pop();
-            }
+    let p_to_q = pq.citer().fold(vec![vec![]; k + 1], |mut t, (p, q)| {
+        t[p].push(q - 1);
+        t
+    });
 
-            if !matches!(q.last(), Some(&z) if z == y) {
-                q.push(y);
-            }
+    let t = (0..=k).rev().fold(FxHashMap::default(), |prev, i| {
+        let mut next = FxHashMap::default();
+        for (q, l) in prev {
+            *next.entry(q / 2).or_insert(0) += l;
+        }
 
-            Some(num)
-        })
-        .sum::<usize>();
+        for &q in &p_to_q[i] {
+            next.insert(q, (1 << (k + 1 - i)) - 1);
+        }
+
+        next
+    });
+
+    let ans = (1usize << (k + 1)) - 1 - t.get(&0).copied().unwrap_or_default();
 
     println!("{ans}");
 }

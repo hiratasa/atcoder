@@ -135,26 +135,22 @@ impl Readable for Digits {
 
 fn main() {
     input! {
-        a: [usize]
+        i: usize, j: usize
     }
 
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .scan(vec![], |q, y| {
-            let mut num = 0;
-            while matches!(q.last(), Some(&z) if z > y) {
-                num += 1;
-                q.pop();
-            }
+    let si = (1..).find(|&a| a * (a + 1) / 2 >= i).unwrap();
+    let bi = i - si * (si - 1) / 2;
+    let ai = si + 1 - bi;
 
-            if !matches!(q.last(), Some(&z) if z == y) {
-                q.push(y);
-            }
+    let sj = (1..).find(|&a| a * (a + 1) / 2 >= j).unwrap();
+    let bj = j - sj * (sj - 1) / 2;
+    let aj = sj + 1 - bj;
 
-            Some(num)
-        })
-        .sum::<usize>();
+    let a = ai + aj;
+    let b = bi + bj;
+    let s = a + b - 1;
+
+    let ans = s * (s - 1) / 2 + b;
 
     println!("{ans}");
 }

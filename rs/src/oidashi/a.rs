@@ -133,28 +133,57 @@ impl Readable for Digits {
     }
 }
 
-fn main() {
-    input! {
-        a: [usize]
+fn bfs(maze: &[Vec<char>], start: (usize, usize)) -> Vec<Vec<usize>> {
+    let h = maze.len();
+    let w = maze[0].len();
+
+    let mut dists = vec![vec![usize::MAX; w]; h];
+    let mut q = VecDeque::new();
+
+    dists[start.0][start.1] = 0;
+    q.push_back(start);
+    while let Some((i, j)) = q.pop_front() {
+        [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            .into_iter()
+            .filter_map(|(di, dj)| Some((i.checked_add_signed(di)?, j.checked_add_signed(dj)?)))
+            .filter(|&(ni, nj)| ni < h && nj < w)
+            .for_each(|(ni, nj)| {
+                if dists[i][j] + 1 < dists[ni][nj] {
+                    dists[ni][nj] = dists[i][j] + 1;
+
+                    if maze[ni][nj] != '#' {
+                        q.push_back((ni, nj));
+                    }
+                }
+            });
     }
 
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .scan(vec![], |q, y| {
-            let mut num = 0;
-            while matches!(q.last(), Some(&z) if z > y) {
-                num += 1;
-                q.pop();
-            }
+    dists
+}
 
-            if !matches!(q.last(), Some(&z) if z == y) {
-                q.push(y);
-            }
+fn main() {
+    input! {
+        h: usize, w: usize, lines: [Chars; h]
+    }
 
-            Some(num)
-        })
-        .sum::<usize>();
+    let start = iproduct!(0..h, 0..w)
+        .find(|&(i, j)| lines[i][j] == 'S')
+        .unwrap();
+    let goal = iproduct!(0..h, 0..w)
+        .find(|&(i, j)| lines[i][j] == 'G')
+        .unwrap();
+
+    let dists_from_start = bfs(&lines, start);
+    let dists_from_goal = bfs(&lines, goal);
+
+    let ans = izip!(
+        dists_from_start.iter().flatten().copied(),
+        dists_from_goal.iter().flatten().copied(),
+    )
+    .filter_map(|(d0, d1)| d0.checked_add(d1))
+    .filter(|&d| d < usize::MAX)
+    .max()
+    .unwrap();
 
     println!("{ans}");
 }

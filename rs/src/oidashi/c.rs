@@ -135,26 +135,29 @@ impl Readable for Digits {
 
 fn main() {
     input! {
-        a: [usize]
+        sc: [(usize, usize)]
     }
 
-    let ans = a
+    let (num, dp) = sc
         .citer()
-        .chain(once(0))
-        .scan(vec![], |q, y| {
-            let mut num = 0;
-            while matches!(q.last(), Some(&z) if z > y) {
-                num += 1;
-                q.pop();
+        .fold((0, vec![[(0, 0); 2]; 100001]), |(num, mut dp), (s, c)| {
+            // 3段目
+            let next = if dp[c][1].1 > s {
+                max(num, dp[c][1].0 + 1)
+            } else {
+                num
+            };
+
+            // 2段目
+            if dp[c][0].1 > s {
+                dp[c][1] = max((dp[c][0].0, s), dp[c][1]);
             }
 
-            if !matches!(q.last(), Some(&z) if z == y) {
-                q.push(y);
-            }
+            // 1段目
+            dp[c][0] = max((num, s), dp[c][0]);
 
-            Some(num)
-        })
-        .sum::<usize>();
+            (next, dp)
+        });
 
-    println!("{ans}");
+    println!("{num}");
 }

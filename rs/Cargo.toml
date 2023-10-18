@@ -15218,3 +15218,35 @@ path = "src/arc167/c.rs"
 [[bin]]
 name = "arc167-d"
 path = "src/arc167/d.rs"
+
+[[bin]]
+name = "geocon2023-b"
+path = "src/geocon2023/b.rs"
+
+[[bin]]
+name = "oidashi-c"
+path = "src/oidashi/c.rs"
+
+[[bin]]
+name = "utpc2011-e"
+path = "src/utpc2011/e.rs"
+
+[[bin]]
+name = "oidashi-b"
+path = "src/oidashi/b.rs"
+
+[[bin]]
+name = "k2pc001-e4"
+path = "src/k2pc001/e4.rs"
+
+[[bin]]
+name = "autumn_fest-c"
+path = "src/autumn_fest/c.rs"
+
+[[bin]]
+name = "oidashi-a"
+path = "src/oidashi/a.rs"
+
+[[bin]]
+name = "k2pc001-e3"
+path = "src/k2pc001/e3.rs"

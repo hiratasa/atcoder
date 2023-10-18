@@ -133,28 +133,62 @@ impl Readable for Digits {
     }
 }
 
-fn main() {
-    input! {
-        a: [usize]
+fn solve(
+    cards: &[f64],
+    open: usize,
+    phase: usize,
+    memo: &mut FxHashMap<(usize, usize), f64>,
+) -> f64 {
+    if phase == 0 && open.count_ones() <= 1 {
+        return 0.0;
     }
 
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .scan(vec![], |q, y| {
-            let mut num = 0;
-            while matches!(q.last(), Some(&z) if z > y) {
-                num += 1;
-                q.pop();
-            }
+    if let Some(&r) = memo.get(&(open, phase)) {
+        return r;
+    }
 
-            if !matches!(q.last(), Some(&z) if z == y) {
-                q.push(y);
-            }
+    let n = cards.len();
+    let r = match phase {
+        0 => {
+            let m = (0..n).filter(|&i| open & (1 << i) > 0).count();
+            (0..n)
+                .filter(|&i| open & (1 << i) > 0)
+                .map(|i| solve(cards, open ^ (1 << i), 1, memo))
+                .sum::<f64>()
+                / (m as f64)
+        }
+        1 => {
+            let m = (0..n).filter(|&i| open & (1 << i) > 0).count();
+            (0..n)
+                .filter(|&i| open & (1 << i) > 0)
+                .map(|i| solve(cards, open ^ (1 << i), 2, memo))
+                .sum::<f64>()
+                / (m as f64)
+        }
+        2 => {
+            let m = (0..n).filter(|&i| open & (1 << i) > 0).count();
+            (0..n)
+                .filter(|&i| open & (1 << i) == 0)
+                .map(|i| solve(cards, open ^ (1 << i), 0, memo) + cards[i])
+                .sum::<f64>()
+                / ((n - m) as f64)
+        }
+        _ => unreachable!(),
+    };
 
-            Some(num)
-        })
-        .sum::<usize>();
+    memo.insert((open, phase), r);
 
-    println!("{ans}");
+    r
+}
+
+fn main() {
+    input! {
+        n: usize,
+        cards: [f64; n]
+    }
+
+    println!(
+        "{}",
+        solve(&cards, (1 << n) - 1, 0, &mut FxHashMap::default())
+    );
 }

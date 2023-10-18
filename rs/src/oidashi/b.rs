@@ -135,26 +135,56 @@ impl Readable for Digits {
 
 fn main() {
     input! {
-        a: [usize]
+        h: usize, w: usize,
+        s: [[u8; w]; h],
+        xy: [(usize, usize)]
     }
 
-    let ans = a
-        .citer()
-        .chain(once(0))
-        .scan(vec![], |q, y| {
-            let mut num = 0;
-            while matches!(q.last(), Some(&z) if z > y) {
-                num += 1;
-                q.pop();
-            }
+    let (h, w, s, xy) = if h < w {
+        (
+            w,
+            h,
+            (0..w)
+                .map(|i| (0..h).map(|j| s[j][i]).collect::<Vec<_>>())
+                .collect::<Vec<_>>(),
+            xy.citer().map(|(x, y)| (y, x)).collect::<Vec<_>>(),
+        )
+    } else {
+        (h, w, s, xy)
+    };
 
-            if !matches!(q.last(), Some(&z) if z == y) {
-                q.push(y);
-            }
+    let s = s
+        .iter()
+        .map(|row| row.citer().rev().fold(0usize, |a, b| a * 2 + b as usize))
+        .collect::<Vec<_>>();
 
-            Some(num)
+    let mask = (1 << w) - 1;
+
+    let broken = xy.citer().fold(vec![0usize; h], |mut broken, (x, y)| {
+        broken[y] |= 1 << x;
+        broken
+    });
+
+    let ans = (0usize..1 << w)
+        .filter_map(|bs0| {
+            (0..h)
+                .try_fold(
+                    (bs0.count_ones() as usize, bs0, 0),
+                    |(num, bs, prev_bs), i| {
+                        if bs & broken[i] > 0 {
+                            return None;
+                        }
+
+                        let next = (s[i] ^ prev_bs ^ bs ^ (bs << 1) ^ (bs >> 1)) & mask;
+
+                        Some((num + next.count_ones() as usize, next, bs))
+                    },
+                )
+                .filter(|&(_, bs, _)| bs == 0)
+                .map(|(num, _, _)| num)
         })
-        .sum::<usize>();
+        .min()
+        .unwrap();
 
     println!("{ans}");
 }
