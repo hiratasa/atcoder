@@ -1,21 +1,5 @@
 #[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::*;
-#[allow(unused_imports)]
-use std::f64;
-#[allow(unused_imports)]
-use std::i64;
-#[allow(unused_imports)]
-use std::io;
-#[allow(unused_imports)]
-use std::iter::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
@@ -26,16 +10,14 @@ use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
 use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 #[allow(unused_imports)]
-use proconio::input;
-#[allow(unused_imports)]
-use proconio::marker::{Bytes, Chars, Isize1, Usize1};
-#[allow(unused_imports)]
-use proconio::source::{Readable, Source};
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -53,22 +35,6 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! it {
-    ($x:expr) => {
-        once($x)
-    };
-    ($first:expr,$($x:expr),+) => {
-        chain(
-            once($first),
-            it!($($x),+)
-        )
-    };
-    ($($x:expr),+,) => {
-        it![$($x),+]
-    };
-}
-
-#[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
@@ -76,25 +42,6 @@ macro_rules! bitset {
             bs.buffer_mut()[0] = $x as u64;
         }
         bs
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! pushed {
-    ($c:expr, $x:expr) => {{
-        let x = $x;
-        let mut c = $c;
-        c.push(x);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! inserted {
-    ($c:expr, $($x:expr),*) => {{
-        let mut c = $c;
-        c.insert($($x),*);
-        c
     }};
 }
 
