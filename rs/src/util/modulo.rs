@@ -102,6 +102,10 @@ impl<M: Modulus> Mod<M> {
         Mod(n % M::modulus(), std::marker::PhantomData)
     }
 
+    pub fn raw(n: usize) -> Self {
+        Mod(n, std::marker::PhantomData)
+    }
+
     pub fn pow(self, p: usize) -> Self {
         Mod::new(pow_mod(self.0, p, M::modulus()))
     }
@@ -179,7 +183,12 @@ impl<M: Modulus> std::ops::Neg for Mod<M> {
 impl<M: Modulus> std::ops::Add<Mod<M>> for Mod<M> {
     type Output = Self;
     fn add(self, rhs: Mod<M>) -> Self {
-        Mod::new(self.0 + rhs.0)
+        let r = self.0 + rhs.0;
+        if r < M::modulus() {
+            Mod::raw(r)
+        } else {
+            Mod::raw(r - M::modulus())
+        }
     }
 }
 
@@ -187,7 +196,7 @@ impl<M: Modulus> std::ops::Add<Mod<M>> for Mod<M> {
 impl<M: Modulus> std::ops::Add<usize> for Mod<M> {
     type Output = Self;
     fn add(self, rhs: usize) -> Self {
-        Mod::new(self.0 + rhs)
+        self + Mod::new(rhs)
     }
 }
 
@@ -195,7 +204,7 @@ impl<M: Modulus> std::ops::Add<usize> for Mod<M> {
 impl<M: Modulus> std::ops::Add<Mod<M>> for usize {
     type Output = Mod<M>;
     fn add(self, rhs: Mod<M>) -> Mod<M> {
-        Mod::new(self + rhs.0)
+        Mod::new(self) + rhs.0
     }
 }
 
@@ -213,7 +222,12 @@ where
 impl<M: Modulus> std::ops::Sub<Mod<M>> for Mod<M> {
     type Output = Self;
     fn sub(self, rhs: Mod<M>) -> Self {
-        Mod::new(self.0 + M::modulus() - rhs.0)
+        let r = self.0.wrapping_sub(rhs.0);
+        if r < M::modulus() {
+            Mod::raw(r)
+        } else {
+            Mod::raw(r.wrapping_add(M::modulus()))
+        }
     }
 }
 
@@ -221,7 +235,7 @@ impl<M: Modulus> std::ops::Sub<Mod<M>> for Mod<M> {
 impl<M: Modulus> std::ops::Sub<usize> for Mod<M> {
     type Output = Self;
     fn sub(self, rhs: usize) -> Self {
-        Mod::new(self.0 + M::modulus() - rhs % M::modulus())
+        self - Mod::new(rhs)
     }
 }
 
@@ -229,7 +243,7 @@ impl<M: Modulus> std::ops::Sub<usize> for Mod<M> {
 impl<M: Modulus> std::ops::Sub<Mod<M>> for usize {
     type Output = Mod<M>;
     fn sub(self, rhs: Mod<M>) -> Mod<M> {
-        Mod::new(self + M::modulus() - rhs.0)
+        Mod::new(self) - rhs
     }
 }
 
