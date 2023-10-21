@@ -175,7 +175,11 @@ impl<M: Modulus> std::str::FromStr for Mod<M> {
 impl<M: Modulus> std::ops::Neg for Mod<M> {
     type Output = Self;
     fn neg(self) -> Self {
-        Mod::new(M::modulus() - self.0)
+        if self.0 == 0 {
+            Mod::raw(0)
+        } else {
+            Mod::raw(M::modulus() - self.0)
+        }
     }
 }
 
