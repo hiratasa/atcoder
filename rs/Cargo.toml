@@ -15250,3 +15250,31 @@ path = "src/oidashi/a.rs"
 [[bin]]
 name = "k2pc001-e3"
 path = "src/k2pc001/e3.rs"
+
+[[bin]]
+name = "abc325-a"
+path = "src/abc325/a.rs"
+
+[[bin]]
+name = "abc325-b"
+path = "src/abc325/b.rs"
+
+[[bin]]
+name = "abc325-c"
+path = "src/abc325/c.rs"
+
+[[bin]]
+name = "abc325-d"
+path = "src/abc325/d.rs"
+
+[[bin]]
+name = "abc325-e"
+path = "src/abc325/e.rs"
+
+[[bin]]
+name = "abc325-f"
+path = "src/abc325/f.rs"
+
+[[bin]]
+name = "abc325-g"
+path = "src/abc325/g.rs"
