@@ -26,54 +26,22 @@ fn butterfly<
     assert!(n.is_power_of_two());
 
     let h = n.trailing_zeros() as usize;
-    let w4 = w_pow[n / 4];
 
     // i回目の演算開始時点で、2^(h-i)で割った余りで等しい要素からなる長さ2^iの列が変換済み
     // i回目の演算では、2^(h-i-1)離れて隣接する項同士を足し引きして列の長さを2倍にする
-    // (もしくは2回分まとめて4倍にする)
-    for (i, step) in (0..=h + 1)
-        .step_by(2)
-        .map(|i| usize::min(i, h))
-        .tuple_windows()
-        .map(|(i, i2)| (i, i2 - i))
-    {
-        if step == 1 {
-            // 変換済みの列長
-            let b = 1 << i;
-            let c = n >> (i + 1);
-            let d = n >> i; // b * d == n
+    for i in 0..=h {
+        // 変換済みの列長
+        let b = 1 << i;
+        let c = n >> (i + 1);
+        let d = n >> i; // b * d == n
 
-            for k in 0..b {
-                for j in 0..c {
-                    let p = w_pow[j * b];
-                    let t0 = f[k * d + j];
-                    let t1 = f[k * d + j + c];
-                    f[k * d + j] = t0 + t1;
-                    f[k * d + j + c] = p * (t0 - t1);
-                }
-            }
-        } else {
-            assert!(step == 2);
-
-            // 変換済みの列長
-            let b = 1 << i;
-            let c = n >> (i + 2);
-            let d = n >> i; // b * d == n
-
-            for k in 0..b {
-                for j in 0..c {
-                    let p = w_pow[j * b];
-                    let p2 = p * p;
-                    let p3 = p2 * p;
-                    let t0 = f[k * d + j];
-                    let t1 = f[k * d + j + c];
-                    let t2 = f[k * d + j + 2 * c];
-                    let t3 = f[k * d + j + 3 * c];
-                    f[k * d + j] = t0 + t1 + t2 + t3;
-                    f[k * d + j + c] = p2 * (t0 - t1 + t2 - t3);
-                    f[k * d + j + 2 * c] = p * (t0 + w4 * t1 - t2 - w4 * t3);
-                    f[k * d + j + 3 * c] = p3 * (t0 - w4 * t1 - t2 + w4 * t3);
-                }
+        for k in 0..b {
+            for j in 0..c {
+                let p = w_pow[j * b];
+                let t0 = f[k * d + j];
+                let t1 = f[k * d + j + c];
+                f[k * d + j] = t0 + t1;
+                f[k * d + j + c] = p * (t0 - t1);
             }
         }
     }
@@ -95,54 +63,22 @@ fn butterfly_inv<
     assert!(n.is_power_of_two());
 
     let h = n.trailing_zeros() as usize;
-    let w4 = w_pow[n / 4];
 
     // i回目の演算開始時点で、各長さ2^iのブロックが変換済み
     // i回目の演算では、隣接するブロックの対応する項同士を足し引きして変換済みのブロック長を2倍にする
-    // (もしくは2回分まとめて4倍にする)
-    for (i, step) in (0..=h + 1)
-        .step_by(2)
-        .map(|i| usize::min(i, h))
-        .tuple_windows()
-        .map(|(i, i2)| (i, i2 - i))
-    {
-        if step == 1 {
-            // 変換済みのブロック長
-            let b = 1 << i;
-            let c = n >> (i + 1); // (2 * b) * c == n
-            let b2 = b * 2;
+    for i in 0..=h {
+        // 変換済みのブロック長
+        let b = 1 << i;
+        let c = n >> (i + 1); // (2 * b) * c == n
+        let b2 = b * 2;
 
-            for j in 0..c {
-                for k in 0..b {
-                    let p = w_pow[k * c];
-                    let t1 = f[j * b2 + k];
-                    let t2 = p * f[j * b2 + k + b];
-                    f[j * b2 + k] = t1 + t2;
-                    f[j * b2 + k + b] = t1 - t2;
-                }
-            }
-        } else {
-            assert!(step == 2);
-
-            // 変換済みのブロック長
-            let b = 1 << i;
-            let c = n >> (i + 2); // (4 * b) * c == n
-            let b4 = 4 * b;
-
-            for j in 0..c {
-                for k in 0..b {
-                    let p = w_pow[k * c];
-                    let p2 = p * p;
-                    let p3 = p2 * p;
-                    let t0 = f[j * b4 + k];
-                    let t1 = p2 * f[j * b4 + k + b];
-                    let t2 = p * f[j * b4 + k + 2 * b];
-                    let t3 = p3 * f[j * b4 + k + 3 * b];
-                    f[j * b4 + k] = t0 + t1 + t2 + t3;
-                    f[j * b4 + k + b] = t0 - t1 + w4 * t2 - w4 * t3;
-                    f[j * b4 + k + 2 * b] = t0 + t1 - t2 - t3;
-                    f[j * b4 + k + 3 * b] = t0 - t1 - w4 * t2 + w4 * t3;
-                }
+        for j in 0..c {
+            for k in 0..b {
+                let p = w_pow[k * c];
+                let t1 = f[j * b2 + k];
+                let t2 = p * f[j * b2 + k + b];
+                f[j * b2 + k] = t1 + t2;
+                f[j * b2 + k + b] = t1 - t2;
             }
         }
     }
