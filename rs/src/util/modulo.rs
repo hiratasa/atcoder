@@ -27,7 +27,7 @@ pub trait Modulus: Copy + Eq {
 }
 
 #[snippet("modulo")]
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub struct StaticModulus<const M: usize>();
 
 #[snippet("modulo")]
