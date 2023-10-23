@@ -1,90 +1,222 @@
 use super::modulo::{pow_mod, Mod, Mod1811939329, Mod2013265921, Mod469762049, Modulus};
 use itertools::izip;
-use itertools::Itertools;
 use num::complex::Complex64;
 
 use cargo_snippet::snippet;
+
+#[snippet("convolution_mod")]
+trait RootSupplier<'a, T> {
+    // 1の2^h乗根のi乗
+    fn w_pow(&self, i: usize) -> T;
+    // w_powの逆数
+    fn iw_pow(&self, i: usize) -> T;
+}
 
 // in-placeなFFTは以下2種類の方法でできる
 //  - 周波数間引きのバタフライ演算(butterfly) => bit順序反転
 //  - bit順序反転 ⇒ 時間間引きのバタフライ演算(butterfly_inv)
 // 特に畳み込みをするときは、両方を使い分けることでbit反転を省略できる
-
-// 周波数間引きバタフライ演算
-// w_pow[1]^n = 1
-// w_pow[i] = w_pow[1]^i
 #[snippet("convolution_mod")]
 #[allow(dead_code)]
-fn butterfly<
+trait Butterfly<T>
+where
     T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
->(
-    f: &mut [T],
-    w_pow: &[T],
-) {
-    let n = f.len();
+{
+    type RootSupplier<'a>: RootSupplier<'a, T>
+    where
+        Self: 'a;
 
-    assert!(n.is_power_of_two());
+    fn get_roots<'a>(&'a self, h: usize) -> Self::RootSupplier<'a>;
 
-    let h = n.trailing_zeros() as usize;
+    // 周波数間引きバタフライ演算
+    fn butterfly(&self, f: &mut [T]) {
+        let n = f.len();
+        assert!(n.is_power_of_two());
 
-    // i回目の演算開始時点で、2^(h-i)で割った余りで等しい要素からなる長さ2^iの列が変換済み
-    // i回目の演算では、2^(h-i-1)離れて隣接する項同士を足し引きして列の長さを2倍にする
-    for i in 0..=h {
-        // 変換済みの列長
-        let b = 1 << i;
-        let c = n >> (i + 1);
-        let d = n >> i; // b * d == n
+        let h = n.trailing_zeros() as usize;
+        let roots = self.get_roots(h);
 
-        for k in 0..b {
-            for j in 0..c {
-                let p = w_pow[j * b];
-                let t0 = f[k * d + j];
-                let t1 = f[k * d + j + c];
-                f[k * d + j] = t0 + t1;
-                f[k * d + j + c] = p * (t0 - t1);
-            }
-        }
-    }
-}
+        // i回目の演算開始時点で、2^(h-i)で割った余りで等しい要素からなる長さ2^iの列が変換済み
+        // i回目の演算では、2^(h-i-1)離れて隣接する項同士を足し引きして列の長さを2倍にする
+        for i in 0..=h {
+            // 変換済みの列長
+            let b = 1 << i;
+            let c = n >> (i + 1);
+            let d = n >> i; // b * d == n
 
-// 時間間引きバタフライ演算
-// w_pow[1]^n = 1
-// w_pow[i] = w_pow[1]^i
-#[snippet("convolution_mod")]
-#[allow(dead_code)]
-fn butterfly_inv<
-    T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
->(
-    f: &mut [T],
-    w_pow: &[T],
-) {
-    let n = f.len();
-
-    assert!(n.is_power_of_two());
-
-    let h = n.trailing_zeros() as usize;
-
-    // i回目の演算開始時点で、各長さ2^iのブロックが変換済み
-    // i回目の演算では、隣接するブロックの対応する項同士を足し引きして変換済みのブロック長を2倍にする
-    for i in 0..=h {
-        // 変換済みのブロック長
-        let b = 1 << i;
-        let c = n >> (i + 1); // (2 * b) * c == n
-        let b2 = b * 2;
-
-        for j in 0..c {
             for k in 0..b {
-                let p = w_pow[k * c];
-                let t1 = f[j * b2 + k];
-                let t2 = p * f[j * b2 + k + b];
-                f[j * b2 + k] = t1 + t2;
-                f[j * b2 + k + b] = t1 - t2;
+                for j in 0..c {
+                    let p = roots.w_pow(j * b);
+                    let t0 = f[k * d + j];
+                    let t1 = f[k * d + j + c];
+                    f[k * d + j] = t0 + t1;
+                    f[k * d + j + c] = p * (t0 - t1);
+                }
+            }
+        }
+    }
+
+    // 時間間引きバタフライ演算
+    fn butterfly_inv(&self, f: &mut [T]) {
+        let n = f.len();
+        assert!(n.is_power_of_two());
+
+        let h = n.trailing_zeros() as usize;
+        let roots = self.get_roots(h);
+
+        // i回目の演算開始時点で、各長さ2^iのブロックが変換済み
+        // i回目の演算では、隣接するブロックの対応する項同士を足し引きして変換済みのブロック長を2倍にする
+        for i in 0..=h {
+            // 変換済みのブロック長
+            let b = 1 << i;
+            let c = n >> (i + 1); // (2 * b) * c == n
+            let b2 = b * 2;
+
+            for j in 0..c {
+                for k in 0..b {
+                    let p = roots.iw_pow(k * c);
+                    let t1 = f[j * b2 + k];
+                    let t2 = p * f[j * b2 + k + b];
+                    f[j * b2 + k] = t1 + t2;
+                    f[j * b2 + k + b] = t1 - t2;
+                }
             }
         }
     }
 }
 
 #[snippet("convolution_mod")]
+#[derive(Debug)]
+struct ModRootSupplier<'a, M> {
+    w_pows: std::cell::Ref<'a, (Vec<Mod<M>>, Vec<Mod<M>>)>,
+}
+
+#[snippet("convolution_mod")]
+impl<'a, M> ModRootSupplier<'a, M> {
+    fn new(w_pows: std::cell::Ref<'a, (Vec<Mod<M>>, Vec<Mod<M>>)>) -> ModRootSupplier<'a, M> {
+        ModRootSupplier { w_pows }
+    }
+}
+
+#[snippet("convolution_mod")]
+impl<'a, M> RootSupplier<'a, Mod<M>> for ModRootSupplier<'a, M>
+where
+    M: Copy,
+{
+    fn w_pow(&self, i: usize) -> Mod<M> {
+        self.w_pows.0[i]
+    }
+
+    fn iw_pow(&self, i: usize) -> Mod<M> {
+        self.w_pows.1[i]
+    }
+}
+
+#[snippet("convolution_mod")]
+#[derive(Debug, Clone)]
+struct ModButterfly<M> {
+    root: Mod<M>,
+    w_pows: std::cell::RefCell<Vec<(Vec<Mod<M>>, Vec<Mod<M>>)>>,
+}
+
+#[snippet("convolution_mod")]
+#[allow(dead_code)]
+impl<M> ModButterfly<Mod<M>>
+where
+    M: Modulus,
+{
+    fn new() -> ModButterfly<M> {
+        ModButterfly {
+            root: Mod::new(primitive_root(M::modulus())),
+            w_pows: std::cell::RefCell::new(vec![]),
+        }
+    }
+}
+
+#[snippet("convolution_mod")]
+impl<M> Butterfly<Mod<M>> for ModButterfly<M>
+where
+    M: Modulus,
+{
+    type RootSupplier<'a> = ModRootSupplier<'a, M> where M: 'a;
+
+    fn get_roots<'a>(&'a self, h: usize) -> ModRootSupplier<'a, M> {
+        let mut w_pows = self.w_pows.borrow_mut();
+
+        if h >= w_pows.len() {
+            w_pows.resize(h + 1, (vec![], vec![]))
+        }
+
+        if w_pows[h].0.is_empty() {
+            let m = 1 << h;
+
+            let c = pow_mod(self.root.0, (M::modulus() - 1) / m, M::modulus());
+            w_pows[h].0 = (0..m)
+                .scan(Mod::<M>::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
+                .collect::<Vec<_>>();
+
+            let cinv = pow_mod(self.root.0, (M::modulus() - 1) / m * (m - 1), M::modulus());
+            w_pows[h].1 = (0..m)
+                .scan(Mod::<M>::new(1), |p, _| {
+                    Some(std::mem::replace(p, *p * cinv))
+                })
+                .collect::<Vec<_>>();
+        }
+
+        // re-borrow as immutable
+        drop(w_pows);
+        let w_pows = self.w_pows.borrow();
+
+        ModRootSupplier::new(std::cell::Ref::map(w_pows, |w_pows| &w_pows[h]))
+    }
+}
+
+#[derive(Debug)]
+struct ComplexRootSupplier {
+    h: usize,
+}
+
+impl ComplexRootSupplier {
+    fn new(h: usize) -> ComplexRootSupplier {
+        ComplexRootSupplier { h }
+    }
+}
+
+impl<'a> RootSupplier<'a, Complex64> for ComplexRootSupplier {
+    fn w_pow(&self, i: usize) -> Complex64 {
+        Complex64::from_polar(
+            1.0,
+            2.0 * i as f64 * std::f64::consts::PI / ((1 << self.h) as f64),
+        )
+    }
+
+    fn iw_pow(&self, i: usize) -> Complex64 {
+        Complex64::from_polar(
+            1.0,
+            -2.0 * i as f64 * std::f64::consts::PI / ((1 << self.h) as f64),
+        )
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ComplexButterfly {}
+
+#[allow(dead_code)]
+impl ComplexButterfly {
+    fn new() -> ComplexButterfly {
+        ComplexButterfly {}
+    }
+}
+
+#[allow(dead_code)]
+impl Butterfly<Complex64> for ComplexButterfly {
+    type RootSupplier<'a> = ComplexRootSupplier;
+
+    fn get_roots(&self, h: usize) -> ComplexRootSupplier {
+        ComplexRootSupplier::new(h)
+    }
+}
+
 #[allow(dead_code)]
 fn reverse_bits_order<
     T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
@@ -114,11 +246,23 @@ fn fft<
     T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
 >(
     f: &mut [T],
-    w_pow: &[T],
+    butterfly: &impl Butterfly<T>,
 ) {
-    butterfly(f, w_pow);
+    butterfly.butterfly(f);
 
     reverse_bits_order(f);
+}
+
+#[allow(dead_code)]
+fn inv_fft<
+    T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T>,
+>(
+    f: &mut [T],
+    butterfly: &impl Butterfly<T>,
+) {
+    reverse_bits_order(f);
+
+    butterfly.butterfly_inv(f);
 }
 
 #[snippet("convolution_mod")]
@@ -133,8 +277,7 @@ fn convolution_impl<
 >(
     p: &mut [T],
     q: &mut [T],
-    w_pow: &[T],
-    iw_pow: &[T],
+    butterfly: &impl Butterfly<T>,
     n_as_t: T,
 ) {
     let n = p.len();
@@ -142,41 +285,28 @@ fn convolution_impl<
     assert!(q.len() == n);
     assert!(n.is_power_of_two());
 
-    butterfly(p, &w_pow);
-    butterfly(q, &w_pow);
+    butterfly.butterfly(p);
+    butterfly.butterfly(q);
 
     for (x, y) in p.iter_mut().zip(q) {
         *x *= *y;
     }
 
-    butterfly_inv(p, &iw_pow);
+    butterfly.butterfly_inv(p);
 
     p.iter_mut().for_each(|x| *x /= n_as_t);
 }
 
 #[allow(dead_code)]
 fn fft_complex(f: &mut Vec<Complex64>) {
-    let n = f.len();
-    fft(
-        f,
-        &(0..n)
-            .map(|i| Complex64::from_polar(1.0, 2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
-            .collect::<Vec<_>>(),
-    );
+    fft(f, &ComplexButterfly::new());
 }
 
 #[allow(dead_code)]
 fn inv_fft_complex(f: &mut Vec<Complex64>) {
     let n = f.len();
 
-    fft(
-        f,
-        &(0..n)
-            .map(|i| {
-                Complex64::from_polar(1.0, -2.0 * i as f64 * std::f64::consts::PI / (n as f64))
-            })
-            .collect::<Vec<_>>(),
-    );
+    inv_fft(f, &ComplexButterfly::new());
     for x in f {
         *x /= n as f64;
     }
@@ -206,13 +336,12 @@ fn convolution_complex<T: Copy + num::ToPrimitive + num::FromPrimitive>(
         .take(n)
         .collect::<Vec<_>>();
 
-    let w_pow = (0..n)
-        .map(|i| Complex64::from_polar(1.0, 2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
-        .collect::<Vec<_>>();
-    let iw_pow = (0..n)
-        .map(|i| Complex64::from_polar(1.0, -2.0 * i as f64 * std::f64::consts::PI / (n as f64)))
-        .collect::<Vec<_>>();
-    convolution_impl(&mut pf, &mut qf, &w_pow, &iw_pow, Complex64::from(n as f64));
+    convolution_impl(
+        &mut pf,
+        &mut qf,
+        &ComplexButterfly::new(),
+        Complex64::from(n as f64),
+    );
 
     pf.iter()
         .map(|x| T::from_f64(x.re.round()).unwrap())
@@ -267,14 +396,9 @@ fn fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
     let n = f.len();
     assert!(n.is_power_of_two());
     assert!((M::modulus() - 1) % n == 0);
-    let g = primitive_root(M::modulus());
-    let c = pow_mod(g, (M::modulus() - 1) / n, M::modulus());
-    fft(
-        f,
-        &(0..n)
-            .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
-            .collect::<Vec<_>>(),
-    );
+
+    let butterfly = ModButterfly::new();
+    fft(f, &butterfly);
 }
 
 #[allow(dead_code)]
@@ -282,15 +406,9 @@ fn inv_fft_mod<M: Modulus>(f: &mut Vec<Mod<M>>) {
     let n = f.len();
     assert!(n.is_power_of_two());
     assert!((M::modulus() - 1) % n == 0);
-    let g = primitive_root(M::modulus());
-    // let c = pow_mod(g, (modulus() - 1) / n, modulus()).inv();
-    let c = pow_mod(g, (M::modulus() - 1) / n * (n - 1), M::modulus());
-    fft(
-        f,
-        &(0..n)
-            .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
-            .collect::<Vec<_>>(),
-    );
+
+    let butterfly = ModButterfly::new();
+    inv_fft(f, &butterfly);
     let invn = Mod::new(n).inv();
     for x in f {
         *x *= invn;
@@ -329,16 +447,8 @@ pub fn convolution_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
         .take(n)
         .collect::<Vec<_>>();
 
-    let g = primitive_root(M::modulus());
-    let c = pow_mod(g, (M::modulus() - 1) / n, M::modulus());
-    let w_pow = (0..n)
-        .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * c)))
-        .collect::<Vec<_>>();
-    let cinv = pow_mod(g, (M::modulus() - 1) / n * (n - 1), M::modulus());
-    let iw_pow = (0..n)
-        .scan(Mod::new(1), |p, _| Some(std::mem::replace(p, *p * cinv)))
-        .collect::<Vec<_>>();
-    convolution_impl(&mut pf, &mut qf, &w_pow, &iw_pow, Mod::new(n));
+    let butterfly = ModButterfly::new();
+    convolution_impl(&mut pf, &mut qf, &butterfly, Mod::new(n));
 
     pf.resize(n0 + n1 - 1, Mod::new(0));
     pf
@@ -433,6 +543,171 @@ fn convolution_crt_mod<M: Modulus>(p: &[Mod<M>], q: &[Mod<M>]) -> Vec<Mod<M>> {
                 + Mod::new(v3) * Mod::new(Mod1::modulus()) * Mod::new(Mod2::modulus())
         })
         .collect()
+}
+
+// 畳み込みを繰り返すとき用のユーティリティ.
+// 同じ配列を何度か畳み込みに利用するときにFFT結果を使いまわせる
+#[derive(Debug, Clone, Default)]
+struct FFTVector<'a, M> {
+    butterfly: Option<&'a ModButterfly<M>>,
+    // 実際にデータが入っている長さ.
+    len: usize,
+    // is_transformed=false => FFT前の列（長さはlen）, is_transformed=true => FFT後の列（長さは2の累乗）
+    values: Vec<Mod<M>>,
+    is_transformed: bool,
+}
+
+#[allow(dead_code)]
+impl<'a, M> FFTVector<'a, M>
+where
+    M: Modulus,
+{
+    fn new(butterfly: &'a ModButterfly<M>, values: Vec<Mod<M>>) -> FFTVector<'a, M> {
+        let len = values.len();
+        FFTVector {
+            butterfly: Some(butterfly),
+            len,
+            values,
+            is_transformed: false,
+        }
+    }
+
+    fn resize(&mut self, n: usize) {
+        assert!(self.len <= n);
+        self.len = n;
+
+        if !self.is_transformed {
+            self.values.resize(n, Mod::raw(0));
+        }
+    }
+
+    // 内部用
+    fn transform(&mut self, n: usize) {
+        assert!(!self.is_transformed);
+        assert!(n.is_power_of_two());
+        assert!(self.values.len() <= n);
+
+        // let butterfly = std::mem::take(&mut self.butterfly).unwrap();
+
+        self.values.resize(n, Mod::raw(0));
+        self.butterfly.as_ref().unwrap().butterfly(&mut self.values);
+        self.is_transformed = true;
+
+        // self.butterfly = Some(butterfly);
+    }
+
+    // 内部用
+    fn untransform(&mut self) {
+        assert!(self.is_transformed);
+
+        let butterfly = std::mem::take(&mut self.butterfly).unwrap();
+
+        butterfly.butterfly_inv(&mut self.values);
+        let inv = Mod::new(self.values.len()).inv();
+        self.values.iter_mut().for_each(|x| *x *= inv);
+        self.values.resize(self.len, Mod::raw(0));
+        self.is_transformed = false;
+
+        self.butterfly = Some(butterfly);
+    }
+
+    // 変換後の列
+    fn transformed_values(&mut self) -> &mut [Mod<M>] {
+        if self.is_transformed {
+            self.transformed_values_with_len(self.values.len())
+        } else {
+            self.transformed_values_with_len(self.len.next_power_of_two())
+        }
+    }
+
+    // 変換後の列. 長さn
+    fn transformed_values_with_len(&mut self, n: usize) -> &mut [Mod<M>] {
+        assert!(n.is_power_of_two());
+        assert!(self.values.len() <= n);
+
+        if self.is_transformed && self.values.len() < n {
+            self.untransform();
+        }
+
+        if !self.is_transformed {
+            self.transform(n);
+        }
+
+        &mut self.values
+    }
+
+    // 変換前の列
+    fn untransformed_values(&mut self) -> &mut [Mod<M>] {
+        if self.is_transformed {
+            self.untransform();
+        }
+
+        &mut self.values
+    }
+}
+
+// 繰り返し畳み込みするとき用のユーティリティ.
+// 原子根の累乗値をキャッシュする & 同じ配列を何度も畳み込みに使いまわすときにFFTを省略する
+#[derive(Debug, Clone)]
+struct ConvolutionMod<M> {
+    butterfly: ModButterfly<M>,
+}
+
+#[allow(dead_code)]
+impl<M> ConvolutionMod<M>
+where
+    M: Modulus,
+{
+    fn new() -> ConvolutionMod<M> {
+        ConvolutionMod {
+            butterfly: ModButterfly::new(),
+        }
+    }
+
+    fn create_vec<'a>(&'a self, values: Vec<Mod<M>>) -> FFTVector<'a, M> {
+        FFTVector::new(&self.butterfly, values)
+    }
+
+    fn convolution_naive<'a>(&'a self, lhs: &mut FFTVector<'a, M>, rhs: &mut FFTVector<'a, M>) {
+        let n = lhs.len + rhs.len - 1;
+        let n0 = lhs.len;
+        let n1 = rhs.len;
+        lhs.resize(n);
+        for i in (0..n).rev() {
+            lhs.values[i] *= rhs.values[0];
+            for j in i.saturating_sub(n0) + 1..std::cmp::min(n1, i + 1) {
+                lhs.values[i] = lhs.values[i] + lhs.values[i - j] * rhs.values[j];
+            }
+        }
+    }
+
+    // lhsとrhsを畳みこむ. 結果はlhsに上書きされる
+    fn convolution<'a>(&'a self, lhs: &mut FFTVector<'a, M>, rhs: &mut FFTVector<'a, M>) {
+        let n = lhs.len + rhs.len - 1;
+
+        let naive_bound = 8
+            * (1 + std::cmp::max(lhs.len, rhs.len)
+                .next_power_of_two()
+                .trailing_zeros() as usize);
+        if std::cmp::min(lhs.len, rhs.len) <= naive_bound
+            && !lhs.is_transformed
+            && !rhs.is_transformed
+        {
+            self.convolution_naive(lhs, rhs);
+            return;
+        }
+
+        lhs.resize(n);
+
+        let n2 = n.next_power_of_two();
+        izip!(
+            lhs.transformed_values_with_len(n2).iter_mut(),
+            rhs.transformed_values_with_len(n2).iter()
+        )
+        .for_each(|(x, y)| {
+            *x *= *y;
+        });
+    }
 }
 
 #[test]
