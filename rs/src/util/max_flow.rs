@@ -229,22 +229,34 @@ impl ProjectSelectionProblem {
     }
 
     // (idx0が組A) ⇒ (idx1が組A) の形の条件
-    fn add_implication_relation(&mut self, idx0: usize, idx1: usize) {
-        self.add_implication_relation_penalty(idx0, idx1, std::usize::MAX);
+    fn add_condition(&mut self, idx0: usize, idx1: usize) {
+        self.g.add_edge(idx0, idx1, usize::MAX);
     }
 
-    // (idx0が組A) ⇒ (idx1が組A) の形の条件. 破ると正のコストがかかる
-    fn add_implication_relation_penalty(&mut self, idx0: usize, idx1: usize, cost: usize) {
+    // (idx0が組A) ⇒ (idx1が組A) の形の条件. 破るとコストがかかる
+    fn add_condition_penalty(&mut self, idx0: usize, idx1: usize, cost: i64) {
+        let cost = self.fix_cost(cost);
         self.g.add_edge(idx0, idx1, cost);
     }
 
-    // idx0とidx1が同じ組に属する の形の条件. 守ると褒章（負のコスト）がある
-    fn add_reward_equality_relation(&mut self, idx0: usize, idx1: usize, reward: usize) {
-        self.cost_offset += reward as i64;
+    // idx0とidx1が同じ組に属する の形の条件. 破るとコストがかかる
+    // （costが負の時のcost_offsetの挙動が、add_condition_penalty()を2回呼ぶのとは異なることに注意）
+    fn add_equality_condition_penalty(&mut self, idx0: usize, idx1: usize, cost: i64) {
+        let cost = self.fix_cost(cost);
+
         // (idx0がA) => (idx1がA)
-        self.add_implication_relation_penalty(idx0, idx1, reward);
+        self.g.add_edge(idx0, idx1, cost);
         // (idx1がA) => (idx0がA)
-        self.add_implication_relation_penalty(idx1, idx0, reward);
+        self.g.add_edge(idx1, idx0, cost);
+    }
+
+    fn fix_cost(&mut self, cost: i64) -> usize {
+        if cost > 0 {
+            cost as usize
+        } else {
+            self.cost_offset += -cost;
+            -cost as usize
+        }
     }
 
     // 最小コストを求める
