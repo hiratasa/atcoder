@@ -182,3 +182,75 @@ impl MaxFlowGraph {
         total_flow
     }
 }
+
+// 全ての頂点を組Aと組Bに分類したときのコストの最小値を求める
+struct ProjectSelectionProblem {
+    g: MaxFlowGraph,
+    cost_offset: i64,
+    src: usize,
+    dst: usize,
+}
+
+#[allow(dead_code)]
+impl ProjectSelectionProblem {
+    fn new(n: usize) -> ProjectSelectionProblem {
+        ProjectSelectionProblem {
+            g: MaxFlowGraph::new(n + 2),
+            cost_offset: 0,
+            src: n,
+            dst: n + 1,
+        }
+    }
+
+    // 各頂点を各組に割り振った時のコストを設定（負も許容）
+    // 同一頂点に対しては高々1回だけ呼ぶこと
+    fn set_cost<C: TryInto<i64>>(&mut self, idx: usize, cost_a: C, cost_b: C) {
+        let cost_a = cost_a.try_into().ok().unwrap();
+        let cost_b = cost_b.try_into().ok().unwrap();
+
+        let offset = std::cmp::max(-cost_a, -cost_b).max(0);
+
+        // コストをどちら側にのせるか注意
+        self.g.add_edge(self.src, idx, (cost_b + offset) as usize);
+        self.g.add_edge(idx, self.dst, (cost_a + offset) as usize);
+
+        self.cost_offset += offset;
+    }
+
+    // idx番目の頂点は組which(=0 or 1)に属するべきである
+    fn should(&mut self, idx: usize, which: usize) {
+        if which == 0 {
+            self.set_cost(idx, 0, 1i64 << 60);
+        } else if which == 1 {
+            self.set_cost(idx, 1i64 << 60, 0);
+        } else {
+            unreachable!();
+        }
+    }
+
+    // (idx0が組A) ⇒ (idx1が組A) の形の条件
+    fn add_implication_relation(&mut self, idx0: usize, idx1: usize) {
+        self.add_implication_relation_penalty(idx0, idx1, std::usize::MAX);
+    }
+
+    // (idx0が組A) ⇒ (idx1が組A) の形の条件. 破ると正のコストがかかる
+    fn add_implication_relation_penalty(&mut self, idx0: usize, idx1: usize, cost: usize) {
+        self.g.add_edge(idx0, idx1, cost);
+    }
+
+    // idx0とidx1が同じ組に属する の形の条件. 守ると褒章（負のコスト）がある
+    fn add_reward_equality_relation(&mut self, idx0: usize, idx1: usize, reward: usize) {
+        self.cost_offset += reward as i64;
+        // (idx0がA) => (idx1がA)
+        self.add_implication_relation_penalty(idx0, idx1, reward);
+        // (idx1がA) => (idx0がA)
+        self.add_implication_relation_penalty(idx1, idx0, reward);
+    }
+
+    // 最小コストを求める
+    fn calc_min_cost(&mut self) -> i64 {
+        let f = self.g.max_flow(self.src, self.dst);
+
+        f as i64 - self.cost_offset
+    }
+}
