@@ -1,19 +1,23 @@
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
+
 #[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use std::cmp::*;
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
-use std::collections::*;
+use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use std::io::*;
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
-use std::mem::*;
+use rustc_hash::{FxHashMap, FxHashSet};
+
 #[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -31,68 +35,89 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! read_cols {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
 }
 
 #[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
+use easy_ext::ext;
+
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
+where
+    Self: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
 }
 
-#[allow(dead_code)]
-fn read_vec<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+enum Digits {}
 
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
+impl Readable for Digits {
+    type Output = Vec<usize>;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> Vec<usize> {
+        source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect()
+    }
 }
 
 fn main() {
-    let l = read::<usize>();
+    input! {
+        l: usize,
+        a: [usize; l],
+    }
 
-    let a = (0..l).map(|_| read::<usize>()).collect::<Vec<_>>();
+    let dp = a.citer().fold([0; 5], |prev, x| {
+        let mut next = [usize::MAX; 5];
 
-    let ans = a.iter().fold(
-        (0usize, 0usize, 0usize, 0usize, 0usize),
-        |(dp0, dp1, dp2, dp3, dp4), aa| {
-            let mdp1 = min(dp0, dp1);
-            let mdp2 = min(mdp1, dp2);
-            let mdp3 = min(mdp2, dp3);
-            let mdp4 = min(mdp3, dp4);
-            match aa {
-                0 => (dp0, mdp1 + 2, mdp2 + 1, mdp3 + 2, mdp4),
-                _ if aa % 2 == 0 => (dp0 + aa, mdp1, mdp2 + 1, mdp3, mdp4 + aa),
-                _ => (dp0 + aa, mdp1 + 1, mdp2, mdp3 + 1, mdp4 + aa),
+        let table = [
+            (0, 0),
+            (2, 1 << 40),
+            (1, (1 << 40) + 1),
+            (2, 1 << 40),
+            (0, 0),
+        ];
+
+        for i in 0..5 {
+            for j in i..5 {
+                let (mi, ma) = table[j];
+                let cost = if mi <= x && x <= ma {
+                    if mi % 2 != x % 2 {
+                        1
+                    } else {
+                        0
+                    }
+                } else {
+                    x.clamp(mi, ma).abs_diff(x)
+                };
+
+                next[j] = min(next[j], prev[i] + cost);
             }
-        },
-    );
-    eprintln!("{:?}", ans);
-    let ans = [ans.0, ans.1, ans.2, ans.3, ans.4]
-        .iter()
-        .copied()
-        .min()
-        .unwrap();
+        }
 
-    println!("{}", ans);
+        next
+    });
+
+    let ans = dp.citer().min().unwrap();
+
+    println!("{ans}");
 }

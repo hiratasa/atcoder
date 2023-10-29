@@ -1,89 +1,115 @@
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
-#[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::VecDeque;
-#[allow(unused_imports)]
-use std::io::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 
-use std::collections::binary_heap::*;
+#[allow(unused_imports)]
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, repeat_n, unfold, Itertools};
+#[allow(unused_imports)]
+use itertools_num::ItertoolsNum;
+#[allow(unused_imports)]
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+#[allow(unused_imports)]
+use rustc_hash::{FxHashMap, FxHashSet};
 
+#[allow(unused_imports)]
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
+
+// vec with some initial value
 #[allow(unused_macros)]
-macro_rules! read_cols {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        stdin().read_line(&mut line).unwrap();
+macro_rules! vvec {
+    ($($x:expr),+; $y:expr; $n:expr) => {{
+        let mut v = vec![$y; $n];
 
-        let mut it = line.trim()
-            .split_whitespace();
+        let mut it = v.iter_mut();
+        $(
+            *it.next().unwrap() = $x;
+        )+
 
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
+        v
     }}
 }
 
-#[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
+#[allow(unused_macros)]
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
 }
 
 #[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
-#[allow(dead_code)]
-fn read_vec<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    stdin().read_line(&mut line).unwrap();
+use easy_ext::ext;
 
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
+where
+    Self: IntoIterator<Item = &'a T>,
+    T: 'a + Copy,
+{
+    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
+        self.into_iter().copied()
+    }
+}
+
+enum Digits {}
+
+impl Readable for Digits {
+    type Output = Vec<usize>;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> Vec<usize> {
+        source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect()
+    }
 }
 
 fn main() {
-    let (w, h) = read_cols!(usize, usize);
-
-    let p = (0..w).map(|_| read()).collect::<Vec<i64>>();
-    let q = (0..h).map(|_| read()).collect::<Vec<i64>>();
-
-    let mut heap = BinaryHeap::new();
-
-    for pp in p {
-        heap.push((-pp, false));
-    }
-    for qq in q {
-        heap.push((-qq, true));
+    input! {
+        w: usize, h: usize,
+        p: [usize; w],
+        q: [usize; h],
     }
 
-    let mut ww = (w + 1) as i64;
-    let mut hh = (h + 1) as i64;
-    let mut ans = 0;
-    while let Some((t, dir)) = heap.pop() {
-        let cost = -t;
+    let ans = unfold(
+        (
+            chain(
+                p.citer().map(|pp| (Reverse(pp), true)),
+                q.citer().map(|pp| (Reverse(pp), false)),
+            )
+            .collect::<BinaryHeap<_>>(),
+            w,
+            h,
+        ),
+        |(q, ww, hh)| {
+            let (Reverse(cost), dir) = q.pop()?;
 
-        if dir {
-            ans += cost * ww;
-            hh -= 1;
-        } else {
-            ans += cost * hh;
-            ww -= 1;
-        }
-    }
+            if dir {
+                *ww -= 1;
+                Some(cost * (*hh + 1))
+            } else {
+                *hh -= 1;
+                Some(cost * (*ww + 1))
+            }
+        },
+    )
+    .sum::<usize>();
 
-    println!("{}", ans);
+    println!("{ans}");
 }

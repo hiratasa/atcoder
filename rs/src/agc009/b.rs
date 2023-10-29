@@ -1,28 +1,23 @@
 #[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::*;
-#[allow(unused_imports)]
-use std::io;
-#[allow(unused_imports)]
-use std::iter::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
+
+#[allow(unused_imports)]
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -40,100 +35,31 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! it {
-    ($x:expr) => {
-        once($x)
-    };
-    ($first:expr,$($x:expr),+) => {
-        chain(
-            once($first),
-            it!($($x),+)
-        )
-    }
-}
-
-#[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
 
-#[allow(unused_macros)]
-macro_rules! pushed {
-    ($c:expr, $x:expr) => {{
-        let mut c = $c;
-        c.push($x);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! inserted {
-    ($c:expr, $($x:expr),*) => {{
-        let mut c = $c;
-        c.insert($($x),*);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! read_tuple {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
-}
-
 #[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
-}
+use easy_ext::ext;
 
-#[allow(dead_code)]
-fn read_row<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_col<T: FromStr>(n: usize) -> Vec<T> {
-    (0..n).map(|_| read()).collect()
-}
-
-#[allow(dead_code)]
-fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
-    (0..n).map(|_| read_row()).collect()
-}
-
-#[allow(dead_code)]
-fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
-    (0..n).map(|_| f()).collect()
-}
-
-trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
 where
+    Self: IntoIterator<Item = &'a T>,
     T: 'a + Copy,
 {
     fn citer(self) -> std::iter::Copied<Self::IntoIter> {
@@ -141,11 +67,17 @@ where
     }
 }
 
-impl<'a, T, I> IterCopyExt<'a, T> for I
-where
-    I: IntoIterator<Item = &'a T>,
-    T: 'a + Copy,
-{
+enum Digits {}
+
+impl Readable for Digits {
+    type Output = Vec<usize>;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> Vec<usize> {
+        source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect()
+    }
 }
 
 mod detail {
@@ -192,8 +124,9 @@ mod detail {
             }
         }
     }
+    type Weight = usize;
     pub type UnweightedEdge = Edge<()>;
-    pub type WeightedEdge = Edge<usize>;
+    pub type WeightedEdge = Edge<Weight>;
     impl std::convert::From<(usize, usize)> for UnweightedEdge {
         fn from(t: (usize, usize)) -> Self {
             UnweightedEdge::new(t.0, t.1)
@@ -204,13 +137,13 @@ mod detail {
             Edge::from(*t)
         }
     }
-    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
-        fn from(t: (usize, usize, usize)) -> Self {
+    impl std::convert::From<(usize, usize, Weight)> for WeightedEdge {
+        fn from(t: (usize, usize, Weight)) -> Self {
             Edge::new_with_label(t.0, t.1, t.2)
         }
     }
-    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
-        fn from(t: &(usize, usize, usize)) -> Self {
+    impl std::convert::From<&(usize, usize, Weight)> for WeightedEdge {
+        fn from(t: &(usize, usize, Weight)) -> Self {
             Edge::from(*t)
         }
     }
@@ -226,7 +159,7 @@ mod detail {
     #[allow(dead_code)]
     pub type UnweightedGraph = Graph<()>;
     #[allow(dead_code)]
-    pub type WeightedGraph = Graph<usize>;
+    pub type WeightedGraph = Graph<Weight>;
     #[allow(dead_code)]
     impl<W: Copy> Graph<W> {
         pub fn new(n: usize) -> Self {
@@ -291,28 +224,47 @@ mod detail {
             self.out_edges[edge.from].push(edge);
             self.in_edges[edge.to].push(edge);
         }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
     }
 }
 
 type Graph = detail::UnweightedGraph;
 
 fn dfs(g: &Graph, v: usize) -> usize {
-    g.out_edges[v]
-        .citer()
-        .map(|edge| dfs(g, edge.to) + 1)
-        .sorted_by_key(|&x| Reverse(x))
-        .enumerate()
-        .map(|(i, x)| x + i)
+    let c = g.out_edges[v].len();
+
+    g.adjs(v)
+        .map(|u| dfs(g, u))
+        .sorted()
+        .zip((1..=c).rev())
+        .map(|(x, y)| x + y)
         .max()
         .unwrap_or(0)
 }
 
 fn main() {
-    let n: usize = read();
-    let a = read_col::<usize>(n - 1);
+    input! {
+        n: usize,
+        a: [Usize1; n - 1]
+    }
 
-    let g = Graph::from_edges_directed(n, a.citer().enumerate().map(|(i, aa)| (aa - 1, i + 1)));
+    let g = Graph::from_edges_directed(n, a.citer().enumerate().map(|(i, p)| (p, i + 1)));
 
-    let ans = dfs(&g, 0);
-    println!("{}", ans);
+    println!("{}", dfs(&g, 0));
 }
