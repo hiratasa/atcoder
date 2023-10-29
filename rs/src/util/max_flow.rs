@@ -183,7 +183,7 @@ impl MaxFlowGraph {
     }
 }
 
-// 全ての頂点を組Aと組Bに分類したときのコストの最小値を求める
+// N個の頂点からいくつか選んでコストを最小にする
 struct ProjectSelectionProblem {
     g: MaxFlowGraph,
     cost_offset: i64,
@@ -202,8 +202,10 @@ impl ProjectSelectionProblem {
         }
     }
 
-    // 各頂点を各組に割り振った時のコストを設定（負も許容）
+    // 各頂点を選んだ時・選ばなかった時のコストを設定
     // 同一頂点に対しては高々1回だけ呼ぶこと
+    // * `cost_a` - 選んだ時のコスト
+    // * `cost_b` - 選ばなかった時のコスト
     fn set_cost<C: TryInto<i64>>(&mut self, idx: usize, cost_a: C, cost_b: C) {
         let cost_a = cost_a.try_into().ok().unwrap();
         let cost_b = cost_b.try_into().ok().unwrap();
@@ -217,31 +219,28 @@ impl ProjectSelectionProblem {
         self.cost_offset += offset;
     }
 
-    // idx番目の頂点は組which(=0 or 1)に属するべきである
-    fn should(&mut self, idx: usize, which: usize) {
-        if which == 0 {
+    // idx番目の頂点は選ぶべき（選ばないべき）
+    fn should(&mut self, idx: usize, select: bool) {
+        if select {
             self.set_cost(idx, 0, 1i64 << 60);
-        } else if which == 1 {
-            self.set_cost(idx, 1i64 << 60, 0);
         } else {
-            unreachable!();
+            self.set_cost(idx, 1i64 << 60, 0);
         }
     }
 
-    // (idx0が組A) ⇒ (idx1が組A) の形の条件
-    fn add_condition(&mut self, idx0: usize, idx1: usize) {
+    // (idx0を選ぶ) ⇒ (idx1を選ぶ) の形の条件
+    fn add_constraint(&mut self, idx0: usize, idx1: usize) {
         self.g.add_edge(idx0, idx1, usize::MAX);
     }
 
-    // (idx0が組A) ⇒ (idx1が組A) の形の条件. 破るとコストがかかる
-    fn add_condition_penalty(&mut self, idx0: usize, idx1: usize, cost: i64) {
+    // (idx0を選ぶ) ⇒ (idx1を選ぶ) の形の条件. 破るとコストがかかる
+    fn add_constraint_cost(&mut self, idx0: usize, idx1: usize, cost: i64) {
         let cost = self.fix_cost(cost);
         self.g.add_edge(idx0, idx1, cost);
     }
 
-    // idx0とidx1が同じ組に属する の形の条件. 破るとコストがかかる
-    // （costが負の時のcost_offsetの挙動が、add_condition_penalty()を2回呼ぶのとは異なることに注意）
-    fn add_equality_condition_penalty(&mut self, idx0: usize, idx1: usize, cost: i64) {
+    // idx0とidx1の選択が等しい の形の条件. 破るとコストがかかる
+    fn add_equality_constraint(&mut self, idx0: usize, idx1: usize, cost: i64) {
         let cost = self.fix_cost(cost);
 
         // (idx0がA) => (idx1がA)
