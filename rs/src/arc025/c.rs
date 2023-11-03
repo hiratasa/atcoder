@@ -1,26 +1,23 @@
 #[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::*;
-#[allow(unused_imports)]
-use std::io;
-#[allow(unused_imports)]
-use std::iter::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use bitset_fixed::BitSet;
+#[allow(unused_imports)]
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
+
+#[allow(unused_imports)]
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -38,93 +35,31 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! it {
-    ($x:expr) => {
-        once($x)
-    };
-    ($first:expr,$($x:expr),+) => {
-        chain(
-            once($first),
-            it!($($x),+)
-        )
+macro_rules! bitset {
+    ($n:expr, $x:expr) => {{
+        let mut bs = BitSet::new($n);
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
+        bs
+    }};
+}
+
+#[allow(dead_code)]
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
     }
 }
 
-#[allow(unused_macros)]
-macro_rules! pushed {
-    ($c:expr, $x:expr) => {{
-        let mut c = $c;
-        c.push($x);
-        c
-    }};
-}
+use easy_ext::ext;
 
-#[allow(unused_macros)]
-macro_rules! inserted {
-    ($c:expr, $($x:expr),*) => {{
-        // calculate before move out c
-        let values = once(($($x),*));
-        let mut c = $c;
-        c.extend(values);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! read_tuple {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
-}
-
-#[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
-}
-
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
-}
-
-#[allow(dead_code)]
-fn read_row<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_col<T: FromStr>(n: usize) -> Vec<T> {
-    (0..n).map(|_| read()).collect()
-}
-
-#[allow(dead_code)]
-fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
-    (0..n).map(|_| read_row()).collect()
-}
-
-#[allow(dead_code)]
-fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
-    (0..n).map(|_| f()).collect()
-}
-
-trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
 where
+    Self: IntoIterator<Item = &'a T>,
     T: 'a + Copy,
 {
     fn citer(self) -> std::iter::Copied<Self::IntoIter> {
@@ -132,122 +67,237 @@ where
     }
 }
 
-impl<'a, T, I> IterCopyExt<'a, T> for I
-where
-    I: IntoIterator<Item = &'a T>,
-    T: 'a + Copy,
-{
-}
+enum Digits {}
 
-#[derive(Clone, Copy, Debug)]
-struct Edge {
-    from: usize,
-    to: usize,
-    weight: usize,
-}
-
-#[allow(dead_code)]
-impl Edge {
-    fn from_stdin() -> Edge {
-        let (from, to, weight) = read_tuple!(usize, usize, usize);
-        Edge {
-            from: from - 1,
-            to: to - 1,
-            weight,
-        }
-    }
-    fn rev(&self) -> Edge {
-        Edge {
-            from: self.to,
-            to: self.from,
-            ..*self
-        }
-    }
-}
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-struct Graph {
-    out_edges: Vec<Vec<Edge>>,
-}
-#[allow(dead_code)]
-impl Graph {
-    fn from_stdin_undirected(n: usize, m: usize) -> Graph {
-        let mut out_edges = vec![vec![]; n];
-        for _ in 0..m {
-            let e = Edge::from_stdin();
-            out_edges[e.from].push(e);
-            out_edges[e.to].push(e.rev());
-        }
-        Graph { out_edges }
-    }
-    fn from_stdin_directed(n: usize, m: usize) -> Graph {
-        let mut out_edges = vec![vec![]; n];
-        for _ in 0..m {
-            let e = Edge::from_stdin();
-            out_edges[e.from].push(e);
-        }
-        Graph { out_edges }
+impl Readable for Digits {
+    type Output = Vec<usize>;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> Vec<usize> {
+        source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect()
     }
 }
 
-fn dijkstra(g: &Graph, src: usize) -> Vec<usize> {
-    let n = g.out_edges.len();
-
-    let mut q = std::collections::BinaryHeap::new();
-    let mut costs = vec![std::usize::MAX; n];
-
-    q.push(std::cmp::Reverse((0, src)));
-    costs[src] = 0;
-
-    while let Some(std::cmp::Reverse((cost, v))) = q.pop() {
-        if cost > costs[v] {
-            continue;
+mod detail {
+    #[allow(dead_code)]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Edge<W = ()>
+    where
+        W: Copy,
+    {
+        pub from: usize,
+        pub to: usize,
+        pub label: W,
+    }
+    #[allow(dead_code)]
+    impl<W> Edge<W>
+    where
+        W: Copy,
+    {
+        pub fn new(from: usize, to: usize) -> Self
+        where
+            W: Default,
+        {
+            Self {
+                from,
+                to,
+                label: W::default(),
+            }
         }
-
-        for &edge in &g.out_edges[v] {
-            let next_cost = cost + edge.weight;
-
-            if next_cost < costs[edge.to] {
-                q.push(std::cmp::Reverse((next_cost, edge.to)));
-                costs[edge.to] = next_cost;
+        pub fn new_with_label(from: usize, to: usize, label: W) -> Self {
+            Self { from, to, label }
+        }
+        pub fn rev(&self) -> Self {
+            Self {
+                from: self.to,
+                to: self.from,
+                ..*self
+            }
+        }
+        pub fn offset1(&self) -> Self {
+            Self {
+                from: self.from - 1,
+                to: self.to - 1,
+                ..*self
             }
         }
     }
-
-    costs
+    type Weight = usize;
+    pub type UnweightedEdge = Edge<()>;
+    pub type WeightedEdge = Edge<Weight>;
+    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+        fn from(t: (usize, usize)) -> Self {
+            UnweightedEdge::new(t.0, t.1)
+        }
+    }
+    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+        fn from(t: &(usize, usize)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    impl std::convert::From<(usize, usize, Weight)> for WeightedEdge {
+        fn from(t: (usize, usize, Weight)) -> Self {
+            Edge::new_with_label(t.0, t.1, t.2)
+        }
+    }
+    impl std::convert::From<&(usize, usize, Weight)> for WeightedEdge {
+        fn from(t: &(usize, usize, Weight)) -> Self {
+            Edge::from(*t)
+        }
+    }
+    #[allow(dead_code)]
+    #[derive(Clone, Debug)]
+    pub struct Graph<W = ()>
+    where
+        W: Copy,
+    {
+        pub out_edges: Vec<Vec<Edge<W>>>,
+        pub in_edges: Vec<Vec<Edge<W>>>,
+    }
+    #[allow(dead_code)]
+    pub type UnweightedGraph = Graph<()>;
+    #[allow(dead_code)]
+    pub type WeightedGraph = Graph<Weight>;
+    #[allow(dead_code)]
+    impl<W: Copy> Graph<W> {
+        pub fn new(n: usize) -> Self {
+            Self {
+                out_edges: vec![vec![]; n],
+                in_edges: vec![vec![]; n],
+            }
+        }
+        pub fn from_edges_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            let mut g = Graph::new(n);
+            for edge in edges {
+                let e = edge.into();
+                g.add_edge(e);
+            }
+            g
+        }
+        pub fn from_edges1_directed<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(n, edges.into_iter().map(|e| e.into()).map(|e| e.offset1()))
+        }
+        pub fn from_edges_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn from_edges1_undirected<T, I>(n: usize, edges: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: std::convert::Into<Edge<W>>,
+        {
+            Graph::from_edges1_directed(
+                n,
+                edges
+                    .into_iter()
+                    .map(|e| e.into())
+                    .flat_map(|e| std::iter::once(e).chain(std::iter::once(e.rev()))),
+            )
+        }
+        pub fn size(&self) -> usize {
+            self.out_edges.len()
+        }
+        pub fn add_edge<T>(&mut self, e: T)
+        where
+            Edge<W>: std::convert::From<T>,
+        {
+            let edge = Edge::from(e);
+            self.out_edges[edge.from].push(edge);
+            self.in_edges[edge.to].push(edge);
+        }
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
+    }
 }
 
-fn main() {
-    let (n, m, r, t) = read_tuple!(usize, usize, usize, usize);
+type Graph = detail::WeightedGraph;
 
-    let g = Graph::from_stdin_undirected(n, m);
+fn main() {
+    input! {
+        n: usize, m: usize, r: usize, t: usize,
+        abc: [(Usize1, Usize1, usize); m]
+    }
+
+    let g = Graph::from_edges_undirected(n, abc);
 
     let ans = (0..n)
-        .map(|a| {
-            let costs = dijkstra(&g, a);
+        .map(|i| {
+            let mut q = BinaryHeap::new();
+            let mut costs = vec![usize::MAX; n];
 
-            let rcosts = costs.citer().fold(BTreeMap::new(), |hs, c| {
-                let rc = r * c;
-                inserted!(hs, rc, *hs.get(&rc).unwrap_or(&0) + 1)
-            });
+            q.push((Reverse(0), i));
+            costs[i] = 0;
 
-            let rcosts_sum =
-                izip!(rcosts.keys(), rcosts.values().cumsum::<usize>()).collect::<BTreeMap<_, _>>();
-            let e = (r < t) as usize;
+            while let Some((Reverse(cost), v)) = q.pop() {
+                if cost > costs[v] {
+                    continue;
+                }
+
+                q.extend(
+                    g.out_edges[v]
+                        .citer()
+                        .filter(|&e| {
+                            if cost + e.label < costs[e.to] {
+                                costs[e.to] = cost + e.label;
+                                true
+                            } else {
+                                false
+                            }
+                        })
+                        .map(|e| (Reverse(cost + e.label), e.to)),
+                );
+            }
+
+            costs.remove(i);
+            costs.sort();
 
             costs
                 .citer()
-                .map(|c| t * c)
-                // .inspect(|tc| eprintln!("{} {}", a, tc))
-                .filter_map(|tc| {
-                    rcosts_sum
-                        .range(..tc)
-                        .next_back()
-                        .map(|(_, &m)| m - /* origin */1 - e)
+                .map(|cost0| {
+                    costs
+                        .binary_search_by(|&cost1| {
+                            (cost1 * r).cmp(&(cost0 * t)).then(Ordering::Greater)
+                        })
+                        .unwrap_err()
+                        - (t > r) as usize
                 })
-                // .inspect(|m| eprintln!("=> {} {}", a, m))
                 .sum::<usize>()
         })
         .sum::<usize>();
-    println!("{}", ans);
+
+    println!("{ans}");
 }

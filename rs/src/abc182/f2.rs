@@ -80,46 +80,36 @@ impl Readable for Digits {
     }
 }
 
+fn solve(a: &[usize], i: usize, x: usize, memo: &mut FxHashMap<(usize, usize), usize>) -> usize {
+    let n = a.len();
+    assert!(i < n);
+
+    if let Some(&r) = memo.get(&(i, x)) {
+        return r;
+    }
+
+    let r = if i == n - 1 {
+        1
+    } else {
+        let ratio = a[i + 1] / a[i];
+
+        if x % ratio == 0 {
+            solve(a, i + 1, x / ratio, memo)
+        } else {
+            solve(a, i + 1, x / ratio, memo) + solve(a, i + 1, x / ratio + 1, memo)
+        }
+    };
+
+    memo.insert((i, x), r);
+
+    r
+}
+
 fn main() {
     input! {
-        h: usize, w: usize,
-        a: [Chars; h]
+        n: usize, x: usize,
+        a: [usize; n]
     }
 
-    let mut red = vec![vec!['.'; w]; h];
-    let mut blue = vec![vec!['.'; w]; h];
-
-    for i in 0..h {
-        red[i][0] = '#';
-        blue[i][w - 1] = '#';
-    }
-
-    for i in (0..h).step_by(2) {
-        for j in 1..w - 1 {
-            red[i][j] = '#';
-        }
-    }
-
-    for i in (1..h).step_by(2) {
-        for j in 1..w - 1 {
-            blue[i][j] = '#';
-        }
-    }
-
-    for i in 0..h {
-        for j in 0..w {
-            if a[i][j] == '#' {
-                red[i][j] = '#';
-                blue[i][j] = '#';
-            }
-        }
-    }
-
-    for row in red {
-        println!("{}", row.citer().join(""));
-    }
-    println!();
-    for row in blue {
-        println!("{}", row.citer().join(""));
-    }
+    println!("{}", solve(&a, 0, x, &mut FxHashMap::default()));
 }

@@ -80,46 +80,54 @@ impl Readable for Digits {
     }
 }
 
+fn solve0(ab: &mut [(usize, usize)]) -> usize {
+    if ab.citer().all(|(x, y)| x == y) {
+        return 0;
+    }
+
+    let n = ab.len();
+
+    (0..n)
+        .map(|i| {
+            if ab[i].0 > 0 {
+                ab[i].0 -= 1;
+
+                let r = (0..n)
+                    .map(|j| {
+                        if ab[j].1 > 0 {
+                            ab[j].1 -= 1;
+                            let r = solve0(ab);
+                            ab[j].1 += 1;
+                            r + 1
+                        } else {
+                            usize::MAX
+                        }
+                    })
+                    .min()
+                    .unwrap();
+                ab[i].0 += 1;
+                r
+            } else {
+                0
+            }
+        })
+        .max()
+        .unwrap()
+}
+
 fn main() {
     input! {
-        h: usize, w: usize,
-        a: [Chars; h]
+        n: usize,
+        ab: [(usize, usize); n]
     }
 
-    let mut red = vec![vec!['.'; w]; h];
-    let mut blue = vec![vec!['.'; w]; h];
+    let s = ab.citer().map(|(a, _)| a).sum::<usize>();
+    let ans = ab
+        .citer()
+        .filter(|&(x, y)| x > y)
+        .map(|(_, y)| y)
+        .min()
+        .map_or(0, |y| s - y);
 
-    for i in 0..h {
-        red[i][0] = '#';
-        blue[i][w - 1] = '#';
-    }
-
-    for i in (0..h).step_by(2) {
-        for j in 1..w - 1 {
-            red[i][j] = '#';
-        }
-    }
-
-    for i in (1..h).step_by(2) {
-        for j in 1..w - 1 {
-            blue[i][j] = '#';
-        }
-    }
-
-    for i in 0..h {
-        for j in 0..w {
-            if a[i][j] == '#' {
-                red[i][j] = '#';
-                blue[i][j] = '#';
-            }
-        }
-    }
-
-    for row in red {
-        println!("{}", row.citer().join(""));
-    }
-    println!();
-    for row in blue {
-        println!("{}", row.citer().join(""));
-    }
+    println!("{ans}");
 }
