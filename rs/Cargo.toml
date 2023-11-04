@@ -15326,3 +15326,31 @@ path = "src/abc243/f2.rs"
 [[bin]]
 name = "arc078-c2"
 path = "src/arc078/c2.rs"
+
+[[bin]]
+name = "abc327-a"
+path = "src/abc327/a.rs"
+
+[[bin]]
+name = "abc327-b"
+path = "src/abc327/b.rs"
+
+[[bin]]
+name = "abc327-c"
+path = "src/abc327/c.rs"
+
+[[bin]]
+name = "abc327-d"
+path = "src/abc327/d.rs"
+
+[[bin]]
+name = "abc327-e"
+path = "src/abc327/e.rs"
+
+[[bin]]
+name = "abc327-f"
+path = "src/abc327/f.rs"
+
+[[bin]]
+name = "abc327-g"
+path = "src/abc327/g.rs"
