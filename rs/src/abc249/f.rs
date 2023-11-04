@@ -1,28 +1,23 @@
 #[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::*;
-#[allow(unused_imports)]
-use std::io;
-#[allow(unused_imports)]
-use std::iter::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
+
+#[allow(unused_imports)]
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -40,101 +35,31 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! it {
-    ($x:expr) => {
-        once($x)
-    };
-    ($first:expr,$($x:expr),+) => {
-        chain(
-            once($first),
-            it!($($x),+)
-        )
-    }
-}
-
-#[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
 
-#[allow(unused_macros)]
-macro_rules! pushed {
-    ($c:expr, $x:expr) => {{
-        let x = $x;
-        let mut c = $c;
-        c.push(x);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! inserted {
-    ($c:expr, $($x:expr),*) => {{
-        let mut c = $c;
-        c.insert($($x),*);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! read_tuple {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
-}
-
 #[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
-}
+use easy_ext::ext;
 
-#[allow(dead_code)]
-fn read_row<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_col<T: FromStr>(n: usize) -> Vec<T> {
-    (0..n).map(|_| read()).collect()
-}
-
-#[allow(dead_code)]
-fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
-    (0..n).map(|_| read_row()).collect()
-}
-
-#[allow(dead_code)]
-fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
-    (0..n).map(|_| f()).collect()
-}
-
-trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
 where
+    Self: IntoIterator<Item = &'a T>,
     T: 'a + Copy,
 {
     fn citer(self) -> std::iter::Copied<Self::IntoIter> {
@@ -142,57 +67,54 @@ where
     }
 }
 
-impl<'a, T, I> IterCopyExt<'a, T> for I
-where
-    I: IntoIterator<Item = &'a T>,
-    T: 'a + Copy,
-{
+enum Digits {}
+
+impl Readable for Digits {
+    type Output = Vec<usize>;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> Vec<usize> {
+        source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect()
+    }
 }
 
 fn main() {
-    let (n, k) = read_tuple!(usize, usize);
-    let ty = read_vec(n, || read_tuple!(usize, i64));
+    input! {
+        n: usize, k: usize,
+        ty: [(usize, i64); n],
+    }
 
-    let ans = ty
-        .citer()
+    let ans = once((1, 0))
+        .chain(ty.citer())
         .rev()
-        .chain(once((1, 0)))
         .scan(
-            (0, 0, BinaryHeap::new(), BinaryHeap::new()),
-            |(r, s, q0, q1), (t, y)| {
-                if *r > k {
+            (0, 0, BinaryHeap::<i64>::new()),
+            |(num_ignore, s, ignored), (t, y)| {
+                if *num_ignore > k {
                     None
                 } else if t == 1 {
-                    let z = y + *s;
-                    *r += 1;
+                    let a = y + *s;
 
-                    while !q1.is_empty() && q1.len() + *r > k {
-                        let a = q1.pop().unwrap();
-                        q0.push(Reverse(a));
-                        *s += a;
+                    *num_ignore += 1;
+
+                    while *num_ignore + ignored.len() > k && !ignored.is_empty() {
+                        let x = ignored.pop().unwrap();
+                        *s += x;
                     }
 
-                    Some(Some(z))
+                    Some(Some(a))
                 } else {
-                    if matches!(q1.peek(), Some(&yy) if yy > y) {
-                        q1.push(y);
+                    if y < 0 {
+                        ignored.push(y);
                     } else {
-                        q0.push(Reverse(y));
                         *s += y;
                     }
 
-                    while matches!(q0.peek(), Some(&Reverse(yy)) if yy < 0)
-                        && q1.len() + 1 + *r <= k
-                    {
-                        let a = q0.pop().unwrap().0;
-                        q1.push(a);
-                        *s -= a;
-                    }
-
-                    while !q1.is_empty() && q1.len() + *r > k {
-                        let a = q1.pop().unwrap();
-                        q0.push(Reverse(a));
-                        *s += a;
+                    while *num_ignore + ignored.len() > k && !ignored.is_empty() {
+                        let x = ignored.pop().unwrap();
+                        *s += x;
                     }
 
                     Some(None)
@@ -203,5 +125,5 @@ fn main() {
         .max()
         .unwrap();
 
-    println!("{}", ans);
+    println!("{ans}");
 }

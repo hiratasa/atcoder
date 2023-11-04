@@ -1,17 +1,5 @@
 #[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::*;
-#[allow(unused_imports)]
-use std::io;
-#[allow(unused_imports)]
-use std::iter::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
@@ -20,9 +8,16 @@ use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
+
+#[allow(unused_imports)]
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -40,19 +35,6 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! it {
-    ($x:expr) => {
-        once($x)
-    };
-    ($first:expr,$($x:expr),+) => {
-        chain(
-            once($first),
-            it!($($x),+)
-        )
-    }
-}
-
-#[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
@@ -63,88 +45,21 @@ macro_rules! bitset {
     }};
 }
 
-#[allow(unused_macros)]
-macro_rules! pushed {
-    ($c:expr, $x:expr) => {{
-        let x = $x;
-        let mut c = $c;
-        c.push(x);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! inserted {
-    ($c:expr, $($x:expr),*) => {{
-        let mut c = $c;
-        c.insert($($x),*);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! read_tuple {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
-}
-
 #[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
-}
+use easy_ext::ext;
 
-#[allow(dead_code)]
-fn read_digits() -> Vec<usize> {
-    read::<String>()
-        .chars()
-        .map(|c| c.to_digit(10).unwrap() as usize)
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_row<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_col<T: FromStr>(n: usize) -> Vec<T> {
-    (0..n).map(|_| read()).collect()
-}
-
-#[allow(dead_code)]
-fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
-    (0..n).map(|_| read_row()).collect()
-}
-
-#[allow(dead_code)]
-fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
-    (0..n).map(|_| f()).collect()
-}
-
-trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
 where
+    Self: IntoIterator<Item = &'a T>,
     T: 'a + Copy,
 {
     fn citer(self) -> std::iter::Copied<Self::IntoIter> {
@@ -152,35 +67,37 @@ where
     }
 }
 
-impl<'a, T, I> IterCopyExt<'a, T> for I
-where
-    I: IntoIterator<Item = &'a T>,
-    T: 'a + Copy,
-{
+enum BitSet01 {}
+
+impl Readable for BitSet01 {
+    type Output = BitSet;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> BitSet {
+        let v = source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c == '1')
+            .collect::<Vec<_>>();
+
+        v.citer()
+            .enumerate()
+            .fold(BitSet::new(v.len()), |mut bs, (i, x)| {
+                bs.set(i, x);
+                bs
+            })
+    }
 }
 
 fn main() {
-    let n = read::<usize>();
-    let a = read_vec(n, || {
-        let s = read_str();
+    input! {
+        n: usize,
+        a: [BitSet01; n],
+    }
 
-        let mut bs = BitSet::new(n);
-        s.citer().enumerate().for_each(|(i, c)| {
-            bs.set(i, c == '1');
-        });
-
-        bs
-    });
-
-    let ans = (0..n)
-        .map(|i| {
-            (i + 1..n)
-                .filter(|&j| a[i][j])
-                .map(|j| (&a[i] & &a[j]).count_ones() as usize)
-                .sum::<usize>()
-        })
+    let ans = iproduct!(0..n, 0..n)
+        .filter(|&(i, j)| a[i][j])
+        .map(|(i, j)| (&a[i] & &a[j]).count_ones() as usize)
         .sum::<usize>()
-        / 3;
+        / 6;
 
-    println!("{}", ans);
+    println!("{ans}");
 }

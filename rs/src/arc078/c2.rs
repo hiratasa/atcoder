@@ -7,6 +7,7 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
+use proconio::input_interactive;
 #[allow(unused_imports)]
 use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
@@ -80,46 +81,61 @@ impl Readable for Digits {
     }
 }
 
-fn main() {
-    input! {
-        a: usize, n: usize, m: usize,
-        l: [usize; n],
-        xy: [(usize, usize); m],
+fn query(n: usize) -> bool {
+    assert!(n > 0);
+    assert!(n <= 1000000000000000000);
+
+    println!("? {}", n);
+
+    input_interactive! {
+        c: char,
     }
 
-    let spaces = l
-        .citer()
-        .tuple_windows()
-        .map(|(s0, s1)| s1 - s0 - 1)
-        .sorted()
-        .collect::<Vec<_>>();
-    let spaces_sum = once(0)
-        .chain(spaces.citer())
-        .cumsum::<usize>()
-        .collect::<Vec<_>>();
+    c == 'Y'
+}
 
-    let first_space = l[0] - 1;
-    let last_space = a - l[n - 1];
+fn solve() -> usize {
+    if !query(999999999) {
+        return 1000000000;
+    }
 
-    xy.citer()
-        .map(|(x, y)| {
-            let z = x + y;
+    let mut low = 0;
+    let mut high;
+    for _ in 0..9 {
+        (low, high) = (low * 10, low * 10 + 9);
 
-            let idx = spaces
-                .binary_search_by(|&s| s.cmp(&z).then(Ordering::Greater))
-                .unwrap_err();
+        while low < high {
+            let mid = (low + high + 1) / 2;
+            assert!(mid > 0);
 
-            let mut ans = n * (1 + z) - idx * z + spaces_sum[idx];
-            if first_space < x {
-                ans = ans - x + first_space;
+            if query(mid * 1000000000) {
+                high = mid - 1;
+            } else {
+                low = mid;
             }
-            if last_space < y {
-                ans = ans - y + last_space;
-            }
+        }
+    }
 
-            ans
-        })
-        .for_each(|ans| {
-            println!("{ans}");
-        });
+    low += 1;
+    while low % 10 == 0 {
+        low /= 10;
+    }
+
+    let mut x = low;
+    loop {
+        let q = query(x + 1);
+
+        let s0 = format!("{}", x);
+        let s = format!("{}", x + 1);
+
+        if (s > s0) == q {
+            return x;
+        }
+
+        x *= 10;
+    }
+}
+
+fn main() {
+    println!("! {}", solve());
 }

@@ -1,28 +1,23 @@
 #[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::*;
-#[allow(unused_imports)]
-use std::io;
-#[allow(unused_imports)]
-use std::iter::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
+
+#[allow(unused_imports)]
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -40,100 +35,31 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! it {
-    ($x:expr) => {
-        once($x)
-    };
-    ($first:expr,$($x:expr),+) => {
-        chain(
-            once($first),
-            it!($($x),+)
-        )
-    }
-}
-
-#[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
 
-#[allow(unused_macros)]
-macro_rules! pushed {
-    ($c:expr, $x:expr) => {{
-        let mut c = $c;
-        c.push($x);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! inserted {
-    ($c:expr, $($x:expr),*) => {{
-        let mut c = $c;
-        c.insert($($x),*);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! read_tuple {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
-}
-
 #[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
-}
+use easy_ext::ext;
 
-#[allow(dead_code)]
-fn read_row<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_col<T: FromStr>(n: usize) -> Vec<T> {
-    (0..n).map(|_| read()).collect()
-}
-
-#[allow(dead_code)]
-fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
-    (0..n).map(|_| read_row()).collect()
-}
-
-#[allow(dead_code)]
-fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
-    (0..n).map(|_| f()).collect()
-}
-
-trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
 where
+    Self: IntoIterator<Item = &'a T>,
     T: 'a + Copy,
 {
     fn citer(self) -> std::iter::Copied<Self::IntoIter> {
@@ -141,65 +67,71 @@ where
     }
 }
 
-impl<'a, T, I> IterCopyExt<'a, T> for I
-where
-    I: IntoIterator<Item = &'a T>,
-    T: 'a + Copy,
-{
+enum Digits {}
+
+impl Readable for Digits {
+    type Output = Vec<usize>;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> Vec<usize> {
+        source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect()
+    }
 }
 
-use ordered_float::OrderedFloat;
-
 fn main() {
-    let n: usize = read();
-    let ab = read_vec(n, || read_tuple!(i64, i64));
-    let cd = read_vec(n, || read_tuple!(i64, i64));
+    input! {
+        n: usize,
+        mut ab: [(i64, i64); n],
+        mut cd: [(i64, i64); n],
+    }
 
     if n == 1 {
         println!("Yes");
         return;
     }
 
-    let ans = (0..n).any(|i| {
-        let ab1 = (1..n)
-            .map(|j| ab[j])
-            .map(|(x, y)| (x - ab[0].0, y - ab[0].1))
-            .sorted_by_key(|&(x, y)| (OrderedFloat(f64::atan2(y as f64, x as f64)), x, y))
-            .collect::<Vec<_>>();
-        let cd1 = (0..n)
-            .filter(|&j| j != i)
-            .map(|j| cd[j])
-            .map(|(x, y)| (x - cd[i].0, y - cd[i].1))
-            .collect::<Vec<_>>();
-        let t0 = f64::atan2(ab1[0].1 as f64, ab1[0].0 as f64);
+    let g0 = ab.citer().fold((0, 0), |(x, y), (x1, y1)| (x + x1, y + y1));
+    let g1 = cd.citer().fold((0, 0), |(x, y), (x1, y1)| (x + x1, y + y1));
 
-        (0..n - 1).any(|j| {
-            let t1 = f64::atan2(cd1[j].1 as f64, cd1[j].0 as f64);
-            let t = t1 - t0;
-            let cd2 = chain(cd1[j..].citer(), cd1[..j].citer())
-                .map(|(x, y)| {
-                    (
-                        t.cos() * x as f64 + t.sin() * y as f64,
-                        -t.sin() * x as f64 + t.cos() * y as f64,
-                    )
-                })
-                .collect::<Vec<_>>();
-            const EPS: f64 = 1.0e-6;
-            if cd2
-                .citer()
-                .any(|(x, y)| (x - x.round()).abs() > EPS || (y - y.round()).abs() > EPS)
-            {
-                return false;
-            }
+    ab.iter_mut().for_each(|(x, y)| {
+        *x = *x * n as i64 - g0.0;
+        *y = *y * n as i64 - g0.1;
+    });
+    cd.iter_mut().for_each(|(x, y)| {
+        *x = *x * n as i64 - g1.0;
+        *y = *y * n as i64 - g1.1;
+    });
 
-            izip!(
-                ab1.citer(),
-                cd2.citer()
-                    .map(|(x, y)| (x.round() as i64, y.round() as i64))
-                    .sorted_by_key(|&(x, y)| (OrderedFloat(f64::atan2(y as f64, x as f64)), x, y))
-            )
-            .all(|(p0, p1)| p0 == p1)
-        })
+    let (x0, y0) = ab.citer().find(|&(x, y)| (x, y) != (0, 0)).unwrap();
+    let r2 = x0 * x0 + y0 * y0;
+    let set1 = cd.citer().collect::<FxHashSet<_>>();
+
+    let ans = cd.citer().any(|(x1, y1)| {
+        if r2 != x1 * x1 + y1 * y1 {
+            return false;
+        }
+
+        let c = x0 * x1 + y0 * y1;
+        let s = x0 * y1 - x1 * y0;
+
+        if let Some(set) = ab
+            .citer()
+            .map(|(x, y)| (c * x - s * y, s * x + c * y))
+            .map(|(x, y)| {
+                if x % r2 != 0 || y % r2 != 0 {
+                    None
+                } else {
+                    Some((x / r2, y / r2))
+                }
+            })
+            .collect::<Option<FxHashSet<_>>>()
+        {
+            set == set1
+        } else {
+            false
+        }
     });
 
     if ans {

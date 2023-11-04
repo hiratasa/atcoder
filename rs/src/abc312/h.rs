@@ -81,46 +81,82 @@ impl Readable for Digits {
 }
 
 #[allow(dead_code)]
-fn extgcd(a: i64, b: i64) -> (i64, i64, i64) {
-    let (_zero, g, _u, v) = std::iter::successors(Some((a, b, 1, 0)), |&(a, b, u, v)| {
-        if a == 0 {
-            None
-        } else {
-            Some((b % a, a, -u * (b / a) + v, u))
-        }
-    })
-    .last()
-    .unwrap();
+fn z_algorithm<T: std::cmp::Eq>(s: &[T]) -> Vec<usize> {
+    let n = s.len();
 
-    (v, (g - a * v) / b, g)
+    // z[i] = max_{j<n} s[0:j] = s[i:i+j]
+    let mut z = vec![0; n];
+    z[0] = n;
+
+    let mut l = 0;
+    let mut r = 0;
+    for i in 1..n {
+        // assert!(s[l..r] == s[0..r - l]);
+        if i < r && z[i - l] < r - i {
+            z[i] = z[i - l];
+        } else {
+            // i < rなら、 z[i - l] >= r - i なので、
+            // s[i..r] (=s[i-l..r-l]) = s[0..r-i] が保証されている
+            // i >= r なら再計算
+            l = i;
+            r = std::cmp::max(i, r);
+            while r < n && s[r] == s[r - l] {
+                r += 1;
+            }
+            z[i] = r - l;
+        }
+    }
+
+    z
 }
 
 fn main() {
     input! {
-        cases: [(i64, i64, i64)],
+        n: usize,
+        s: [Chars; n],
     }
 
-    cases
-        .citer()
-        .map(|(n, s, k)| {
-            // u * k + v * n = g
-            let (u, v, g) = extgcd(k, n);
+    let t = s
+        .iter()
+        .map(|word| {
+            let z = z_algorithm(&word);
 
-            if s % g != 0 {
-                None
-            } else {
-                let k = k / g;
-                let n = n / g;
-                let s = s / g;
+            let p = (1..word.len())
+                .filter(|&i| word.len() % i == 0)
+                .find(|&i| z[i] == word.len() - i)
+                .unwrap_or(word.len());
 
-                // u * k + v * n = 1
-                // => u = k^(-1) mod n
-                // s + a * k = 0 mod n
-                // => a = -s * k^(-1) = -s * u mod n
-                Some((-s * u).rem_euclid(n))
-            }
+            (word.len() / p, word[..p].to_vec())
         })
-        .for_each(|ans| {
-            println_opt(ans);
+        .collect::<Vec<_>>();
+
+    let groups = t
+        .iter()
+        .enumerate()
+        .fold(FxHashMap::default(), |mut map, (i, (r, unit))| {
+            map.entry(unit).or_insert(vec![]).push((i, *r));
+            map
         });
+
+    let ans = groups.values().fold(vec![0; n], |mut ans, v| {
+        let s = v.citer().map(|(_, r)| r).sum::<usize>();
+
+        v.citer()
+            .scan(
+                (vec![false; s + 1], vec![1; s + 1]),
+                |(used, itrs), (i, r)| {
+                    let idx = (itrs[r]..).find(|&idx| !used[r * idx]).unwrap();
+                    used[r * idx] = true;
+                    itrs[r] = idx + 1;
+
+                    Some((i, idx))
+                },
+            )
+            .for_each(|(i, x)| {
+                ans[i] = x;
+            });
+        ans
+    });
+
+    println!("{}", ans.citer().join(" "));
 }
