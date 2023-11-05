@@ -591,7 +591,7 @@ where
 #[snippet("lazysegtree")]
 macro_rules! define_monoid {
     ($name: ident, $t: ty, $id: expr, $op: expr) => {
-        #[derive(Clone, Copy, Debug)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         struct $name($t);
 
         impl Monoid for $name {
@@ -860,6 +860,215 @@ type RMTTree = SegmentTree<Minimum>;
 
 #[allow(dead_code)]
 type RMTTreeWithAddition = LazySegmentTree<Minimum, AddValue>;
+
+// 失敗しうる作用. 葉に対しては必ず成功すること. また、id()は必ず成功すること
+trait TryOperator<T>: Monoid {
+    fn try_apply(&self, v: &T) -> Option<T>;
+}
+
+// M: Monoid of value
+// Op: Monoid of lazy operation
+#[derive(Debug)]
+struct SegmentTreeBeats<M, Op>
+where
+    M: Monoid,
+    Op: Monoid,
+{
+    #[allow(dead_code)]
+    height: usize,
+    n: usize,
+    cap: usize,
+    values: Vec<M>,
+    lazy: Vec<Op>,
+}
+
+#[allow(dead_code)]
+impl<M, Op> SegmentTreeBeats<M, Op>
+where
+    M: Monoid + Clone,
+    Op: Monoid + TryOperator<M> + Clone + PartialEq,
+{
+    fn new(n: usize) -> Self {
+        let cap = n.next_power_of_two();
+        SegmentTreeBeats {
+            height: cap.trailing_zeros() as usize + 1,
+            n,
+            cap,
+            values: vec![M::id(); 2 * cap - 1],
+            lazy: vec![Op::id(); 2 * cap - 1],
+        }
+    }
+
+    fn with<T>(vals: &[T]) -> Self
+    where
+        T: Into<M> + Clone,
+    {
+        let n = vals.len();
+        let cap = n.next_power_of_two();
+
+        let mut values = Vec::with_capacity(2 * cap - 1);
+        values.resize(cap - 1, M::id());
+        values.extend(vals.iter().cloned().map(|x| x.into()));
+        values.resize(2 * cap - 1, M::id());
+
+        let mut st = SegmentTreeBeats {
+            height: cap.trailing_zeros() as usize + 1,
+            n,
+            cap,
+            values,
+            lazy: vec![Op::id(); 2 * cap - 1],
+        };
+
+        for idx in (0..cap - 1).rev() {
+            st.fix(idx);
+        }
+
+        st
+    }
+
+    // internal
+    // 子の値を反映する
+    fn fix(&mut self, idx: usize) {
+        let left_idx = 2 * (idx + 1) - 1;
+        let right_idx = 2 * (idx + 1);
+        if left_idx < self.values.len() {
+            self.values[idx] = Op::try_apply(
+                &self.lazy[idx],
+                &M::op(&self.values[left_idx], &self.values[right_idx]),
+            )
+            .unwrap();
+        }
+    }
+
+    // internal
+    // idxの全ての祖先でfixする
+    fn fix_all(&mut self, mut idx: usize) {
+        while idx > 0 {
+            idx = (idx - 1) / 2;
+            self.fix(idx);
+        }
+    }
+
+    // internal
+    // pをidx全体に適用する
+    fn apply(&mut self, idx: usize, p: &Op) {
+        self.lazy[idx] = Op::op(p, &self.lazy[idx]);
+        if let Some(val) = Op::try_apply(p, &self.values[idx]) {
+            self.values[idx] = val;
+        } else {
+            assert!(2 * (idx + 1) < self.values.len());
+            self.push(idx);
+            self.fix(idx);
+        }
+    }
+
+    // internal
+    // lazyを子に伝搬する
+    fn push(&mut self, parent_idx: usize) {
+        let left_idx = 2 * (parent_idx + 1) - 1;
+        let right_idx = 2 * (parent_idx + 1);
+
+        if left_idx < self.values.len() {
+            let l = self.lazy[parent_idx].clone();
+            self.apply(left_idx, &l);
+            self.apply(right_idx, &l);
+            self.lazy[parent_idx] = Op::id();
+        }
+    }
+
+    // internal
+    // idxの全ての祖先でpushする
+    fn push_all(&mut self, idx: usize) {
+        for i in (1..(idx + 2).next_power_of_two().trailing_zeros()).rev() {
+            self.push(((idx + 1) >> i) - 1);
+        }
+    }
+
+    fn get(&mut self, pos: usize) -> M {
+        let idx = self.cap - 1 + pos;
+
+        self.push_all(idx);
+
+        self.values[idx].clone()
+    }
+
+    fn set<T>(&mut self, pos: usize, v: T)
+    where
+        T: Into<M>,
+    {
+        let idx = self.cap - 1 + pos;
+
+        self.push_all(idx);
+
+        self.values[idx] = v.into();
+        self.lazy[idx] = Op::id();
+
+        self.fix_all(idx);
+    }
+
+    fn update<T>(&mut self, r: impl std::ops::RangeBounds<usize>, p: T)
+    where
+        T: Into<Op>,
+    {
+        let (a, b) = range(r, self.n);
+
+        let p = p.into();
+
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        // Opが非可換の場合、[l, r)とその他の区間にまたがるlazyをpushしておく必要がある
+        self.push_all(((left_idx + 1) >> (left_idx + 1).trailing_zeros()) - 1);
+        self.push_all(((right_idx + 1) >> (right_idx + 1).trailing_zeros()) - 1);
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                self.apply(left_idx, &p);
+            }
+
+            if right_idx % 2 == 0 {
+                self.apply(right_idx - 1, &p);
+            }
+
+            // 偶数の場合は一つ右隣の親になる
+            left_idx = left_idx >> 1;
+            right_idx = (right_idx - 1) >> 1;
+        }
+
+        self.fix_all(a + self.cap - 1);
+        self.fix_all(b + self.cap - 1);
+    }
+
+    fn query(&mut self, r: impl std::ops::RangeBounds<usize>) -> M {
+        let (a, b) = range(r, self.n);
+
+        let mut left = M::id();
+        let mut right = M::id();
+
+        let mut left_idx = a + self.cap - 1;
+        let mut right_idx = b + self.cap - 1;
+
+        self.push_all(((left_idx + 1) >> (left_idx + 1).trailing_zeros()) - 1);
+        self.push_all(((right_idx + 1) >> (right_idx + 1).trailing_zeros()) - 1);
+
+        while left_idx < right_idx {
+            if left_idx % 2 == 0 {
+                left = M::op(&left, &self.values[left_idx]);
+                left_idx += 1;
+            }
+
+            if right_idx % 2 == 0 {
+                right = M::op(&self.values[right_idx - 1], &right);
+                right_idx -= 1;
+            }
+
+            left_idx = left_idx >> 1;
+            right_idx = (right_idx - 1) >> 1;
+        }
+
+        M::op(&left, &right)
+    }
+}
 
 mod test {
     #[allow(unused_imports)]
@@ -1259,6 +1468,292 @@ mod test {
 
                 st.set(pos.0, pos.1, val);
                 values.insert(pos, Minimum(val));
+            }
+        }
+    }
+
+    #[test]
+    fn test_segtree_beats() {
+        use rand::{rngs::SmallRng, Rng, SeedableRng};
+        use std::cmp::*;
+
+        #[derive(PartialEq, Eq)]
+        struct RevOption<T>(Option<T>);
+
+        impl<T> PartialOrd for RevOption<T>
+        where
+            T: PartialOrd,
+        {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                match (&self.0, &other.0) {
+                    (None, None) => Some(Ordering::Equal),
+                    (None, Some(_)) => Some(Ordering::Greater),
+                    (Some(_), None) => Some(Ordering::Less),
+                    (Some(x), Some(y)) => x.partial_cmp(y),
+                }
+            }
+        }
+
+        impl<T> Ord for RevOption<T>
+        where
+            T: Ord,
+        {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.partial_cmp(other).unwrap()
+            }
+        }
+
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        struct Item {
+            max_val: i64,
+            max2_val: Option<i64>,
+            num_max: i64,
+            min_val: i64,
+            min2_val: Option<i64>,
+            num_min: i64,
+            num: i64,
+            sum: i64,
+        }
+
+        impl Item {
+            fn new(val: i64) -> Self {
+                Item {
+                    max_val: val,
+                    max2_val: None,
+                    num_max: 1,
+                    min_val: val,
+                    min2_val: None,
+                    num_min: 1,
+                    num: 1,
+                    sum: val,
+                }
+            }
+        }
+
+        impl Monoid for Item {
+            fn id() -> Self {
+                Self {
+                    max_val: i64::MIN,
+                    max2_val: None,
+                    num_max: 0,
+                    min_val: i64::MAX,
+                    min2_val: None,
+                    num_min: 0,
+                    num: 0,
+                    sum: 0,
+                }
+            }
+
+            fn op(&self, rhs: &Self) -> Self {
+                Self {
+                    max_val: max(self.max_val, rhs.max_val),
+                    max2_val: match self.max_val.cmp(&rhs.max_val) {
+                        Ordering::Equal => max(self.max2_val, rhs.max2_val),
+                        Ordering::Greater => max(self.max2_val, Some(rhs.max_val)),
+                        Ordering::Less => max(Some(self.max_val), rhs.max2_val),
+                    },
+                    num_max: match self.max_val.cmp(&rhs.max_val) {
+                        Ordering::Equal => self.num_max + rhs.num_max,
+                        Ordering::Greater => self.num_max,
+                        Ordering::Less => rhs.num_max,
+                    },
+                    min_val: min(self.min_val, rhs.min_val),
+                    min2_val: match self.min_val.cmp(&rhs.min_val) {
+                        Ordering::Equal => min(RevOption(self.min2_val), RevOption(rhs.min2_val)).0,
+                        Ordering::Greater => {
+                            min(RevOption(Some(self.min_val)), RevOption(rhs.min2_val)).0
+                        }
+                        Ordering::Less => {
+                            min(RevOption(self.min2_val), RevOption(Some(rhs.min_val))).0
+                        }
+                    },
+                    num_min: match self.min_val.cmp(&rhs.min_val) {
+                        Ordering::Equal => self.num_min + rhs.num_min,
+                        Ordering::Greater => rhs.num_min,
+                        Ordering::Less => self.num_min,
+                    },
+                    num: self.num + rhs.num,
+                    sum: self.sum + rhs.sum,
+                }
+            }
+        }
+
+        impl From<i64> for Item {
+            fn from(value: i64) -> Self {
+                Self::new(value)
+            }
+        }
+
+        // add => chmin => chmax
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        struct Update {
+            add: i64,
+            chmin: i64,
+            chmax: i64,
+        }
+
+        impl Update {
+            fn add(val: i64) -> Update {
+                Update {
+                    add: val,
+                    chmin: i64::MAX,
+                    chmax: i64::MIN,
+                }
+            }
+
+            fn chmin(val: i64) -> Update {
+                Update {
+                    add: 0,
+                    chmin: val,
+                    chmax: i64::MIN,
+                }
+            }
+
+            fn chmax(val: i64) -> Update {
+                Update {
+                    add: 0,
+                    chmin: i64::MAX,
+                    chmax: val,
+                }
+            }
+        }
+
+        impl Monoid for Update {
+            fn id() -> Self {
+                Update {
+                    add: 0,
+                    chmin: i64::MAX,
+                    chmax: i64::MIN,
+                }
+            }
+
+            fn op(&self, rhs: &Self) -> Self {
+                Self {
+                    add: self.add + rhs.add,
+                    chmin: min(self.chmin, rhs.chmin.saturating_add(self.add)),
+                    chmax: max(
+                        self.chmax,
+                        min(self.chmin, rhs.chmax.saturating_add(self.add)),
+                    ),
+                }
+            }
+        }
+
+        impl TryOperator<Item> for Update {
+            fn try_apply(&self, v: &Item) -> Option<Item> {
+                let mut v = *v;
+
+                // add
+                v.max_val = v.max_val.saturating_add(self.add);
+                v.max2_val = v.max2_val.map(|x| x.saturating_add(self.add));
+                v.min_val = v.min_val.saturating_add(self.add);
+                v.min2_val = v.min2_val.map(|x| x.saturating_add(self.add));
+                v.sum += v.num * self.add;
+
+                // chmin
+                if matches!(v.max2_val, Some(x) if x >= self.chmin) {
+                    return None;
+                }
+                if self.chmin <= v.min_val {
+                    v.max_val = self.chmin;
+                    v.max2_val = None;
+                    v.num_max = v.num;
+                    v.min_val = self.chmin;
+                    v.min2_val = None;
+                    v.num_min = v.num;
+                    v.sum = v.num * self.chmin;
+                } else {
+                    v.sum -= (v.max_val.saturating_sub(min(v.max_val, self.chmin))) * v.num_max;
+                    v.max_val = min(v.max_val, self.chmin);
+                    v.min2_val = v.min2_val.map(|x| min(x, self.chmin));
+                }
+
+                // chmax
+                if matches!(v.min2_val, Some(x) if x <= self.chmax) {
+                    return None;
+                }
+                if self.chmax >= v.max_val {
+                    v.max_val = self.chmax;
+                    v.max2_val = None;
+                    v.num_max = v.num;
+                    v.min_val = self.chmax;
+                    v.min2_val = None;
+                    v.num_min = v.num;
+                    v.sum = v.num * self.chmax;
+                } else {
+                    v.sum += (max(v.min_val, self.chmax).saturating_sub(v.min_val)) * v.num_min;
+                    v.max2_val = v.max2_val.map(|x| max(x, self.chmax));
+                    v.min_val = max(v.min_val, self.chmax);
+                }
+
+                Some(v)
+            }
+        }
+
+        let mut rng = SmallRng::seed_from_u64(42);
+        let n = 100000;
+        const M: i64 = 10000;
+        let mut v = std::iter::repeat_with(|| rng.gen_range(-M..M))
+            .take(n)
+            .collect::<Vec<_>>();
+        let mut st = SegmentTreeBeats::<Item, Update>::with(&v);
+
+        for _ in 0..1000 {
+            match rng.gen_range(0..6) {
+                // get
+                0 => {
+                    let idx = rng.gen_range(0..n);
+                    assert_eq!(st.get(idx), Item::new(v[idx]), "st={:?};\nv={:?}", st, v);
+                }
+                // set
+                1 => {
+                    let idx = rng.gen_range(0..n);
+                    let val = rng.gen_range(0..M);
+                    st.set(idx, val);
+                    v[idx] = val;
+                }
+                // chmin
+                2 => {
+                    let idx0 = rng.gen_range(0..n);
+                    let idx1 = rng.gen_range(0..n);
+                    let (l, r) = (min(idx0, idx1), max(idx0, idx1) + 1);
+                    let val = rng.gen_range(0..M);
+                    st.update(l..r, Update::chmin(val));
+                    for i in l..r {
+                        v[i] = min(v[i], val);
+                    }
+                }
+                // chmax
+                3 => {
+                    let idx0 = rng.gen_range(0..n);
+                    let idx1 = rng.gen_range(0..n);
+                    let (l, r) = (min(idx0, idx1), max(idx0, idx1) + 1);
+                    let val = rng.gen_range(0..M);
+                    st.update(l..r, Update::chmax(val));
+                    for i in l..r {
+                        v[i] = max(v[i], val);
+                    }
+                }
+                // add
+                4 => {
+                    let idx0 = rng.gen_range(0..n);
+                    let idx1 = rng.gen_range(0..n);
+                    let (l, r) = (min(idx0, idx1), max(idx0, idx1) + 1);
+                    let val = rng.gen_range(0..M);
+                    st.update(l..r, Update::add(val));
+                    for i in l..r {
+                        v[i] += val;
+                    }
+                }
+                // sum
+                5 => {
+                    let idx0 = rng.gen_range(0..n);
+                    let idx1 = rng.gen_range(0..n);
+                    let (l, r) = (min(idx0, idx1), max(idx0, idx1) + 1);
+
+                    assert_eq!(st.query(l..r).sum, v[l..r].iter().copied().sum::<i64>());
+                }
+                _ => unreachable!(),
             }
         }
     }
