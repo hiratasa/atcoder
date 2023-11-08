@@ -80,4 +80,69 @@ impl Readable for Digits {
     }
 }
 
-fn main() {}
+fn solve0(s: &[char], k: usize, memo: &mut FxHashMap<Vec<char>, usize>) -> usize {
+    if let Some(&r) = memo.get(s) {
+        return r;
+    }
+
+    if s.is_empty() {
+        return 0;
+    }
+
+    let n = s.len();
+    let r = (0..n)
+        .tuple_windows()
+        .filter(|&(i, j)| s[i] == 'o' && s[j] == 'f')
+        .filter_map(|(i, _)| {
+            (i + 2..=min(i + 2 + k, n))
+                .map(|l| {
+                    let mut t = s[..i].to_vec();
+                    t.extend(s[l..n].citer());
+
+                    solve0(&t, k, memo)
+                })
+                .min()
+        })
+        .min()
+        .unwrap_or(s.len());
+
+    memo.insert(s.to_vec(), r);
+
+    r
+}
+
+fn main() {
+    input! {
+        s: Chars,
+        k: usize,
+    };
+
+    let n = s.len();
+    let dp = (0..=n)
+        .flat_map(|len| (0..=n - len).map(move |i| (i, i + len)))
+        .fold(vec![vec![0usize; n + 1]; n + 1], |mut dp, (i, j)| {
+            if i < j {
+                dp[i][j] = (i + 1..j)
+                    .map(|mid| dp[i][mid] + dp[mid][j])
+                    .min()
+                    .unwrap_or(j - i);
+
+                if s[i] == 'o' {
+                    dp[i][j] = min(
+                        dp[i][j],
+                        (i + 1..j)
+                            .filter(|&l| s[l] == 'f' && dp[i + 1][l] == 0)
+                            .map(|l| dp[l + 1][j].saturating_sub(k))
+                            .min()
+                            .unwrap_or(usize::MAX),
+                    );
+                }
+            }
+
+            dp
+        });
+
+    let ans = dp[0][n];
+
+    println!("{ans}");
+}

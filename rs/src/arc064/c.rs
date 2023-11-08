@@ -1,28 +1,23 @@
 #[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::*;
-#[allow(unused_imports)]
-use std::io;
-#[allow(unused_imports)]
-use std::iter::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
+use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
+
+#[allow(unused_imports)]
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -40,100 +35,31 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! it {
-    ($x:expr) => {
-        once($x)
-    };
-    ($first:expr,$($x:expr),+) => {
-        chain(
-            once($first),
-            it!($($x),+)
-        )
-    }
-}
-
-#[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
+        if $n > 0 {
+            bs.buffer_mut()[0] = $x as u64;
+        }
         bs
     }};
 }
 
-#[allow(unused_macros)]
-macro_rules! pushed {
-    ($c:expr, $x:expr) => {{
-        let mut c = $c;
-        c.push($x);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! inserted {
-    ($c:expr, $($x:expr),*) => {{
-        let mut c = $c;
-        c.insert($($x),*);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! read_tuple {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
-}
-
 #[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
+fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
+    if let Some(ans) = ans {
+        println!("{}", ans);
+    } else {
+        println!("-1");
+    }
 }
 
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
-}
+use easy_ext::ext;
 
-#[allow(dead_code)]
-fn read_row<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_col<T: FromStr>(n: usize) -> Vec<T> {
-    (0..n).map(|_| read()).collect()
-}
-
-#[allow(dead_code)]
-fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
-    (0..n).map(|_| read_row()).collect()
-}
-
-#[allow(dead_code)]
-fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
-    (0..n).map(|_| f()).collect()
-}
-
-trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
 where
+    Self: IntoIterator<Item = &'a T>,
     T: 'a + Copy,
 {
     fn citer(self) -> std::iter::Copied<Self::IntoIter> {
@@ -141,61 +67,74 @@ where
     }
 }
 
-impl<'a, T, I> IterCopyExt<'a, T> for I
-where
-    I: IntoIterator<Item = &'a T>,
-    T: 'a + Copy,
-{
+enum Digits {}
+
+impl Readable for Digits {
+    type Output = Vec<usize>;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> Vec<usize> {
+        source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect()
+    }
 }
-
-fn calc_distance((x0, y0, r0): (f64, f64, f64), (x1, y1, r1): (f64, f64, f64)) -> f64 {
-    let d = ((x0 - x1).powi(2) + (y0 - y1).powi(2)).sqrt();
-
-    f64::max(d - r0 - r1, 0.0)
-}
-
-use ordered_float::OrderedFloat;
 
 fn main() {
-    let (xs, ys, xt, yt) = read_tuple!(f64, f64, f64, f64);
-    let n: usize = read();
-    let mut xyr = read_vec(n, || read_tuple!(f64, f64, f64));
-    xyr.push((xs, ys, 0.0));
-    xyr.push((xt, yt, 0.0));
+    input! {
+        s: (f64, f64), t: (f64, f64),
+        n: usize,
+        circles: [((f64, f64), f64); n],
+    };
 
-    let src = n;
-    let dst = n + 1;
+    let mut dists = vec![vec![0.0; n + 2]; n + 2];
+    for i in 0..n {
+        let ((x0, y0), r0) = circles[i];
+        for j in 0..n {
+            let ((x1, y1), r1) = circles[j];
 
-    let dists = (0..n + 2)
-        .map(|i| {
-            (0..n + 2)
-                .map(|j| calc_distance(xyr[i], xyr[j]))
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
+            let d = ((x0 - x1).powi(2) + (y0 - y1).powi(2)).sqrt();
 
-    let mut q = BinaryHeap::new();
-    let mut costs = vec![std::f64::MAX; n + 2];
-
-    q.push(Reverse((OrderedFloat(0.0), src)));
-    costs[src] = 0.0;
-
-    while let Some(Reverse((OrderedFloat(c), v))) = q.pop() {
-        if c > costs[v] {
-            continue;
+            dists[i][j] = f64::max(0.0, d - (r0 + r1));
         }
 
-        if v == dst {
-            println!("{}", c);
+        for (k, (x1, y1)) in [s, t].citer().enumerate() {
+            let d = ((x0 - x1).powi(2) + (y0 - y1).powi(2)).sqrt();
+            dists[i][n + k] = f64::max(0.0, d - r0);
+            dists[n + k][i] = f64::max(0.0, d - r0);
+        }
+    }
+
+    {
+        let (x0, y0) = s;
+        let (x1, y1) = t;
+
+        let d = ((x0 - x1).powi(2) + (y0 - y1).powi(2)).sqrt();
+        dists[n][n + 1] = d;
+        dists[n + 1][n] = d;
+    }
+
+    let mut visited = vec![false; n + 2];
+    let mut costs = vec![f64::INFINITY; n + 2];
+    costs[n] = 0.0;
+
+    loop {
+        let v = (0..n + 2)
+            .filter(|&i| !visited[i])
+            .min_by_key(|&i| ordered_float::OrderedFloat(costs[i]))
+            .unwrap();
+        visited[v] = true;
+        let cost = costs[v];
+
+        if v == n + 1 {
+            println!("{cost}");
             return;
         }
 
-        for u in 0..n + 2 {
-            let nc = c + dists[v][u];
-            if nc < costs[u] {
-                costs[u] = nc;
-                q.push(Reverse((OrderedFloat(nc), u)));
+        (0..n + 2).for_each(|i| {
+            if cost + dists[v][i] < costs[i] {
+                costs[i] = cost + dists[v][i];
             }
-        }
+        });
     }
 }
