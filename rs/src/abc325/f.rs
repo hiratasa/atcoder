@@ -80,4 +80,32 @@ impl Readable for Digits {
     }
 }
 
-fn main() {}
+fn main() {
+    input! {
+        n: usize,
+        d: [usize; n],
+        (l0, c0, k0): (usize, usize, usize),
+        (l1, c1, k1): (usize, usize, usize),
+    };
+
+    let dp = d.citer().fold(vec![0; k0 + 1], |prev, x| {
+        let mut next = vec![usize::MAX; k0 + 1];
+        (0..=k0).for_each(|i| {
+            (0..=k0 - i).for_each(|j| {
+                next[i + j] = min(
+                    next[i + j],
+                    prev[i] + (x.saturating_sub(j * l0) + l1 - 1) / l1,
+                );
+            });
+        });
+        next
+    });
+
+    let ans = dp
+        .citer()
+        .enumerate()
+        .filter_map(|(i, j)| if j <= k1 { Some(i * c0 + j * c1) } else { None })
+        .min();
+
+    println_opt(ans);
+}
