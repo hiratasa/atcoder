@@ -1,21 +1,5 @@
 #[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::*;
-#[allow(unused_imports)]
-use std::f64;
-#[allow(unused_imports)]
-use std::i64;
-#[allow(unused_imports)]
-use std::io;
-#[allow(unused_imports)]
-use std::iter::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
@@ -26,9 +10,14 @@ use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
 use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
 #[allow(unused_imports)]
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
+
 #[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use proconio::{
+    input,
+    marker::{Bytes, Chars, Isize1, Usize1},
+    source::{Readable, Source},
+};
 
 // vec with some initial value
 #[allow(unused_macros)]
@@ -46,22 +35,6 @@ macro_rules! vvec {
 }
 
 #[allow(unused_macros)]
-macro_rules! it {
-    ($x:expr) => {
-        once($x)
-    };
-    ($first:expr,$($x:expr),+) => {
-        chain(
-            once($first),
-            it!($($x),+)
-        )
-    };
-    ($($x:expr),+,) => {
-        it![$($x),+]
-    };
-}
-
-#[allow(unused_macros)]
 macro_rules! bitset {
     ($n:expr, $x:expr) => {{
         let mut bs = BitSet::new($n);
@@ -70,86 +43,6 @@ macro_rules! bitset {
         }
         bs
     }};
-}
-
-#[allow(unused_macros)]
-macro_rules! pushed {
-    ($c:expr, $x:expr) => {{
-        let x = $x;
-        let mut c = $c;
-        c.push(x);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! inserted {
-    ($c:expr, $($x:expr),*) => {{
-        let mut c = $c;
-        c.insert($($x),*);
-        c
-    }};
-}
-
-#[allow(unused_macros)]
-macro_rules! read_tuple {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
-}
-
-#[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
-}
-
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
-}
-
-#[allow(dead_code)]
-fn read_digits() -> Vec<usize> {
-    read::<String>()
-        .chars()
-        .map(|c| c.to_digit(10).unwrap() as usize)
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_row<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_col<T: FromStr>(n: usize) -> Vec<T> {
-    (0..n).map(|_| read()).collect()
-}
-
-#[allow(dead_code)]
-fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
-    (0..n).map(|_| read_row()).collect()
-}
-
-#[allow(dead_code)]
-fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
-    (0..n).map(|_| f()).collect()
 }
 
 #[allow(dead_code)]
@@ -161,8 +54,12 @@ fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     }
 }
 
-trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
+use easy_ext::ext;
+
+#[ext(IterCopyExt)]
+impl<'a, I, T> I
 where
+    Self: IntoIterator<Item = &'a T>,
     T: 'a + Copy,
 {
     fn citer(self) -> std::iter::Copied<Self::IntoIter> {
@@ -170,11 +67,50 @@ where
     }
 }
 
-impl<'a, T, I> IterCopyExt<'a, T> for I
-where
-    I: IntoIterator<Item = &'a T>,
-    T: 'a + Copy,
-{
+enum Digits {}
+
+impl Readable for Digits {
+    type Output = Vec<usize>;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> Vec<usize> {
+        source
+            .next_token_unwrap()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect()
+    }
 }
 
-fn main() {}
+fn main() {
+    input! {
+        n: usize, k: usize,
+        a: [usize; n],
+    };
+
+    let ans = (0..k)
+        .try_fold(a, |a, _| {
+            let mut b = vec![0usize; n];
+
+            for (i, x) in a.citer().enumerate() {
+                let l = i.saturating_sub(x);
+                b[l] = b[l].wrapping_add(1);
+
+                let r = i + x + 1;
+                if r < n {
+                    b[r] = b[r].wrapping_add(1usize.wrapping_neg());
+                }
+            }
+
+            for i in 1..n {
+                b[i] = b[i - 1].wrapping_add(b[i]);
+            }
+
+            if a == b {
+                Err(a)
+            } else {
+                Ok(b)
+            }
+        })
+        .map_or_else(|ans| ans, |ans| ans);
+
+    println!("{}", ans.citer().join(" "));
+}
