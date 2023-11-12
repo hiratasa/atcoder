@@ -204,7 +204,7 @@ mod detail {
 
 use detail::Graph;
 
-fn calc_lowlink(g: &Graph, components: &mut [u32], bridges: &mut Vec<(usize, usize)>) {
+fn calc_lowlink(g: &Graph, components: &mut [u32], bridges: &mut Vec<(usize, usize)>) -> u32 {
     let n = g.size();
     let mut ord = vec![0; n];
     let mut low = vec![0; n];
@@ -213,46 +213,59 @@ fn calc_lowlink(g: &Graph, components: &mut [u32], bridges: &mut Vec<(usize, usi
 
     let mut stack = vec![];
     let mut stack2 = vec![];
-    stack.push((0, n, true));
 
-    while let Some((v, p, first)) = stack.pop() {
-        if first {
-            ord[v] = idx;
-            low[v] = idx;
-            idx += 1;
+    for v0 in 0..n {
+        if ord[v0] > 0 {
+            continue;
+        }
 
-            stack.push((v, p, false));
-            stack2.push(v);
-            g.adjs(v).for_each(|u| {
-                if u == p {
-                    return;
+        stack.push((v0, n, true));
+
+        while let Some((v, p, first)) = stack.pop() {
+            if first {
+                if ord[v] > 0 {
+                    low[p] = min(low[p], ord[v]);
+                    continue;
                 }
-                if ord[u] > 0 {
-                    low[v] = min(low[v], ord[u]);
-                } else {
-                    stack.push((u, v, true));
-                }
-            });
-        } else {
-            if p < n {
-                low[p] = min(low[p], low[v]);
-            }
 
-            if p >= n || ord[p] < low[v] {
-                // bridge
-                while let Some(x) = stack2.pop() {
-                    components[x] = cidx;
-                    if x == v {
-                        break;
+                ord[v] = idx;
+                low[v] = idx;
+                idx += 1;
+
+                stack.push((v, p, false));
+                stack2.push(v);
+                let mut p_first = true;
+                g.adjs(v).for_each(|u| {
+                    // 多重辺があるときのために、pは初回だけ無視
+                    if u == p && p_first {
+                        p_first = false;
+                        return;
                     }
-                }
-                cidx += 1;
+                    stack.push((u, v, true));
+                });
+            } else {
                 if p < n {
-                    bridges.push((p, v));
+                    low[p] = min(low[p], low[v]);
+                }
+
+                if p >= n || ord[p] < low[v] {
+                    // bridge
+                    while let Some(x) = stack2.pop() {
+                        components[x] = cidx;
+                        if x == v {
+                            break;
+                        }
+                    }
+                    cidx += 1;
+                    if p < n {
+                        bridges.push((p, v));
+                    }
                 }
             }
         }
     }
+
+    cidx
 }
 
 use proconio::input;
