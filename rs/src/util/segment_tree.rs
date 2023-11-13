@@ -591,7 +591,7 @@ where
 #[snippet("lazysegtree")]
 macro_rules! define_monoid {
     ($name: ident, $t: ty, $id: expr, $op: expr) => {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        #[derive(Clone, Copy, PartialEq, Eq)]
         struct $name($t);
 
         impl Monoid for $name {
@@ -607,6 +607,12 @@ macro_rules! define_monoid {
         impl From<$t> for $name {
             fn from(x: $t) -> $name {
                 Self(x)
+            }
+        }
+
+        impl std::fmt::Debug for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+                self.0.fmt(f)
             }
         }
     };
