@@ -25,6 +25,76 @@ fn range(r: impl std::ops::RangeBounds<usize>, n: usize) -> (usize, usize) {
 #[snippet("segtree")]
 #[snippet("dualsegtree")]
 #[snippet("lazysegtree")]
+fn segtree_table<M: Monoid + std::fmt::Debug, Op: Monoid + std::fmt::Debug>(
+    values: &[M],
+    lazy: &[Op],
+) -> String {
+    let cap = (values.len() + 1) / 2;
+    assert!(cap.is_power_of_two());
+    let height = cap.trailing_zeros() as usize + 1;
+    let enable_lazy = !lazy.is_empty();
+
+    let rows = (0..height)
+        .map(|i| {
+            ((1usize << i) - 1..(1 << (i + 1)) - 1)
+                .map(|idx| {
+                    if enable_lazy {
+                        format!("{:?}; {:?}", values[idx], lazy[idx])
+                    } else {
+                        format!("{:?}", values[idx])
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let width = rows
+        .iter()
+        .enumerate()
+        .map(|(i, cols)| {
+            let k = cap >> i;
+
+            cols.iter()
+                .map(|s| s.len())
+                .map(|l| {
+                    // w * k + (k - 1) >= l
+                    (l.saturating_sub(k - 1) + k - 1) / k
+                })
+                .max()
+                .unwrap()
+        })
+        .chain(once(2))
+        .max()
+        .unwrap();
+
+    use std::iter::once;
+    once(
+        (0..cap)
+            .map(|i| format!("|{:>width$}", i))
+            .chain(once("|\n".to_string()))
+            .collect::<String>(),
+    )
+    .chain(once(
+        once("|")
+            .chain((0..cap * (width + 1) - 1).map(|_| "+"))
+            .chain(once("|\n"))
+            .collect::<String>(),
+    ))
+    .chain(rows.iter().enumerate().map(|(i, cols)| {
+        let k = cap >> i;
+
+        let w = width * k + (k - 1);
+        cols.iter()
+            .map(|t| format!("|{:^w$}", t))
+            .collect::<String>()
+            + "|\n"
+    }))
+    .collect()
+}
+
+#[snippet("segtree")]
+#[snippet("dualsegtree")]
+#[snippet("lazysegtree")]
 trait Monoid {
     fn id() -> Self;
     fn op(&self, rhs: &Self) -> Self;
@@ -251,6 +321,13 @@ where
             Some(a)
         }
     }
+
+    fn dump_table(&self)
+    where
+        M: std::fmt::Debug,
+    {
+        eprintln!("{}", segtree_table::<M, M>(&self.values, &[]));
+    }
 }
 
 // 演算だけのったセグメント木
@@ -379,6 +456,13 @@ where
             left_idx = left_idx >> 1;
             right_idx = (right_idx - 1) >> 1;
         }
+    }
+
+    fn dump_table(&self)
+    where
+        Op: std::fmt::Debug,
+    {
+        eprintln!("{}", segtree_table::<Op, Op>(&self.lazy, &[]));
     }
 }
 
@@ -584,6 +668,14 @@ where
 
         M::op(&left, &right)
     }
+
+    fn dump_table(&self)
+    where
+        M: std::fmt::Debug,
+        Op: std::fmt::Debug,
+    {
+        eprintln!("{}", segtree_table::<M, Op>(&self.values, &self.lazy));
+    }
 }
 
 #[snippet("segtree")]
@@ -612,7 +704,11 @@ macro_rules! define_monoid {
 
         impl std::fmt::Debug for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-                self.0.fmt(f)
+                if *self == Self::id() {
+                    write!(f, "id.")
+                } else {
+                    self.0.fmt(f)
+                }
             }
         }
     };
@@ -852,12 +948,12 @@ where
     }
 }
 
-define_monoid!(Minimum, i64, 1 << 60, i64::min);
+define_monoid!(Minimum, i64, i64::MAX, i64::min);
 define_monoid!(AddValue, i64, 0, std::ops::Add::add);
 
 impl Operator<Minimum> for AddValue {
     fn apply(&self, v: &Minimum) -> Minimum {
-        Minimum(self.0 + v.0)
+        Minimum(self.0.saturating_add(v.0))
     }
 }
 
@@ -1073,6 +1169,14 @@ where
         }
 
         M::op(&left, &right)
+    }
+
+    fn dump_table(&self)
+    where
+        M: std::fmt::Debug,
+        Op: std::fmt::Debug,
+    {
+        eprintln!("{}", segtree_table::<M, Op>(&self.values, &self.lazy));
     }
 }
 
