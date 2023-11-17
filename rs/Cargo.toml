@@ -15386,3 +15386,7 @@ path = "src/abc328/f.rs"
 [[bin]]
 name = "abc328-g"
 path = "src/abc328/g.rs"
+
+[[bin]]
+name = "wtf22_day1-a"
+path = "src/wtf22_day1/a.rs"
