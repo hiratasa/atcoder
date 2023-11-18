@@ -1,6 +1,8 @@
+use bitset_fixed::BitSet;
 use cargo_snippet::snippet;
 
 #[snippet("read_digits")]
+#[snippet("read_bitset")]
 use proconio::source::{Readable, Source};
 
 #[snippet("read_digits")]
@@ -15,6 +17,29 @@ impl Readable for Digits {
             .chars()
             .map(|c| c.to_digit(10).unwrap() as usize)
             .collect()
+    }
+}
+
+#[snippet("read_bitset")]
+enum BitSet01 {}
+
+#[snippet("read_bitset")]
+impl Readable for BitSet01 {
+    type Output = BitSet;
+    fn read<R: std::io::BufRead, S: Source<R>>(source: &mut S) -> BitSet {
+        let s = source.next_token_unwrap();
+
+        s.chars()
+            .map(|c| match c {
+                '0' => false,
+                '1' => true,
+                _ => unreachable!(),
+            })
+            .enumerate()
+            .fold(BitSet::new(s.len()), |mut bs, (i, x)| {
+                bs.set(i, x);
+                bs
+            })
     }
 }
 
@@ -33,5 +58,19 @@ mod tests {
         };
 
         assert_eq!(&s, &[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
+    }
+
+    #[test]
+    fn test_bitset01() {
+        let source = AutoSource::from("00011110101");
+
+        input! {
+            from source,
+            bs: BitSet01,
+        };
+
+        let mut expected = BitSet::new(11);
+        expected.buffer_mut()[0] = 0b10101111000;
+        assert_eq!(&bs, &expected);
     }
 }
