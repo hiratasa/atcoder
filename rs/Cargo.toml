@@ -15390,3 +15390,31 @@ path = "src/abc328/g.rs"
 [[bin]]
 name = "wtf22_day1-a"
 path = "src/wtf22_day1/a.rs"
+
+[[bin]]
+name = "abc329-a"
+path = "src/abc329/a.rs"
+
+[[bin]]
+name = "abc329-b"
+path = "src/abc329/b.rs"
+
+[[bin]]
+name = "abc329-c"
+path = "src/abc329/c.rs"
+
+[[bin]]
+name = "abc329-d"
+path = "src/abc329/d.rs"
+
+[[bin]]
+name = "abc329-e"
+path = "src/abc329/e.rs"
+
+[[bin]]
+name = "abc329-f"
+path = "src/abc329/f.rs"
+
+[[bin]]
+name = "abc329-g"
+path = "src/abc329/g.rs"
