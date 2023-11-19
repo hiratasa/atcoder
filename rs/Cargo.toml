@@ -15418,3 +15418,19 @@ path = "src/abc329/f.rs"
 [[bin]]
 name = "abc329-g"
 path = "src/abc329/g.rs"
+
+[[bin]]
+name = "arc168-a"
+path = "src/arc168/a.rs"
+
+[[bin]]
+name = "arc168-b"
+path = "src/arc168/b.rs"
+
+[[bin]]
+name = "arc168-c"
+path = "src/arc168/c.rs"
+
+[[bin]]
+name = "arc168-d"
+path = "src/arc168/d.rs"
