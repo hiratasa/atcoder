@@ -158,12 +158,12 @@ struct WaveletMatrix {
 type Value = u64;
 #[allow(dead_code)]
 impl WaveletMatrix {
-    const W: usize = 64;
+    const H: usize = 64;
 
     fn new(values: &[Value]) -> WaveletMatrix {
         let n = values.len();
 
-        let bits = (0..Self::W)
+        let bits = (0..Self::H)
             .rev()
             .scan(values.to_vec(), |values, i| {
                 let bv = BitVector::new(values.iter().map(|&x| x & (1 << i) > 0));
@@ -214,7 +214,7 @@ impl WaveletMatrix {
     // O(W)
     fn value_idx(&self, idx: usize, val: Value) -> usize {
         self.bits.iter().enumerate().fold(idx, |idx, (i, bv)| {
-            if val & (1 << (Self::W - 1 - i)) == 0 {
+            if val & (1 << (Self::H - 1 - i)) == 0 {
                 bv.count0(idx)
             } else {
                 bv.num0() + bv.count1(idx)
@@ -238,7 +238,7 @@ impl WaveletMatrix {
             .iter()
             .enumerate()
             .fold((0, begin, end), |(num, begin, end), (i, bv)| {
-                if val & (1 << (Self::W - 1 - i)) == 0 {
+                if val & (1 << (Self::H - 1 - i)) == 0 {
                     (num, bv.count0(begin), bv.count0(end))
                 } else {
                     (
