@@ -1,68 +1,30 @@
+use itertools::Itertools;
+use itertools_num::ItertoolsNum;
 use std::iter::once;
-
-type BitBlock = u16;
-const W: usize = std::mem::size_of::<BitBlock>() * 8;
-
-const fn construct_masks() -> [BitBlock; W] {
-    let mut v = [0; W];
-
-    let mut i = 0;
-    while i < W {
-        v[i] = (1 << i) - 1;
-        i += 1;
-    }
-
-    v
-}
-
-const fn construct_num_ones() -> [usize; 1 << W] {
-    let mut v = [0; 1 << W];
-
-    let mut i = 0;
-    while i < 1 << W {
-        v[i] = i.count_ones() as usize;
-        i += 1;
-    }
-
-    v
-}
-
-const MASKS: [BitBlock; W] = construct_masks();
-const NUM_ONES: [usize; 1 << W] = construct_num_ones();
 
 struct BitVector {
     len: usize,
-    blocks: Vec<BitBlock>,
+    blocks: Vec<u64>,
     ranks: Vec<usize>,
 }
 
 impl BitVector {
-    const W: usize = W;
+    const W: usize = 64;
 
     fn new(iter: impl IntoIterator<Item = bool>) -> BitVector {
         let mut len = 0;
         let blocks = iter
             .into_iter()
-            .map(|x| Some(x))
-            .chain(once(None)) // count1()などにlenぴったりが渡されても問題ないように.
-            .enumerate()
-            .scan(0 as BitBlock, |b, (i, x_opt)| {
-                if let Some(x) = x_opt {
+            .chunks(Self::W)
+            .into_iter()
+            .map(|it| {
+                it.inspect(|_| {
                     len += 1;
-                    if x {
-                        *b += 1 << (i % W);
-                    }
-
-                    if i % W == W - 1 {
-                        Some(Some(std::mem::replace(b, 0)))
-                    } else {
-                        Some(None)
-                    }
-                } else {
-                    Some(Some(*b))
-                }
+                })
+                .enumerate()
+                .map(|(i, x)| if x { 1 << i } else { 0 })
+                .sum::<u64>()
             })
-            .flatten()
             .collect::<Vec<_>>();
 
         let ranks = once(0)
@@ -72,10 +34,7 @@ impl BitVector {
                     .copied()
                     .map(|block| block.count_ones() as usize),
             )
-            .scan(0, |s, x| {
-                *s += x;
-                Some(*s)
-            })
+            .cumsum::<usize>()
             .collect::<Vec<_>>();
 
         BitVector { len, blocks, ranks }
@@ -96,7 +55,12 @@ impl BitVector {
 
     // [0, i)の1の個数
     fn count1(&self, i: usize) -> usize {
-        self.ranks[i / Self::W] + NUM_ONES[(self.blocks[i / Self::W] & MASKS[i % Self::W]) as usize]
+        if i / Self::W >= self.blocks.len() {
+            self.ranks[self.ranks.len() - 1]
+        } else {
+            self.ranks[i / Self::W]
+                + (self.blocks[i / Self::W] & ((1 << (i % Self::W)) - 1)).count_ones() as usize
+        }
     }
 
     fn num0(&self) -> usize {
@@ -270,76 +234,21 @@ impl WaveletMatrix {
     // [begin, end)でのval未満の値の出現回数
     // O(W)
     fn count_below(&self, begin: usize, end: usize, val: Value) -> usize {
-        let mut num = 0;
-        let mut begin = begin;
-        let mut end = end;
-
-        for i in 0..Self::H {
-            let bv = &self.bits[i];
-            let pos = 1 << (Self::H - 1 - i);
-
-            let add_num;
-            (add_num, begin, end) = if val & pos == 0 {
-                (0, bv.count0(begin), bv.count0(end))
-            } else {
-                let c1b = bv.count1(begin);
-                let c1e = bv.count1(end);
-                (
-                    (end - begin) - (c1e - c1b),
-                    bv.num0() + c1b,
-                    bv.num0() + c1e,
-                )
-            };
-
-            num += add_num;
-        }
-
-        num
-    }
-
-    // [begin, end)での[lower, upper)の出現回数
-    // O(W)
-    fn count_between(&self, begin: usize, end: usize, lower: Value, upper: Value) -> usize {
-        let mut num = 0;
-        let mut begin_l = begin;
-        let mut end_l = end;
-        let mut begin_u = begin;
-        let mut end_u = end;
-
-        for i in 0..Self::H {
-            let bv = &self.bits[i];
-            let pos = 1 << (Self::H - 1 - i);
-
-            let num_l;
-            (num_l, begin_l, end_l) = if lower & pos == 0 {
-                (0, bv.count0(begin_l), bv.count0(end_l))
-            } else {
-                let c1b = bv.count1(begin_l);
-                let c1e = bv.count1(end_l);
-                (
-                    (end_l - begin_l) - (c1e - c1b),
-                    bv.num0() + c1b,
-                    bv.num0() + c1e,
-                )
-            };
-
-            let num_u;
-            (num_u, begin_u, end_u) = if upper & pos == 0 {
-                (0, bv.count0(begin_u), bv.count0(end_u))
-            } else {
-                let c1b = bv.count1(begin_u);
-                let c1e = bv.count1(end_u);
-                (
-                    (end_u - begin_u) - (c1e - c1b),
-                    bv.num0() + c1b,
-                    bv.num0() + c1e,
-                )
-            };
-
-            num = num + num_u - num_l;
-        }
-
-        num
+        self.bits
+            .iter()
+            .enumerate()
+            .fold((0, begin, end), |(num, begin, end), (i, bv)| {
+                if val & (1 << (Self::H - 1 - i)) == 0 {
+                    (num, bv.count0(begin), bv.count0(end))
+                } else {
+                    (
+                        num + bv.count0(end) - bv.count0(begin),
+                        bv.num0() + bv.count1(begin),
+                        bv.num0() + bv.count1(end),
+                    )
+                }
+            })
+            .0
     }
 
     // nth番目のvalの出現位置
@@ -403,7 +312,6 @@ impl WaveletMatrix {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use itertools::Itertools;
 
     #[test]
     fn test_bv_rank() {
