@@ -15434,3 +15434,7 @@ path = "src/arc168/c.rs"
 [[bin]]
 name = "arc168-d"
 path = "src/arc168/d.rs"
+
+[[bin]]
+name = "arc168-d2"
+path = "src/arc168/d2.rs"
