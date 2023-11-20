@@ -93,7 +93,7 @@ impl BitVector {
 
         let idx = begin;
         let pattern = self.blocks[idx];
-        let nth_in_block = nth - self.ranks[idx];
+        let nth_in_block = nth - (Self::W * begin - self.ranks[idx]);
         let mut begin = 0;
         let mut end = Self::W;
         while end - begin > 1 {
