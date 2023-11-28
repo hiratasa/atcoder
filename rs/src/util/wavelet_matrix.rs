@@ -1,17 +1,160 @@
 use std::iter::once;
 
+trait BitVector {
+    fn new(iter: impl IntoIterator<Item = bool>) -> Self;
+
+    fn len(&self) -> usize;
+    fn get(&self, i: usize) -> bool;
+    // [0, i)の0の個数
+    fn count0(&self, i: usize) -> usize;
+    // [0, i)の1の個数
+    fn count1(&self, i: usize) -> usize;
+    // 全体の0の個数
+    fn num0(&self) -> usize {
+        self.count0(self.len())
+    }
+    // 全体の1の個数
+    fn num1(&self) -> usize {
+        self.count1(self.len())
+    }
+    // nth番目(0-indexed)の0の位置
+    fn select0(&self, nth: usize) -> Option<usize>;
+    // nth番目(0-indexed)の1の位置
+    fn select1(&self, nth: usize) -> Option<usize>;
+}
+
+// サイズが小さく、キャッシュミスが問題にならないとき => BitVectorByRanks
+// サイズが大きく、キャッシュミスが問題になるとき => BitSetVector
+
+type BitRank = u8;
+
+struct BitVectorByRanks {
+    len: usize,
+    ranks: Vec<BitRank>,
+    group_ranks: Vec<usize>,
+}
+
+impl BitVectorByRanks {
+    const GROUP_WIDTH: usize = BitRank::MAX as usize + 1;
+}
+
+impl BitVector for BitVectorByRanks {
+    fn new(iter: impl IntoIterator<Item = bool>) -> BitVectorByRanks {
+        let bits = iter.into_iter().collect::<Vec<_>>();
+        let len = bits.len();
+
+        let mut ranks = once(0)
+            .chain(bits.iter().copied().map(|x| x as BitRank))
+            .collect::<Vec<_>>();
+
+        for i in 1..ranks.len() {
+            if i % Self::GROUP_WIDTH == 0 {
+                ranks[i] = 0;
+            } else {
+                ranks[i] += ranks[i - 1];
+            }
+        }
+
+        let mut group_ranks = vec![0; (len + Self::GROUP_WIDTH - 1) / Self::GROUP_WIDTH + 1];
+        for (i, b) in bits.iter().copied().enumerate() {
+            group_ranks[(i / Self::GROUP_WIDTH) + 1] += b as usize;
+        }
+
+        for i in 1..group_ranks.len() {
+            group_ranks[i] += group_ranks[i - 1];
+        }
+
+        BitVectorByRanks {
+            len,
+            ranks,
+            group_ranks,
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn get(&self, i: usize) -> bool {
+        self.count1(i + 1) > self.count1(i)
+    }
+
+    // [0, i)の0の個数
+    fn count0(&self, i: usize) -> usize {
+        i - self.count1(i)
+    }
+
+    // [0, i)の1の個数
+    fn count1(&self, i: usize) -> usize {
+        self.group_ranks[i / Self::GROUP_WIDTH] + self.ranks[i] as usize
+    }
+
+    fn num0(&self) -> usize {
+        self.len - self.num1()
+    }
+
+    fn num1(&self) -> usize {
+        self.group_ranks[self.group_ranks.len() - 1]
+    }
+
+    // nth番目(0-indexed)の0の位置
+    fn select0(&self, nth: usize) -> Option<usize> {
+        if nth >= self.num0() {
+            return None;
+        }
+
+        let mut begin = 0;
+        let mut end = self.len;
+        while end - begin > 1 {
+            let mid = begin + (end - begin) / 2;
+            if nth < self.count0(mid) {
+                end = mid;
+            } else {
+                begin = mid;
+            }
+        }
+
+        assert!(self.count0(begin) <= nth);
+        assert!(begin + 1 == self.len || self.count0(begin + 1) > nth);
+
+        Some(begin)
+    }
+
+    // nth番目(0-indexed)の1の位置
+    fn select1(&self, nth: usize) -> Option<usize> {
+        if nth >= self.num1() {
+            return None;
+        }
+
+        let mut begin = 0;
+        let mut end = self.len;
+        while end - begin > 1 {
+            let mid = begin + (end - begin) / 2;
+            if nth < self.count1(mid) {
+                end = mid;
+            } else {
+                begin = mid;
+            }
+        }
+
+        assert!(self.count1(begin) <= nth);
+        assert!(begin + 1 == self.len || self.count1(begin + 1) > nth);
+
+        Some(begin)
+    }
+}
+
 type Block = u8;
 type BlockRank = u8;
 
-// NOTE: サイズが十分に小さいケースでは、BlockRankを十分に大きい型にしてblock_group_ranksを廃止したほうが速い
-struct BitVector {
+struct BitSetVector {
     len: usize,
     blocks: Vec<Block>,
     block_ranks: Vec<BlockRank>,
     block_group_ranks: Vec<usize>,
 }
 
-impl BitVector {
+impl BitSetVector {
     const WIDTH: usize = std::mem::size_of::<Block>() * 8;
     const GROUP_WIDTH: usize = BlockRank::MAX as usize + 1;
     const BLOCK_PER_GROUP: usize = Self::GROUP_WIDTH / Self::WIDTH;
@@ -33,8 +176,10 @@ impl BitVector {
 
         v
     }
+}
 
-    fn new(iter: impl IntoIterator<Item = bool>) -> BitVector {
+impl BitVector for BitSetVector {
+    fn new(iter: impl IntoIterator<Item = bool>) -> BitSetVector {
         let mut len = 0;
         let mut blocks = vec![];
 
@@ -74,7 +219,7 @@ impl BitVector {
             block_group_ranks[i] += block_group_ranks[i - 1];
         }
 
-        BitVector {
+        BitSetVector {
             len,
             blocks,
             block_ranks,
@@ -223,14 +368,14 @@ impl BitVector {
 }
 
 // 参考: https://miti-7.hatenablog.com/entry/2018/04/28/152259
-struct WaveletMatrix<const H: usize> {
-    bits: Vec<BitVector>,
+struct WaveletMatrix<B: BitVector, const H: usize> {
+    bits: Vec<B>,
 }
 
 type Value = u64;
 #[allow(dead_code)]
-impl<const H: usize> WaveletMatrix<H> {
-    fn new(values: &[Value]) -> WaveletMatrix<H> {
+impl<B: BitVector, const H: usize> WaveletMatrix<B, H> {
+    fn new(values: &[Value]) -> WaveletMatrix<B, H> {
         let n = values.len();
         if let Some(u) = (1 as Value).checked_shl(H as u32) {
             assert!(values.iter().all(|&x| x < u));
@@ -239,7 +384,7 @@ impl<const H: usize> WaveletMatrix<H> {
         let bits = (0..H)
             .rev()
             .scan(values.to_vec(), |values, i| {
-                let bv = BitVector::new(values.iter().map(|&x| x & (1 << i) > 0));
+                let bv = B::new(values.iter().map(|&x| x & (1 << i) > 0));
 
                 let mut new_values = vec![0; n];
                 values
@@ -466,9 +611,25 @@ mod tests {
     use rand::{rngs::SmallRng, Rng, SeedableRng};
 
     #[test]
-    fn test_bv_rank() {
+    fn test_bit_vector_by_ranks() {
+        test_bv::<BitVectorByRanks>();
+    }
+
+    #[test]
+    fn test_bit_set_vector() {
+        test_bv::<BitSetVector>();
+    }
+
+    fn test_bv<BV: BitVector>() {
+        test_bv_rank::<BV>();
+        test_bv_rank_random::<BV>();
+        test_bv_select::<BV>();
+        test_bv_select_random::<BV>();
+    }
+
+    fn test_bv_rank<BV: BitVector>() {
         let v = [false, false, true, false, false, true, false];
-        let bv = BitVector::new(v);
+        let bv = BV::new(v);
 
         let mut rank0 = 0;
         let mut rank1 = 0;
@@ -486,15 +647,14 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_bv_rank_random() {
+    fn test_bv_rank_random<BV: BitVector>() {
         let mut rng = SmallRng::seed_from_u64(42);
 
         for n in 1000..3000 {
             let v = std::iter::repeat_with(|| rng.gen::<bool>())
                 .take(n)
                 .collect::<Vec<_>>();
-            let bv = BitVector::new(v.iter().copied());
+            let bv = BV::new(v.iter().copied());
 
             let mut rank0 = 0;
             let mut rank1 = 0;
@@ -515,10 +675,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_bv_select() {
+    fn test_bv_select<BV: BitVector>() {
         let v = [false, false, true, false, false, true, false];
-        let bv = BitVector::new(v);
+        let bv = BV::new(v);
 
         for i in 0..=bv.num0() {
             assert_eq!(v.iter().positions(|&x| !x).nth(i), bv.select0(i), "nth={i}");
@@ -529,15 +688,14 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_bv_select_random() {
+    fn test_bv_select_random<BV: BitVector>() {
         let mut rng = SmallRng::seed_from_u64(42);
 
         for n in 1000..3000 {
             let v = std::iter::repeat_with(|| rng.gen::<bool>())
                 .take(n)
                 .collect::<Vec<_>>();
-            let bv = BitVector::new(v.iter().copied());
+            let bv = BV::new(v.iter().copied());
 
             let mut rank0 = 0;
             let mut rank1 = 0;
@@ -561,19 +719,36 @@ mod tests {
     }
 
     #[test]
-    fn test_get() {
+    fn test_wv_with_bit_vector_by_ranks() {
+        test_wv::<BitVectorByRanks>();
+    }
+
+    #[test]
+    fn test_wv_with_bit_set_vector() {
+        test_wv::<BitSetVector>();
+    }
+
+    fn test_wv<BV: BitVector>() {
+        test_get::<BV>();
+        test_rank::<BV>();
+        test_rank_below::<BV>();
+        test_rank_between::<BV>();
+        test_select::<BV>();
+        test_quantile::<BV>();
+    }
+
+    fn test_get<BV: BitVector>() {
         let a = [1, 100, 34, 22, 9, 8, 77777, 6, 5, 34, 22, 9, 1, 4];
-        let wm = WaveletMatrix::<64>::new(&a);
+        let wm = WaveletMatrix::<BV, 64>::new(&a);
 
         for i in 0..a.len() {
             assert_eq!(a[i], wm.get(i));
         }
     }
 
-    #[test]
-    fn test_rank() {
+    fn test_rank<BV: BitVector>() {
         let a = [1, 100, 34, 22, 9, 8, 77777, 6, 5, 34, 22, 9, 1, 4];
-        let wm = WaveletMatrix::<64>::new(&a);
+        let wm = WaveletMatrix::<BV, 64>::new(&a);
 
         for i in 0..a.len() {
             for j in i + 1..a.len() {
@@ -590,10 +765,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_rank_below() {
+    fn test_rank_below<BV: BitVector>() {
         let a = [1, 100, 34, 22, 9, 8, 77777, 6, 5, 34, 22, 9, 1, 4];
-        let wm = WaveletMatrix::<64>::new(&a);
+        let wm = WaveletMatrix::<BV, 64>::new(&a);
 
         for i in 0..a.len() {
             for j in i + 1..a.len() {
@@ -610,10 +784,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_rank_between() {
+    fn test_rank_between<BV: BitVector>() {
         let a = [1, 100, 34, 22, 9, 8, 77777, 6, 5, 34, 22, 9, 1, 4];
-        let wm = WaveletMatrix::<20>::new(&a);
+        let wm = WaveletMatrix::<BV, 20>::new(&a);
 
         let test_values = a
             .iter()
@@ -638,10 +811,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_select() {
+    fn test_select<BV: BitVector>() {
         let a = [1, 100, 34, 22, 9, 8, 77777, 6, 5, 34, 22, 9, 1, 4];
-        let wm = WaveletMatrix::<64>::new(&a);
+        let wm = WaveletMatrix::<BV, 64>::new(&a);
 
         let mut freq = std::collections::BTreeMap::new();
         for i in 0..a.len() {
@@ -659,10 +831,9 @@ mod tests {
         assert!(wm.select(1, 42).is_none());
     }
 
-    #[test]
-    fn test_quantile() {
+    fn test_quantile<BV: BitVector>() {
         let a = [1, 100, 34, 22, 9, 8, 77777, 6, 5, 34, 22, 9, 1, 4];
-        let wm = WaveletMatrix::<64>::new(&a);
+        let wm = WaveletMatrix::<BV, 64>::new(&a);
 
         for i in 0..a.len() {
             for j in i + 1..a.len() {
