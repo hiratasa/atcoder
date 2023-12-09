@@ -15494,3 +15494,19 @@ path = "src/abc331/f.rs"
 [[bin]]
 name = "abc331-g"
 path = "src/abc331/g.rs"
+
+[[bin]]
+name = "arc169-a"
+path = "src/arc169/a.rs"
+
+[[bin]]
+name = "arc169-b"
+path = "src/arc169/b.rs"
+
+[[bin]]
+name = "arc169-c"
+path = "src/arc169/c.rs"
+
+[[bin]]
+name = "arc169-d"
+path = "src/arc169/d.rs"
