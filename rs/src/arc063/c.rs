@@ -1,152 +1,97 @@
-#[allow(unused_imports)]
-use std::cmp::*;
-#[allow(unused_imports)]
-use std::collections::*;
-#[allow(unused_imports)]
-use std::io;
-#[allow(unused_imports)]
-use std::iter::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::usize;
+use std::cmp::{max, min};
 
-#[allow(unused_imports)]
-use bitset_fixed::BitSet;
-#[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
-#[allow(unused_imports)]
-use itertools_num::ItertoolsNum;
-#[allow(unused_imports)]
-use rustc_hash::FxHashMap;
-#[allow(unused_imports)]
-use rustc_hash::FxHashSet;
+use proconio::{input, marker::Usize1};
 
-// vec with some initial value
-#[allow(unused_macros)]
-macro_rules! vvec {
-    ($($x:expr),+; $y:expr; $n:expr) => {{
-        let mut v = vec![$y; $n];
-
-        let mut it = v.iter_mut();
-        $(
-            *it.next().unwrap() = $x;
-        )+
-
-        v
-    }}
-}
-
-#[allow(unused_macros)]
-macro_rules! it {
-    ($x:expr) => {
-        once($x)
+fn main() {
+    input! {
+        n: usize,
+        ab: [(Usize1, Usize1); n - 1],
+        k: usize,
+        vp: [(Usize1, i64); k],
     };
-    ($first:expr,$($x:expr),+) => {
-        chain(
-            once($first),
-            it!($($x),+)
-        )
+
+    let g = Graph::from_edges_undirected(n, ab);
+
+    let mut ranges = vp.into_iter().fold(vec![None; n], |mut ranges, (v, p)| {
+        ranges[v] = Some((p, p));
+        ranges
+    });
+
+    if !check(&g, 0, n, &mut ranges) {
+        println!("No");
+        return;
+    }
+
+    println!("Yes");
+    let mut ans = vec![0; n];
+    ans[0] = ranges[0].unwrap().0;
+    fill(&g, 0, n, &ranges, &mut ans);
+
+    for x in ans {
+        println!("{x}");
     }
 }
 
-#[allow(unused_macros)]
-macro_rules! bitset {
-    ($n:expr, $x:expr) => {{
-        let mut bs = BitSet::new($n);
-        bs.buffer_mut()[0] = $x as u64;
-        bs
-    }};
+fn check(g: &Graph, v: usize, p: usize, ranges: &mut [Option<(i64, i64)>]) -> bool {
+    let merge = |u: usize, ranges: &mut [Option<(i64, i64)>]| {
+        ranges[v] = match (ranges[v], ranges[u]) {
+            (None, None) => None,
+            (None, Some((l1, u1))) => Some((l1 - 1, u1 + 1)),
+            (Some((l0, u0)), None) => Some((l0, u0)),
+            (Some((l0, u0)), Some((l1, u1))) => {
+                if l0 % 2 == l1 % 2 {
+                    return false;
+                }
+
+                let lower = max(l0, l1 - 1);
+                let upper = min(u0, u1 + 1);
+
+                if lower > upper {
+                    return false;
+                }
+
+                Some((lower, upper))
+            }
+        };
+
+        true
+    };
+
+    for u in g.children(v, p) {
+        if !check(g, u, v, ranges) {
+            return false;
+        }
+
+        if !merge(u, ranges) {
+            return false;
+        }
+    }
+
+    true
 }
 
-#[allow(unused_macros)]
-macro_rules! pushed {
-    ($c:expr, $x:expr) => {{
-        let mut c = $c;
-        c.push($x);
-        c
-    }};
-}
+fn fill(g: &Graph, v: usize, p: usize, ranges: &[Option<(i64, i64)>], ans: &mut [i64]) {
+    if p < g.size() {
+        let x = ans[p];
 
-#[allow(unused_macros)]
-macro_rules! inserted {
-    ($c:expr, $($x:expr),*) => {{
-        let mut c = $c;
-        c.insert($($x),*);
-        c
-    }};
-}
+        ans[v] = match ranges[v] {
+            Some((l, _)) => {
+                if x - 1 >= l {
+                    x - 1
+                } else {
+                    x + 1
+                }
+            }
+            None => x - 1,
+        };
+    }
 
-#[allow(unused_macros)]
-macro_rules! read_tuple {
-    ($($t:ty),+) => {{
-        let mut line = String::new();
-        io::stdin().read_line(&mut line).unwrap();
-
-        let mut it = line.trim()
-            .split_whitespace();
-
-        ($(
-            it.next().unwrap().parse::<$t>().ok().unwrap()
-        ),+)
-    }}
-}
-
-#[allow(dead_code)]
-fn read<T: FromStr>() -> T {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-    line.trim().to_string().parse().ok().unwrap()
-}
-
-#[allow(dead_code)]
-fn read_str() -> Vec<char> {
-    read::<String>().chars().collect()
-}
-
-#[allow(dead_code)]
-fn read_row<T: FromStr>() -> Vec<T> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
-
-    line.trim()
-        .split_whitespace()
-        .map(|s| s.parse().ok().unwrap())
-        .collect()
-}
-
-#[allow(dead_code)]
-fn read_col<T: FromStr>(n: usize) -> Vec<T> {
-    (0..n).map(|_| read()).collect()
-}
-
-#[allow(dead_code)]
-fn read_mat<T: FromStr>(n: usize) -> Vec<Vec<T>> {
-    (0..n).map(|_| read_row()).collect()
-}
-
-#[allow(dead_code)]
-fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
-    (0..n).map(|_| f()).collect()
-}
-
-trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
-where
-    T: 'a + Copy,
-{
-    fn citer(self) -> std::iter::Copied<Self::IntoIter> {
-        self.into_iter().copied()
+    for u in g.children(v, p) {
+        fill(g, u, v, ranges, ans);
     }
 }
 
-impl<'a, T, I> IterCopyExt<'a, T> for I
-where
-    I: IntoIterator<Item = &'a T>,
-    T: 'a + Copy,
-{
-}
+type Graph = detail::UnweightedGraph;
 
 mod detail {
     #[allow(dead_code)]
@@ -192,8 +137,9 @@ mod detail {
             }
         }
     }
+    type Weight = usize;
     pub type UnweightedEdge = Edge<()>;
-    pub type WeightedEdge = Edge<usize>;
+    pub type WeightedEdge = Edge<Weight>;
     impl std::convert::From<(usize, usize)> for UnweightedEdge {
         fn from(t: (usize, usize)) -> Self {
             UnweightedEdge::new(t.0, t.1)
@@ -204,13 +150,13 @@ mod detail {
             Edge::from(*t)
         }
     }
-    impl std::convert::From<(usize, usize, usize)> for WeightedEdge {
-        fn from(t: (usize, usize, usize)) -> Self {
+    impl std::convert::From<(usize, usize, Weight)> for WeightedEdge {
+        fn from(t: (usize, usize, Weight)) -> Self {
             Edge::new_with_label(t.0, t.1, t.2)
         }
     }
-    impl std::convert::From<&(usize, usize, usize)> for WeightedEdge {
-        fn from(t: &(usize, usize, usize)) -> Self {
+    impl std::convert::From<&(usize, usize, Weight)> for WeightedEdge {
+        fn from(t: &(usize, usize, Weight)) -> Self {
             Edge::from(*t)
         }
     }
@@ -226,7 +172,7 @@ mod detail {
     #[allow(dead_code)]
     pub type UnweightedGraph = Graph<()>;
     #[allow(dead_code)]
-    pub type WeightedGraph = Graph<usize>;
+    pub type WeightedGraph = Graph<Weight>;
     #[allow(dead_code)]
     impl<W: Copy> Graph<W> {
         pub fn new(n: usize) -> Self {
@@ -291,89 +237,22 @@ mod detail {
             self.out_edges[edge.from].push(edge);
             self.in_edges[edge.to].push(edge);
         }
-    }
-}
-
-type Graph = detail::UnweightedGraph;
-
-fn dfs(g: &Graph, v: usize, p: usize, nums: &mut [Option<(i64, i64)>]) -> bool {
-    if g.out_edges[v]
-        .citer()
-        .filter(|e| e.to != p)
-        .any(|e| !dfs(g, e.to, v, nums))
-    {
-        return false;
-    }
-
-    let nums0 = nums[v];
-    nums[v] = if let Some(tmp) = g.out_edges[v]
-        .citer()
-        .filter(|e| e.to != p)
-        .map(|e| nums[e.to])
-        .map(|m| m.map(|(l, u)| (l - 1, u + 1)))
-        .try_fold(nums0, |nums0, nums1| {
-            nums0.map_or(Some(nums1), |(l0, u0)| {
-                nums1.map_or(Some(Some((l0, u0))), |(l1, u1)| {
-                    if (l0 + l1) % 2 > 0 {
-                        None
-                    } else {
-                        let l = max(l0, l1);
-                        let u = min(u0, u1);
-
-                        if l > u {
-                            None
-                        } else {
-                            Some(Some((l, u)))
-                        }
-                    }
-                })
-            })
-        }) {
-        tmp
-    } else {
-        return false;
-    };
-
-    true
-}
-
-fn dfs2(g: &Graph, v: usize, p: usize, nums: &[Option<(i64, i64)>], ans: &mut [i64]) {
-    if p >= g.size() {
-        ans[v] = nums[v].unwrap().0;
-    } else {
-        ans[v] = max(nums[v].map_or(std::i64::MIN, |(l, _u)| l), ans[p] - 1);
-    }
-
-    g.out_edges[v]
-        .citer()
-        .filter(|e| e.to != p)
-        .for_each(|e| dfs2(g, e.to, v, nums, ans));
-}
-
-fn main() {
-    let n: usize = read();
-    let ab = read_vec(n - 1, || read_tuple!(usize, usize));
-
-    let k: usize = read();
-    let vp = read_vec(k, || read_tuple!(usize, i64));
-
-    let g = Graph::from_edges1_undirected(n, ab);
-
-    let mut nums = vp.citer().fold(vec![None; n], |mut nums, (v, p)| {
-        nums[v - 1] = Some((p, p));
-        nums
-    });
-
-    if !dfs(&g, 0, n, &mut nums) {
-        println!("No");
-        return;
-    }
-
-    let mut ans = vec![0; n];
-    dfs2(&g, 0, n, &nums, &mut ans);
-
-    println!("Yes");
-    for a in ans {
-        println!("{}", a);
+        pub fn adjs<'a>(&'a self, v: usize) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.out_edges[v].iter().map(|e| e.to)
+        }
+        pub fn children<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = usize> {
+            self.adjs(v).filter(move |&u| u != p)
+        }
+        pub fn children_edge<'a>(
+            &'a self,
+            v: usize,
+            p: usize,
+        ) -> impl 'a + DoubleEndedIterator<Item = Edge<W>> {
+            self.out_edges[v].iter().copied().filter(move |e| e.to != p)
+        }
     }
 }
