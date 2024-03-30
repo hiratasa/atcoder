@@ -15990,3 +15990,31 @@ path = "src/arc175/d.rs"
 [[bin]]
 name = "arc175-e"
 path = "src/arc175/e.rs"
+
+[[bin]]
+name = "abc347-a"
+path = "src/abc347/a.rs"
+
+[[bin]]
+name = "abc347-b"
+path = "src/abc347/b.rs"
+
+[[bin]]
+name = "abc347-c"
+path = "src/abc347/c.rs"
+
+[[bin]]
+name = "abc347-d"
+path = "src/abc347/d.rs"
+
+[[bin]]
+name = "abc347-e"
+path = "src/abc347/e.rs"
+
+[[bin]]
+name = "abc347-f"
+path = "src/abc347/f.rs"
+
+[[bin]]
+name = "abc347-g"
+path = "src/abc347/g.rs"
