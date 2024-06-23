@@ -4,8 +4,8 @@ fn main() {}
 use std::{
     cmp::{max, min, Ordering, Reverse},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
-    iter::*,
-    mem::{replace, take},
+    iter::{once, once_with, repeat, repeat_with, successors},
+    mem::{replace, swap, take},
 };
 
 #[allow(unused_imports)]
