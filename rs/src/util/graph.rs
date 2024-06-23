@@ -1,7 +1,7 @@
 use cargo_snippet::snippet;
 
 #[allow(unused_imports)]
-pub use detail::{Edge, Graph, UnweightedEdge, UnweightedGraph, WeightedEdge, WeightedGraph};
+pub use detail::{Edge, Graph};
 
 #[snippet("graph")]
 mod detail {
@@ -53,29 +53,30 @@ mod detail {
         }
     }
 
-    type Weight = usize;
-
-    pub type UnweightedEdge = Edge<()>;
-    pub type WeightedEdge = Edge<Weight>;
-
-    impl std::convert::From<(usize, usize)> for UnweightedEdge {
+    impl std::convert::From<(usize, usize)> for Edge<()> {
         fn from(t: (usize, usize)) -> Self {
-            UnweightedEdge::new(t.0, t.1)
+            Edge::new(t.0, t.1)
         }
     }
-    impl std::convert::From<&(usize, usize)> for UnweightedEdge {
+    impl std::convert::From<&(usize, usize)> for Edge<()> {
         fn from(t: &(usize, usize)) -> Self {
             Edge::from(*t)
         }
     }
 
-    impl std::convert::From<(usize, usize, Weight)> for WeightedEdge {
-        fn from(t: (usize, usize, Weight)) -> Self {
+    impl<W> std::convert::From<(usize, usize, W)> for Edge<W>
+    where
+        W: Copy,
+    {
+        fn from(t: (usize, usize, W)) -> Self {
             Edge::new_with_label(t.0, t.1, t.2)
         }
     }
-    impl std::convert::From<&(usize, usize, Weight)> for WeightedEdge {
-        fn from(t: &(usize, usize, Weight)) -> Self {
+    impl<W> std::convert::From<&(usize, usize, W)> for Edge<W>
+    where
+        W: Copy,
+    {
+        fn from(t: &(usize, usize, W)) -> Self {
             Edge::from(*t)
         }
     }
@@ -89,11 +90,6 @@ mod detail {
         pub out_edges: Vec<Vec<Edge<W>>>,
         pub in_edges: Vec<Vec<Edge<W>>>,
     }
-
-    #[allow(dead_code)]
-    pub type UnweightedGraph = Graph<()>;
-    #[allow(dead_code)]
-    pub type WeightedGraph = Graph<Weight>;
 
     #[allow(dead_code)]
     impl<W: Copy> Graph<W> {
@@ -249,7 +245,7 @@ mod tree_dfs {
 
 #[allow(dead_code)]
 #[snippet("dijkstra")]
-fn dijkstra(g: &WeightedGraph, src: usize) -> Vec<usize> {
+fn dijkstra(g: &Graph<usize>, src: usize) -> Vec<usize> {
     let n = g.size();
 
     let mut q = std::collections::BinaryHeap::new();
@@ -278,7 +274,7 @@ fn dijkstra(g: &WeightedGraph, src: usize) -> Vec<usize> {
 
 #[allow(dead_code)]
 #[snippet("dijkstra1")]
-fn dijkstra1(g: &WeightedGraph, src: usize, dst: usize) -> Option<usize> {
+fn dijkstra1(g: &Graph<usize>, src: usize, dst: usize) -> Option<usize> {
     let n = g.size();
 
     let mut q = std::collections::BinaryHeap::new();
