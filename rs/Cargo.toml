@@ -16446,3 +16446,31 @@ path = "src/arc180/c.rs"
 [[bin]]
 name = "arc180-d"
 path = "src/arc180/d.rs"
+
+[[bin]]
+name = "abc360-a"
+path = "src/abc360/a.rs"
+
+[[bin]]
+name = "abc360-b"
+path = "src/abc360/b.rs"
+
+[[bin]]
+name = "abc360-c"
+path = "src/abc360/c.rs"
+
+[[bin]]
+name = "abc360-d"
+path = "src/abc360/d.rs"
+
+[[bin]]
+name = "abc360-e"
+path = "src/abc360/e.rs"
+
+[[bin]]
+name = "abc360-f"
+path = "src/abc360/f.rs"
+
+[[bin]]
+name = "abc360-g"
+path = "src/abc360/g.rs"
