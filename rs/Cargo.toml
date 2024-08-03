@@ -16586,3 +16586,31 @@ path = "src/abc364/f.rs"
 [[bin]]
 name = "abc364-g"
 path = "src/abc364/g.rs"
+
+[[bin]]
+name = "abc365-a"
+path = "src/abc365/a.rs"
+
+[[bin]]
+name = "abc365-b"
+path = "src/abc365/b.rs"
+
+[[bin]]
+name = "abc365-c"
+path = "src/abc365/c.rs"
+
+[[bin]]
+name = "abc365-d"
+path = "src/abc365/d.rs"
+
+[[bin]]
+name = "abc365-e"
+path = "src/abc365/e.rs"
+
+[[bin]]
+name = "abc365-f"
+path = "src/abc365/f.rs"
+
+[[bin]]
+name = "abc365-g"
+path = "src/abc365/g.rs"
