@@ -16614,3 +16614,19 @@ path = "src/abc365/f.rs"
 [[bin]]
 name = "abc365-g"
 path = "src/abc365/g.rs"
+
+[[bin]]
+name = "arc181-a"
+path = "src/arc181/a.rs"
+
+[[bin]]
+name = "arc181-b"
+path = "src/arc181/b.rs"
+
+[[bin]]
+name = "arc181-c"
+path = "src/arc181/c.rs"
+
+[[bin]]
+name = "arc181-d"
+path = "src/arc181/d.rs"
