@@ -16630,3 +16630,31 @@ path = "src/arc181/c.rs"
 [[bin]]
 name = "arc181-d"
 path = "src/arc181/d.rs"
+
+[[bin]]
+name = "abc366-a"
+path = "src/abc366/a.rs"
+
+[[bin]]
+name = "abc366-b"
+path = "src/abc366/b.rs"
+
+[[bin]]
+name = "abc366-c"
+path = "src/abc366/c.rs"
+
+[[bin]]
+name = "abc366-d"
+path = "src/abc366/d.rs"
+
+[[bin]]
+name = "abc366-e"
+path = "src/abc366/e.rs"
+
+[[bin]]
+name = "abc366-f"
+path = "src/abc366/f.rs"
+
+[[bin]]
+name = "abc366-g"
+path = "src/abc366/g.rs"
