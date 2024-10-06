@@ -16914,3 +16914,11 @@ path = "src/abc373/f.rs"
 [[bin]]
 name = "abc373-g"
 path = "src/abc373/g.rs"
+
+[[bin]]
+name = "agc068-a"
+path = "src/agc068/a.rs"
+
+[[bin]]
+name = "agc068-b"
+path = "src/agc068/b.rs"
