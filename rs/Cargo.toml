@@ -17058,3 +17058,19 @@ path = "src/arc187/c.rs"
 [[bin]]
 name = "arc187-d"
 path = "src/arc187/d.rs"
+
+[[bin]]
+name = "arc188-a"
+path = "src/arc188/a.rs"
+
+[[bin]]
+name = "arc188-b"
+path = "src/arc188/b.rs"
+
+[[bin]]
+name = "arc188-c"
+path = "src/arc188/c.rs"
+
+[[bin]]
+name = "arc188-d"
+path = "src/arc188/d.rs"
