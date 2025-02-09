@@ -17134,3 +17134,19 @@ path = "src/arc191/c.rs"
 [[bin]]
 name = "arc191-d"
 path = "src/arc191/d.rs"
+
+[[bin]]
+name = "arc192-a"
+path = "src/arc192/a.rs"
+
+[[bin]]
+name = "arc192-b"
+path = "src/arc192/b.rs"
+
+[[bin]]
+name = "arc192-c"
+path = "src/arc192/c.rs"
+
+[[bin]]
+name = "arc192-d"
+path = "src/arc192/d.rs"
