@@ -17326,3 +17326,31 @@ path = "src/abc406/f.rs"
 [[bin]]
 name = "abc406-g"
 path = "src/abc406/g.rs"
+
+[[bin]]
+name = "abc408-a"
+path = "src/abc408/a.rs"
+
+[[bin]]
+name = "abc408-b"
+path = "src/abc408/b.rs"
+
+[[bin]]
+name = "abc408-c"
+path = "src/abc408/c.rs"
+
+[[bin]]
+name = "abc408-d"
+path = "src/abc408/d.rs"
+
+[[bin]]
+name = "abc408-e"
+path = "src/abc408/e.rs"
+
+[[bin]]
+name = "abc408-f"
+path = "src/abc408/f.rs"
+
+[[bin]]
+name = "abc408-g"
+path = "src/abc408/g.rs"
