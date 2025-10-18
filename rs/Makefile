@@ -39,4 +39,4 @@ gen:
 
 .PHONY: snippet
 snippet:
-	cargo snippet -t vscode > ../.vscode/atcoder-snippets.code-snippets
+	cargo snippet -t vscode $(PWD)/src/util > ../.vscode/atcoder-snippets.code-snippets
