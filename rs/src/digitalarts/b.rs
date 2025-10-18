@@ -11,7 +11,7 @@ use std::collections::*;
 #[allow(unused_imports)]
 use std::io::*;
 #[allow(unused_imports)]
-use std::iter::*;
+use std::iter::once;
 #[allow(unused_imports)]
 use std::mem::*;
 #[allow(unused_imports)]
