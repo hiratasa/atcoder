@@ -15088,10 +15088,6 @@ name = "abc321-f"
 path = "src/abc321/f.rs"
 
 [[bin]]
-name = "abc321-g"
-path = "src/abc321/g.rs"
-
-[[bin]]
 name = "abc322-a"
 path = "src/abc322/a.rs"
 
