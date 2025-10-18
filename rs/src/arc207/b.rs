@@ -39,7 +39,7 @@ fn main() {
 
 #[allow(dead_code)]
 fn calc0(n: usize) -> impl Iterator<Item = (usize, Vec<(usize, usize)>)> {
-    let edges = iproduct!(0..n)
+    let edges = (0..n)
         .tuple_combinations::<(usize, usize)>()
         .collect::<Vec<_>>();
     let m = edges.len();

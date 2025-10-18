@@ -120,7 +120,7 @@ fn main() {
         }
 
         for u in 0..n {
-            let next_cost = least_cost + costs[v][u];
+            let next_cost = NotNan::new(least_cost + costs[v][u]).unwrap();
             if next_cost < least_costs[u] {
                 least_costs[u] = next_cost;
                 q.push(Reverse((next_cost, u)));
@@ -133,7 +133,7 @@ fn main() {
         (0..n - 1).rev(),
     )
     // .inspect(|t| eprintln!("{:?}", t))
-    .map(|(c, i)| c + (i as f64))
+    .map(|(c, i)| NotNan::new(c + (i as f64)).unwrap())
     .max()
     .unwrap_or(NotNan::new(0.0).unwrap());
     println!("{:.10}", ans);
