@@ -390,12 +390,12 @@ fn main() {
 
     // use rand::Rng;
     // use rand::SeedableRng;
-    // let mut rng = rand::rngs::SmallRng::from_entropy();
+    // let mut rng = rand::rngs::SmallRng::from_os_rng();
     // let (n, m) = (10, 3);
     // let s = "01".chars().cycle().take(n).collect::<Vec<_>>();
     // let lr = repeat_with(|| {
-    //     let l = rng.gen_range(1, n - 1);
-    //     let r = rng.gen_range(l + 1, n);
+    //     let l = rng.random_range(1, n - 1);
+    //     let r = rng.random_range(l + 1, n);
     //     (l, r)
     // })
     // .take(m)

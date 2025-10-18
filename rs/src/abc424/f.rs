@@ -8,7 +8,7 @@ fn main() {
     ab.into_iter()
         .enumerate()
         .scan(SegmentTree::<Xor>::new(n), |st, (i, (a, b))| {
-            let x = rng.gen::<usize>();
+            let x = rng.random::<u64>() as usize;
             if st.query(a..b).0 == 0 {
                 st.set(a, x);
                 st.set(b, x);

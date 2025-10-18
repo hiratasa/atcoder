@@ -11,9 +11,9 @@ fn main() {
             a: [usize; n],
         };
 
-        // let n = rng.gen_range(3..=10);
-        // let k = rng.gen_range(0..1 << n);
-        // let a = (0..n).map(|_| rng.gen_range(0..1 << n)).collect::<Vec<_>>();
+        // let n = rng.random_range(3..=10);
+        // let k = rng.random_range(0..1 << n);
+        // let a = (0..n).map(|_| rng.random_range(0..1 << n)).collect::<Vec<_>>();
 
         // eprintln!("{n} {k}\n{}", a.iter().join(" "));
 

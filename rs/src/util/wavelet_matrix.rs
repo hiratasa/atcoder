@@ -651,7 +651,7 @@ mod tests {
         let mut rng = SmallRng::seed_from_u64(42);
 
         for n in 1000..3000 {
-            let v = std::iter::repeat_with(|| rng.gen::<bool>())
+            let v = std::iter::repeat_with(|| rng.random::<bool>())
                 .take(n)
                 .collect::<Vec<_>>();
             let bv = BV::new(v.iter().copied());
@@ -692,7 +692,7 @@ mod tests {
         let mut rng = SmallRng::seed_from_u64(42);
 
         for n in 1000..3000 {
-            let v = std::iter::repeat_with(|| rng.gen::<bool>())
+            let v = std::iter::repeat_with(|| rng.random::<bool>())
                 .take(n)
                 .collect::<Vec<_>>();
             let bv = BV::new(v.iter().copied());

@@ -7,8 +7,8 @@ fn main() {
     let mut rng = SmallRng::seed_from_u64(42);
 
     let ans = (0..100).find_map(|_| {
-        let i = rng.gen_range(0..n);
-        let j = rng.gen_range(0..n - 1);
+        let i = rng.random_range(0..n);
+        let j = rng.random_range(0..n - 1);
         let j = if j >= i { j + 1 } else { j };
 
         let (x1, y1) = xy[i];

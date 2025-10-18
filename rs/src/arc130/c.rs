@@ -183,12 +183,12 @@ fn main() {
     // use rand::{Rng, SeedableRng};
     // let mut rng = SmallRng::seed_from_u64(42);
 
-    // let n_a = rng.gen_range(3, 5);
-    // let a = repeat_with(|| rng.gen_range(1, 10))
+    // let n_a = rng.random_range(3, 5);
+    // let a = repeat_with(|| rng.random_range(1, 10))
     //     .take(n_a)
     //     .collect::<Vec<_>>();
-    // let n_b = rng.gen_range(3, 5);
-    // let b = repeat_with(|| rng.gen_range(1, 10))
+    // let n_b = rng.random_range(3, 5);
+    // let b = repeat_with(|| rng.random_range(1, 10))
     //     .take(n_b)
     //     .collect::<Vec<_>>();
 

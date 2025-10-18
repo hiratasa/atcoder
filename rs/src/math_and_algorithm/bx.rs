@@ -148,8 +148,8 @@ where
 {
 }
 
-use rand::distributions::Distribution;
-use rand::distributions::Uniform;
+use rand::distr::Distribution;
+use rand::distr::Uniform;
 use rand::rngs::SmallRng;
 use rand::Rng;
 use rand::SeedableRng;
@@ -185,7 +185,7 @@ fn check(edges: &[Vec<usize>]) -> usize {
 }
 
 fn main() {
-    let mut rng = SmallRng::from_entropy();
+    let mut rng = SmallRng::from_os_rng();
 
     let (n0, m0) = read_tuple!(usize, usize);
     let ab = read_vec(m0, || read_tuple!(usize, usize));
@@ -215,7 +215,7 @@ fn main() {
     let mut penalty = (0..n0).filter(|&i| edges[i].len() > 4).count() * (1 << 30) + check(&edges);
     for n in n0.. {
         let mut buf = vec![];
-        let dist = Uniform::new(0, n);
+        let dist = Uniform::new(0, n).unwrap();
         let start = std::time::Instant::now();
 
         for _i_itr in 0.. {
@@ -228,7 +228,7 @@ fn main() {
                 );
             }
 
-            let m = min(rng.gen_range(1..10), n * (n - 1));
+            let m = min(rng.random_range(1..10), n * (n - 1));
 
             buf.clear();
             buf.extend(

@@ -284,13 +284,13 @@ fn main() {
 
     case.citer()
         // repeat_with(|| {
-        //     let p = primes[rng.gen_range(0, primes.len())];
+        //     let p = primes[rng.random_range(0, primes.len())];
         //     (
         //         p,
-        //         rng.gen_range(0, p),
-        //         rng.gen_range(0, p),
-        //         rng.gen_range(0, p),
-        //         rng.gen_range(0, p),
+        //         rng.random_range(0, p),
+        //         rng.random_range(0, p),
+        //         rng.random_range(0, p),
+        //         rng.random_range(0, p),
         //     )
         // })
         .map(|(p, a, b, s, g)| {

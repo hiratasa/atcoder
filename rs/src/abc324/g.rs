@@ -636,17 +636,17 @@ fn main() {
     // let mut rng = SmallRng::seed_from_u64(42);
 
     // loop {
-    //     let n = rng.gen_range(1..10);
-    //     let a = repeat_with(|| rng.gen_range(1..=n))
+    //     let n = rng.random_range(1..10);
+    //     let a = repeat_with(|| rng.random_range(1..=n))
     //         .take(n)
     //         .collect::<Vec<_>>();
-    //     let q = rng.gen_range(1..10);
+    //     let q = rng.random_range(1..10);
     //     let query = (1..=q)
     //         .map(|i| {
     //             (
-    //                 rng.gen_range(1..=2),
-    //                 rng.gen_range(0..i),
-    //                 rng.gen_range(0..=n),
+    //                 rng.random_range(1..=2),
+    //                 rng.random_range(0..i),
+    //                 rng.random_range(0..=n),
     //             )
     //         })
     //         .collect::<Vec<_>>();

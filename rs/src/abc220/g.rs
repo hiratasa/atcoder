@@ -194,9 +194,9 @@ fn main() {
     // let mut rng = SmallRng::seed_from_u64(42);
 
     // let xyc = read_vec(n, || {
-    //     use rand::distributions::Distribution;
-    //     let dist = rand::distributions::Uniform::new(0i128, 5);
-    //     let dist_weight = rand::distributions::Uniform::new(0, 5);
+    //     use rand::distr::Distribution;
+    //     let dist = rand::distr::Uniform::new(0i128, 5).unwrap();
+    //     let dist_weight = rand::distr::Uniform::new(0, 5).unwrap();
     //     (
     //         Rational::from(dist.sample(&mut rng)),
     //         Rational::from(dist.sample(&mut rng)),

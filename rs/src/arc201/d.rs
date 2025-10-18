@@ -13,8 +13,8 @@ fn main() {
             // let n = 300000;
             // let m = 1000000000;
             // let mut rng = SmallRng::seed_from_u64(42);
-            // let a = (0..n).map(|_| rng.gen_range(0..m)).collect::<Vec<_>>();
-            // let b = (0..n).map(|_| rng.gen_range(0..m)).collect::<Vec<_>>();
+            // let a = (0..n).map(|_| rng.random_range(0..m)).collect::<Vec<_>>();
+            // let b = (0..n).map(|_| rng.random_range(0..m)).collect::<Vec<_>>();
 
             let vals = chain(a.iter().copied(), b.iter().copied())
                 .flat_map(|x| [x, (m - x) % m])

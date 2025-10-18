@@ -95,11 +95,11 @@ fn main() {
             mut a: [usize; n],
             mut b: [usize; n],
         };
-        // let n = rng.gen_range(2..20);
-        // let mut a = repeat_with(|| rng.gen_range(1..100))
+        // let n = rng.random_range(2..20);
+        // let mut a = repeat_with(|| rng.random_range(1..100))
         //     .take(n)
         //     .collect::<Vec<_>>();
-        // let mut b = repeat_with(|| rng.gen_range(1..100))
+        // let mut b = repeat_with(|| rng.random_range(1..100))
         //     .take(n)
         //     .collect::<Vec<_>>();
 

@@ -197,7 +197,7 @@ where
     left: Option<Box<TreapNode<K, M, Op>>>,
     right: Option<Box<TreapNode<K, M, Op>>>,
     size: usize,
-    priority: usize,
+    priority: u64,
     key: K,
     reversed: bool,
     lazy: Op::Item,
@@ -214,7 +214,7 @@ where
     M: Monoid,
     Op: Monoid + Operator<M::Item>,
 {
-    fn new(priority: usize, key: K, value: M::Item) -> TreapNode<K, M, Op> {
+    fn new(priority: u64, key: K, value: M::Item) -> TreapNode<K, M, Op> {
         TreapNode {
             left: None,
             right: None,
@@ -352,7 +352,7 @@ where
         })
     }
 
-    fn insert(t: Option<Box<Self>>, priority: usize, key: K, value: M::Item) -> Box<Self> {
+    fn insert(t: Option<Box<Self>>, priority: u64, key: K, value: M::Item) -> Box<Self> {
         let mut t = if let Some(t) = t {
             t
         } else {
@@ -384,7 +384,7 @@ where
     fn insert_at(
         t: Option<Box<Self>>,
         nth: usize,
-        priority: usize,
+        priority: u64,
         key: K,
         value: M::Item,
     ) -> Box<Self> {
@@ -551,7 +551,7 @@ where
         use rand::SeedableRng;
 
         ImplicitTreap {
-            rng: std::rc::Rc::new(std::cell::RefCell::new(rand::rngs::SmallRng::from_entropy())),
+            rng: std::rc::Rc::new(std::cell::RefCell::new(rand::rngs::SmallRng::from_os_rng())),
             root: None,
         }
     }
@@ -576,7 +576,7 @@ where
         self.root = Some(TreapNode::insert_at(
             std::mem::replace(&mut self.root, None),
             nth,
-            self.rng.borrow_mut().gen(),
+            self.rng.borrow_mut().random(),
             (),
             value,
         ));

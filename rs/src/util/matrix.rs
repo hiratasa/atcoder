@@ -542,12 +542,12 @@ mod tests {
         let mut rng = SmallRng::seed_from_u64(42);
 
         for _ in 0..1000 {
-            let n = rng.gen_range(2..=4);
+            let n = rng.random_range(2..=4);
             let a = (0..n)
-                .map(|_| (0..n).map(|_| rng.gen::<Mod>()).collect::<Vec<_>>())
+                .map(|_| (0..n).map(|_| rng.random::<Mod>()).collect::<Vec<_>>())
                 .collect::<Vec<_>>();
             let b = (0..n)
-                .map(|_| (0..n).map(|_| rng.gen::<Mod>()).collect::<Vec<_>>())
+                .map(|_| (0..n).map(|_| rng.random::<Mod>()).collect::<Vec<_>>())
                 .collect::<Vec<_>>();
 
             let mut d0 = calc_det_a_xb(&a, &b);
@@ -569,13 +569,13 @@ mod tests {
         let mut rng = SmallRng::seed_from_u64(42);
 
         for _ in 0..1000 {
-            let n = rng.gen_range(2..=4);
+            let n = rng.random_range(2..=4);
             let a = (0..n)
                 .map(|_| {
                     (0..n)
                         .map(|_| {
-                            if rng.gen() {
-                                rng.gen::<Mod>()
+                            if rng.random() {
+                                rng.random::<Mod>()
                             } else {
                                 Mod::zero()
                             }
@@ -587,8 +587,8 @@ mod tests {
                 .map(|_| {
                     (0..n)
                         .map(|_| {
-                            if rng.gen() {
-                                rng.gen::<Mod>()
+                            if rng.random() {
+                                rng.random::<Mod>()
                             } else {
                                 Mod::zero()
                             }

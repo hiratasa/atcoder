@@ -7,10 +7,10 @@ fn main() {
     // let mut rng = SmallRng::seed_from_u64(42);
 
     // repeat_with(|| {
-    //     let a = rng.gen_range(1..=20);
-    //     let b = rng.gen_range(1..=20);
-    //     let c = rng.gen_range(1..=20);
-    //     let d = rng.gen_range(1..=20);
+    //     let a = rng.random_range(1..=20);
+    //     let b = rng.random_range(1..=20);
+    //     let c = rng.random_range(1..=20);
+    //     let d = rng.random_range(1..=20);
 
     //     match (a * d).cmp(&(b * c)) {
     //         Ordering::Less => Some((a, b, c, d)),

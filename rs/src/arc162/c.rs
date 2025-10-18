@@ -420,15 +420,15 @@ fn main() {
         .iter()
         .map(|(k, p, a)| (*k, p, a))
         // repeat_with(|| {
-        //     let n = rng.gen_range(2, 5);
+        //     let n = rng.random_range(2, 5);
         //     (
-        //         rng.gen_range(0, n + 1),
-        //         (1..n).map(|i| rng.gen_range(0, i) + 1).collect::<Vec<_>>(),
+        //         rng.random_range(0, n + 1),
+        //         (1..n).map(|i| rng.random_range(0, i) + 1).collect::<Vec<_>>(),
         //         repeat_with(|| {
         //             if rng.gen() {
         //                 None
         //             } else {
-        //                 Some(rng.gen_range(0, n + 1))
+        //                 Some(rng.random_range(0, n + 1))
         //             }
         //         })
         //         .take(n)

@@ -364,9 +364,9 @@ impl<M: Modulus> num::One for Mod<M> {
         self.0 == 1
     }
 }
-impl<M: Modulus> rand::distributions::Distribution<Mod<M>> for rand::distributions::Standard {
+impl<M: Modulus> rand::distr::Distribution<Mod<M>> for rand::distr::StandardUniform {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Mod<M> {
-        Mod::new(rng.gen_range(0..M::modulus()))
+        Mod::new(rng.random_range(0..M::modulus()))
     }
 }
 
@@ -465,7 +465,10 @@ impl<M> Butterfly<Mod<M>> for ModButterfly<M>
 where
     M: Modulus,
 {
-    type RootSupplier < 'a > = ModRootSupplier < 'a , M > where M : 'a ;
+    type RootSupplier<'a>
+        = ModRootSupplier<'a, M>
+    where
+        M: 'a;
     fn get_roots<'a>(&'a self, h: usize) -> ModRootSupplier<'a, M> {
         let mut w_pows = self.w_pows.borrow_mut();
         if h >= w_pows.len() {

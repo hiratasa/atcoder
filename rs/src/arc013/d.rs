@@ -508,7 +508,7 @@ fn main() {
     let tutte = edges2.citer().fold(
         vec![vec![Mod::zero(); 2 * m]; 2 * m],
         |mut tutte, (x, y)| {
-            let r = Mod::new(rng.gen_range(0..Mod::modulus()));
+            let r = Mod::new(rng.random_range(0..Mod::modulus()));
             tutte[x][y] = r;
             tutte[y][x] = -r;
 

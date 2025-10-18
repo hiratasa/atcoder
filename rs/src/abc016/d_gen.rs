@@ -327,7 +327,7 @@ impl LineSegment {
     }
 }
 
-use rand::distributions::Distribution;
+use rand::distr::Distribution;
 use rand::SeedableRng;
 
 fn draw_svg(m: i32, ax: i32, ay: i32, bx: i32, by: i32, xy: &Vec<(i32, i32)>) {
@@ -349,12 +349,12 @@ fn draw_svg(m: i32, ax: i32, ay: i32, bx: i32, by: i32, xy: &Vec<(i32, i32)>) {
 }
 
 fn main() {
-    let mut rng = rand::rngs::SmallRng::from_entropy();
+    let mut rng = rand::rngs::SmallRng::from_os_rng();
 
     let n: usize = read();
 
     let m = 1000;
-    let dist = rand::distributions::Uniform::new(-m, m + 1);
+    let dist = rand::distr::Uniform::new(-m, m + 1).unwrap();
 
     let ax = -m;
     let ay = dist.sample(&mut rng);

@@ -24,7 +24,7 @@ fn main() {
     let values = (0..=n)
         .map(|i| {
             (0..counts_max[i])
-                .map(|_| rng.gen::<usize>())
+                .map(|_| rng.random::<u64>() as usize)
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();

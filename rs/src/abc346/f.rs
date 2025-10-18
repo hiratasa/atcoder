@@ -28,11 +28,11 @@ fn main() {
     // use rand::{rngs::SmallRng, Rng, SeedableRng};
     // let mut rng = SmallRng::seed_from_u64(42);
     // loop {
-    //     let n = rng.gen_range(1..5);
-    //     let sl = rng.gen_range(1..5);
-    //     let s = (0..sl).map(|_| rng.gen_range(0..26)).collect::<Vec<_>>();
-    //     let tl = rng.gen_range(1..5);
-    //     let t = (0..tl).map(|_| rng.gen_range(0..26)).collect::<Vec<_>>();
+    //     let n = rng.random_range(1..5);
+    //     let sl = rng.random_range(1..5);
+    //     let s = (0..sl).map(|_| rng.random_range(0..26)).collect::<Vec<_>>();
+    //     let tl = rng.random_range(1..5);
+    //     let t = (0..tl).map(|_| rng.random_range(0..26)).collect::<Vec<_>>();
 
     //     assert_eq!(
     //         solve(n, &s, &t),

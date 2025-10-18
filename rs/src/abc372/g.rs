@@ -11,13 +11,13 @@ fn main() {
 
     // let mut rng = SmallRng::seed_from_u64(42);
     // loop {
-    //     let n = rng.gen_range(1..=10);
+    //     let n = rng.random_range(1..=10);
     //     let case = (0..n)
     //         .map(|_| {
     //             (
-    //                 rng.gen_range(1..=10),
-    //                 rng.gen_range(1..=10),
-    //                 rng.gen_range(1..=10),
+    //                 rng.random_range(1..=10),
+    //                 rng.random_range(1..=10),
+    //                 rng.random_range(1..=10),
     //             )
     //         })
     //         .collect::<Vec<_>>();

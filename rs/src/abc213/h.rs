@@ -626,18 +626,18 @@ fn main() {
 
     let (n, m, t) = read_tuple!(usize, usize, usize);
 
-    // use rand::distributions::Distribution;
+    // use rand::distr::Distribution;
     // use rand::SeedableRng;
     // let mut rng = rand::rngs::SmallRng::seed_from_u64(43);
 
     let p = (0..m).fold(vec![vec![vec![]; n]; n], |mut p, _| {
         let (a, b) = read_tuple!(usize, usize);
         p[a - 1][b - 1] = read_row::<Mod>();
-        // let dist = rand::distributions::Uniform::new(1, n);
+        // let dist = rand::distr::Uniform::new(1, n).unwrap();
         // let a = dist.sample(&mut rng);
-        // let dist1 = rand::distributions::Uniform::new(a + 1, n + 1);
+        // let dist1 = rand::distr::Uniform::new(a + 1, n + 1).unwrap();
         // let b = dist1.sample(&mut rng);
-        // let dist2 = rand::distributions::Uniform::new(0, 100);
+        // let dist2 = rand::distr::Uniform::new(0, 100).unwrap();
         // p[a - 1][b - 1] = (0..t)
         //     .map(|_| Mod::new(dist2.sample(&mut rng)))
         //     .collect::<Vec<_>>();

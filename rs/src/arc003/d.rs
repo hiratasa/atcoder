@@ -68,7 +68,7 @@ fn read_vec<T: FromStr>() -> Vec<T> {
         .collect()
 }
 
-use rand::distributions::Distribution;
+use rand::distr::Distribution;
 use rand::{Rng, SeedableRng};
 
 fn main() {
@@ -78,10 +78,10 @@ fn main() {
 
     let ab = (0..m).map(|_| read_cols!(usize, usize)).collect::<Vec<_>>();
 
-    let mut rng = rand::rngs::SmallRng::from_entropy();
+    let mut rng = rand::rngs::SmallRng::from_os_rng();
 
-    let dist0 = rand::distributions::Uniform::new(0, n);
-    let dist1 = rand::distributions::Uniform::new(0, n - 1);
+    let dist0 = rand::distr::Uniform::new(0, n).unwrap();
+    let dist1 = rand::distr::Uniform::new(0, n - 1).unwrap();
 
     let mut s = 0usize;
     let mut t = 0usize;

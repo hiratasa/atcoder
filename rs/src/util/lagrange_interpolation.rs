@@ -116,14 +116,14 @@ mod tests {
         let mut rng = SmallRng::seed_from_u64(42);
 
         for _ in 0..10000 {
-            let n = rng.gen_range(2..=5);
+            let n = rng.random_range(2..=5);
             let f = (0..n)
-                .map(|_| Mod::new(rng.gen_range(0..10)))
+                .map(|_| Mod::new(rng.random_range(0..10)))
                 .collect::<Vec<_>>();
 
             let mut xy = vec![];
             while xy.len() < n {
-                let x = Mod::new(rng.gen_range(0..50));
+                let x = Mod::new(rng.random_range(0..50));
                 if xy.iter().any(|&(xx, _)| x == xx) {
                     continue;
                 }

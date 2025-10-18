@@ -1201,18 +1201,18 @@ mod test {
 
     #[test]
     fn test_segtree_random() {
-        use rand::distributions::Distribution;
+        use rand::distr::Distribution;
         use rand::SeedableRng;
 
-        let mut rng = rand::rngs::SmallRng::from_entropy();
+        let mut rng = rand::rngs::SmallRng::from_os_rng();
 
-        let dist = rand::distributions::Uniform::new(0, 1000);
-        let dist01 = rand::distributions::Uniform::new(0, 2);
+        let dist = rand::distr::Uniform::new(0, 1000).unwrap();
+        let dist01 = rand::distr::Uniform::new(0, 2).unwrap();
 
         for i in 0..5 {
             // 2の冪乗のあたりを試す
             let n = 510 + i;
-            let distidx = rand::distributions::Uniform::new(0, n);
+            let distidx = rand::distr::Uniform::new(0, n).unwrap();
 
             let a0 = std::iter::repeat_with(|| dist.sample(&mut rng))
                 .take(n)
@@ -1238,7 +1238,7 @@ mod test {
                 } else {
                     // query
                     let l = distidx.sample(&mut rng);
-                    let distidx2 = rand::distributions::Uniform::new(l, n + 1);
+                    let distidx2 = rand::distr::Uniform::new(l, n + 1).unwrap();
                     let r = distidx2.sample(&mut rng);
 
                     assert_eq!(
@@ -1280,18 +1280,18 @@ mod test {
 
     #[test]
     fn test_lazy_segtree_random() {
-        use rand::distributions::Distribution;
+        use rand::distr::Distribution;
         use rand::SeedableRng;
 
-        let mut rng = rand::rngs::SmallRng::from_entropy();
+        let mut rng = rand::rngs::SmallRng::from_os_rng();
 
-        let dist = rand::distributions::Uniform::new(0, 100000);
-        let dist_op = rand::distributions::Uniform::new(0, 4);
+        let dist = rand::distr::Uniform::new(0, 100000).unwrap();
+        let dist_op = rand::distr::Uniform::new(0, 4).unwrap();
 
         for i in 0..5 {
             // 2の冪乗のあたりを試す
             let n = 510 + i;
-            let distidx = rand::distributions::Uniform::new(0, n + 1);
+            let distidx = rand::distr::Uniform::new(0, n + 1).unwrap();
 
             let a0 = std::iter::repeat_with(|| dist.sample(&mut rng))
                 .take(n)
@@ -1422,7 +1422,7 @@ mod test {
 
     #[test]
     fn test_sparse_segtree_random() {
-        use rand::distributions::Distribution;
+        use rand::distr::Distribution;
         use rand::seq::IteratorRandom;
         use rand::Rng;
         use rand::SeedableRng;
@@ -1432,8 +1432,8 @@ mod test {
         let n = 100;
         let m = 20;
 
-        let dist_pos = rand::distributions::Uniform::new(0, n);
-        let dist_val = rand::distributions::Uniform::new(0, 100000);
+        let dist_pos = rand::distr::Uniform::new(0, n).unwrap();
+        let dist_val = rand::distr::Uniform::new(0, 100000).unwrap();
 
         let poss = (0..n).choose_multiple(&mut rng, m);
         let pos_set = poss
@@ -1469,7 +1469,7 @@ mod test {
             );
 
             // 区間取得3
-            let pos2 = rng.gen_range(pos..=n);
+            let pos2 = rng.random_range(pos..=n);
             assert_eq!(
                 st.query(pos..pos2).0,
                 arr[pos..pos2]
@@ -1490,7 +1490,7 @@ mod test {
 
     #[test]
     fn test_sparse_segtree_2d_random() {
-        use rand::distributions::Distribution;
+        use rand::distr::Distribution;
         use rand::seq::IteratorRandom;
         use rand::Rng;
         use rand::SeedableRng;
@@ -1500,8 +1500,8 @@ mod test {
         let n = 10;
         let m = 20;
 
-        let dist_pos = rand::distributions::Uniform::new(0, n);
-        let dist_val = rand::distributions::Uniform::new(0, 100000);
+        let dist_pos = rand::distr::Uniform::new(0, n).unwrap();
+        let dist_val = rand::distr::Uniform::new(0, 100000).unwrap();
 
         let poss0 = (0..n).choose_multiple(&mut rng, m);
         let poss1 = (0..n).choose_multiple(&mut rng, m);
@@ -1556,7 +1556,7 @@ mod test {
             );
 
             // 区間取得3
-            let pos2 = (rng.gen_range(pos.0..=n), rng.gen_range(pos.1..=n));
+            let pos2 = (rng.random_range(pos.0..=n), rng.random_range(pos.1..=n));
             assert_eq!(
                 st.query(pos.0..pos2.0, pos.1..pos2.1).0,
                 values
@@ -1803,31 +1803,31 @@ mod test {
         let mut rng = SmallRng::seed_from_u64(42);
         let n = 100000;
         const M: i64 = 10000;
-        let mut v = std::iter::repeat_with(|| rng.gen_range(-M..M))
+        let mut v = std::iter::repeat_with(|| rng.random_range(-M..M))
             .take(n)
             .collect::<Vec<_>>();
         let mut st = SegmentTreeBeats::<Item, Update>::with(&v);
 
         for _ in 0..1000 {
-            match rng.gen_range(0..6) {
+            match rng.random_range(0..6) {
                 // get
                 0 => {
-                    let idx = rng.gen_range(0..n);
+                    let idx = rng.random_range(0..n);
                     assert_eq!(st.get(idx), Item::new(v[idx]), "st={:?};\nv={:?}", st, v);
                 }
                 // set
                 1 => {
-                    let idx = rng.gen_range(0..n);
-                    let val = rng.gen_range(0..M);
+                    let idx = rng.random_range(0..n);
+                    let val = rng.random_range(0..M);
                     st.set(idx, val);
                     v[idx] = val;
                 }
                 // chmin
                 2 => {
-                    let idx0 = rng.gen_range(0..n);
-                    let idx1 = rng.gen_range(0..n);
+                    let idx0 = rng.random_range(0..n);
+                    let idx1 = rng.random_range(0..n);
                     let (l, r) = (min(idx0, idx1), max(idx0, idx1) + 1);
-                    let val = rng.gen_range(0..M);
+                    let val = rng.random_range(0..M);
                     st.update(l..r, Update::chmin(val));
                     for i in l..r {
                         v[i] = min(v[i], val);
@@ -1835,10 +1835,10 @@ mod test {
                 }
                 // chmax
                 3 => {
-                    let idx0 = rng.gen_range(0..n);
-                    let idx1 = rng.gen_range(0..n);
+                    let idx0 = rng.random_range(0..n);
+                    let idx1 = rng.random_range(0..n);
                     let (l, r) = (min(idx0, idx1), max(idx0, idx1) + 1);
-                    let val = rng.gen_range(0..M);
+                    let val = rng.random_range(0..M);
                     st.update(l..r, Update::chmax(val));
                     for i in l..r {
                         v[i] = max(v[i], val);
@@ -1846,10 +1846,10 @@ mod test {
                 }
                 // add
                 4 => {
-                    let idx0 = rng.gen_range(0..n);
-                    let idx1 = rng.gen_range(0..n);
+                    let idx0 = rng.random_range(0..n);
+                    let idx1 = rng.random_range(0..n);
                     let (l, r) = (min(idx0, idx1), max(idx0, idx1) + 1);
-                    let val = rng.gen_range(0..M);
+                    let val = rng.random_range(0..M);
                     st.update(l..r, Update::add(val));
                     for i in l..r {
                         v[i] += val;
@@ -1857,8 +1857,8 @@ mod test {
                 }
                 // sum
                 5 => {
-                    let idx0 = rng.gen_range(0..n);
-                    let idx1 = rng.gen_range(0..n);
+                    let idx0 = rng.random_range(0..n);
+                    let idx1 = rng.random_range(0..n);
                     let (l, r) = (min(idx0, idx1), max(idx0, idx1) + 1);
 
                     assert_eq!(st.query(l..r).sum, v[l..r].iter().copied().sum::<i64>());

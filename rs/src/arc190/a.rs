@@ -2,9 +2,9 @@ fn main() {
     // let mut rng = SmallRng::seed_from_u64(42);
 
     // loop {
-    //     let n = rng.gen_range(1..=5);
-    //     let m = rng.gen_range(1..=5);
-    //     let lr = repeat_with(|| (rng.gen_range(0..n), rng.gen_range(1..=n)))
+    //     let n = rng.random_range(1..=5);
+    //     let m = rng.random_range(1..=5);
+    //     let lr = repeat_with(|| (rng.random_range(0..n), rng.random_range(1..=n)))
     //         .filter(|&(l, r)| l < r)
     //         .take(m)
     //         .collect::<Vec<_>>();

@@ -23,17 +23,17 @@ fn main() {
     cases
         .into_iter()
         // repeat_with(|| {
-        //     let n = rng.gen_range(1..10);
-        //     let nx = rng.gen_range(1..10);
-        //     let ny = rng.gen_range(1..10);
-        //     let s = repeat_with(|| rng.gen_range(b'a'..=b'z'))
+        //     let n = rng.random_range(1..10);
+        //     let nx = rng.random_range(1..10);
+        //     let ny = rng.random_range(1..10);
+        //     let s = repeat_with(|| rng.random_range(b'a'..=b'z'))
         //         .take(n)
         //         .map(|c| c as char)
         //         .collect::<Vec<_>>();
-        //     let x = repeat_with(|| rng.gen_range(0..=1))
+        //     let x = repeat_with(|| rng.random_range(0..=1))
         //         .take(nx)
         //         .collect::<Vec<_>>();
-        //     let y = repeat_with(|| rng.gen_range(0..=1))
+        //     let y = repeat_with(|| rng.random_range(0..=1))
         //         .take(ny)
         //         .collect::<Vec<_>>();
         //     (s, x, y)
@@ -491,8 +491,8 @@ impl<M: Modulus> num::One for Mod<M> {
         self.0 == 1
     }
 }
-impl<M: Modulus> rand::distributions::Distribution<Mod<M>> for rand::distributions::Standard {
+impl<M: Modulus> rand::distr::Distribution<Mod<M>> for rand::distr::StandardUniform {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Mod<M> {
-        Mod::new(rng.gen_range(0..M::modulus()))
+        Mod::new(rng.random_range(0..M::modulus()))
     }
 }

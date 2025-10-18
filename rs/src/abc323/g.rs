@@ -23,7 +23,7 @@ use bitset_fixed::BitSet;
 use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
-use rand::distributions::Standard;
+use rand::distr::StandardUniform;
 use rand::prelude::Distribution;
 #[allow(unused_imports)]
 use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
@@ -391,9 +391,9 @@ impl<M: Modulus> num::One for Mod<M> {
     }
 }
 
-impl<M: Modulus> Distribution<Mod<M>> for Standard {
+impl<M: Modulus> Distribution<Mod<M>> for StandardUniform {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Mod<M> {
-        Mod::new(rng.gen_range(0..M::modulus()))
+        Mod::new(rng.random_range(0..M::modulus()))
     }
 }
 

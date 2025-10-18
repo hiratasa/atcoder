@@ -153,7 +153,7 @@ where
     }
 }
 
-use rand::distributions::Distribution;
+use rand::distr::Distribution;
 use rand::SeedableRng;
 
 fn main() {
@@ -161,9 +161,9 @@ fn main() {
 
     println!("{} {}", n, k);
 
-    let mut rng = rand::rngs::SmallRng::from_entropy();
+    let mut rng = rand::rngs::SmallRng::from_os_rng();
 
-    let dist = rand::distributions::Uniform::new(b'a', b'z' + 1);
+    let dist = rand::distr::Uniform::new(b'a', b'z' + 1).unwrap();
 
     let s = repeat_with(|| dist.sample(&mut rng)).take(n).to_string();
     println!("{}", s);

@@ -338,8 +338,8 @@ impl<M: Modulus> num::One for Mod<M> {
         self.0 == 1
     }
 }
-impl<M: Modulus> rand::distributions::Distribution<Mod<M>> for rand::distributions::Standard {
+impl<M: Modulus> rand::distr::Distribution<Mod<M>> for rand::distr::StandardUniform {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Mod<M> {
-        Mod::new(rng.gen_range(0..M::modulus()))
+        Mod::new(rng.random_range(0..M::modulus()))
     }
 }

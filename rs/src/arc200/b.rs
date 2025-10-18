@@ -33,11 +33,11 @@ fn main() {
 
                 let (x1, x2) = loop {
                     let x1 = rng
-                        .gen_range(10usize.pow(b1 as u32 - 1) / 2..10usize.pow(b1 as u32) / 2)
+                        .random_range(10usize.pow(b1 as u32 - 1) / 2..10usize.pow(b1 as u32) / 2)
                         * t
                         * 2;
                     let x2 = (rng
-                        .gen_range(10usize.pow(b2 as u32 - 1) / 2..10usize.pow(b2 as u32) / 2)
+                        .random_range(10usize.pow(b2 as u32 - 1) / 2..10usize.pow(b2 as u32) / 2)
                         * 2
                         + 1)
                         * t;
