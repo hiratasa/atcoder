@@ -1,4 +1,4 @@
-use itertools::{repeat_n, Itertools};
+use itertools::{Itertools, repeat_n};
 use proconio::input;
 
 fn main() {

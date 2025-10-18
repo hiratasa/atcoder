@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -159,11 +159,7 @@ fn main() {
                     let dy = (i - a).abs();
                     let dx = (j - b).abs();
 
-                    if dx == dy {
-                        '#'
-                    } else {
-                        '.'
-                    }
+                    if dx == dy { '#' } else { '.' }
                 })
                 .collect::<String>()
         })

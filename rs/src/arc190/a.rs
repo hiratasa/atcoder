@@ -82,7 +82,7 @@ fn solve(n: usize, lr: &[(usize, usize)]) -> Option<Vec<(usize, usize)>> {
             .filter(|&(_, (l, r))| r == n)
             .min_by_key(|&(_, (l, _))| l)?;
 
-        if first_max.1 .1 >= last_min.1 .0 {
+        if first_max.1.1 >= last_min.1.0 {
             return Some((first_max.0, last_min.0));
         }
 
@@ -127,7 +127,7 @@ fn solve(n: usize, lr: &[(usize, usize)]) -> Option<Vec<(usize, usize)>> {
             .enumerate()
             .max_by_key(|&(_, (l, _))| l)?;
 
-        if rmin.1 .1 <= lmax.1 .0 {
+        if rmin.1.1 <= lmax.1.0 {
             return Some((rmin.0, lmax.0));
         }
 
@@ -176,7 +176,7 @@ fn check(n: usize, lr: &[(usize, usize)], ops: &[usize]) -> bool {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},
@@ -193,6 +193,6 @@ use proconio::{
     input, input_interactive,
     marker::{Chars, Usize1},
 };
-use rand::{rngs::SmallRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng};
 #[allow(unused_imports)]
 use rustc_hash::{FxHashMap, FxHashSet};

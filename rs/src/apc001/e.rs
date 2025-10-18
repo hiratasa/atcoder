@@ -130,11 +130,7 @@ fn dfs(g: &UndirectedGraph, v: usize, p: usize) -> usize {
             }
         });
 
-    if t.1 <= 1 {
-        t.0
-    } else {
-        t.0 + t.1 - 1
-    }
+    if t.1 <= 1 { t.0 } else { t.0 + t.1 - 1 }
 }
 
 fn main() {

@@ -22,7 +22,7 @@ fn dfs(g: &Graph<i64>, v: usize, p: usize, x: &[i64]) -> (i64, i64) {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

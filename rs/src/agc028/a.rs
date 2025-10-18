@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -138,11 +138,7 @@ where
 }
 
 fn gcd(n: usize, m: usize) -> usize {
-    if n == 0 {
-        m
-    } else {
-        gcd(m % n, n)
-    }
+    if n == 0 { m } else { gcd(m % n, n) }
 }
 
 fn main() {

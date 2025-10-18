@@ -1,4 +1,4 @@
-use std::cmp::{max, min, Ordering};
+use std::cmp::{Ordering, max, min};
 
 use proconio::input;
 
@@ -69,11 +69,7 @@ fn solve(a: &[usize], b: &[usize]) -> bool {
                 // eprintln!("x={x}; i={i}, limit={limit}, c={c}, ok={ok}");
             }
 
-            if ok {
-                Err(true)
-            } else {
-                Ok((i, limit))
-            }
+            if ok { Err(true) } else { Ok((i, limit)) }
         })
         .map_or_else(|e| e, |_| false)
 }

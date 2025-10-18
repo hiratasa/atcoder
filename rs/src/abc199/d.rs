@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -304,11 +304,7 @@ fn dfs(g: &Graph, v: usize, colors: &mut [Option<usize>], parents: &mut [Option<
         .map(|edge| {
             if let Some(color) = colors[edge.to] {
                 // visiting
-                if color == color0 {
-                    0
-                } else {
-                    1
-                }
+                if color == color0 { 0 } else { 1 }
             } else if matches!(parents[edge.to], Some(p) if p != v) {
                 1
             } else {

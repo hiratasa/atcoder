@@ -13,12 +13,12 @@ fn main() {
         st
     });
 
-    println!("{}", (0..n).map(|i| st.get(i).0 .0).join(" "));
+    println!("{}", (0..n).map(|i| st.get(i).0.0).join(" "));
 }
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},
@@ -241,11 +241,7 @@ impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
         assert!(!rhs.is_zero());
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
@@ -597,7 +593,7 @@ define_monoid!(Set, Option<Mod998244353>, None, |x: Option<
 impl Operator<Sum> for Set {
     fn apply(&self, v: &Sum) -> Sum {
         match self.0 {
-            Some(x) => Sum((x * v.0 .1, v.0 .1)),
+            Some(x) => Sum((x * v.0.1, v.0.1)),
             None => v.clone(),
         }
     }

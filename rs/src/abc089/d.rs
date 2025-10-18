@@ -74,11 +74,7 @@ trait UsizeExt {
 
 impl UsizeExt for usize {
     fn difference(self, rhs: Self) -> Self {
-        if self < rhs {
-            rhs - self
-        } else {
-            self - rhs
-        }
+        if self < rhs { rhs - self } else { self - rhs }
     }
 }
 

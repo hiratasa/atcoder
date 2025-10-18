@@ -15,11 +15,7 @@ fn main() {
                 .enumerate()
                 .map(
                     |(i, (a, b))| {
-                        if s & (1 << i) == 0 {
-                            (a, b)
-                        } else {
-                            (b, a)
-                        }
+                        if s & (1 << i) == 0 { (a, b) } else { (b, a) }
                     },
                 )
                 .collect::<Vec<_>>();

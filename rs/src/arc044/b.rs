@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, izip};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -110,11 +110,7 @@ impl Mod {
             self
         } else {
             let r = self.pow(p / 2);
-            if p % 2 == 0 {
-                r * r
-            } else {
-                r * r * self
-            }
+            if p % 2 == 0 { r * r } else { r * r * self }
         }
     }
 }

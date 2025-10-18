@@ -1,6 +1,6 @@
 use std::iter::once;
 
-use itertools::{izip, Itertools};
+use itertools::{Itertools, izip};
 use proconio::input;
 
 fn main() {

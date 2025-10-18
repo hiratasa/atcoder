@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -315,11 +315,7 @@ fn dfs(g: &Graph, v: usize, p: usize) -> Option<bool> {
         .map(|u| dfs(g, u, v))
         .try_fold(true, |x, y| {
             let y = y?;
-            if !x && y {
-                None
-            } else {
-                Some(x && !y)
-            }
+            if !x && y { None } else { Some(x && !y) }
         })
 }
 

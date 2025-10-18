@@ -33,7 +33,7 @@ fn main() {
                 let seg = st.query(l..r);
                 // st.dump_table();
                 // eprintln!("{seg:?}");
-                let ans = seg.0 .2;
+                let ans = seg.0.2;
 
                 Some(Some(ans))
             }
@@ -46,7 +46,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

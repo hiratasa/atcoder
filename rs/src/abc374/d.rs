@@ -25,11 +25,7 @@ fn main() {
                 .enumerate()
                 .map(|(i, (p, q))| {
                     let d = ((p.0 - q.0).powi(2) + (p.1 - q.1).powi(2)).sqrt();
-                    if i % 2 == 0 {
-                        d / s
-                    } else {
-                        d / t
-                    }
+                    if i % 2 == 0 { d / s } else { d / t }
                 })
                 .sum::<f64>()
         })
@@ -41,7 +37,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

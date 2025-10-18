@@ -73,19 +73,11 @@ fn main() {
     let combi = |n: usize, k: usize| fact[n] * inv_fact[k] % M * inv_fact[n - k] % M;
 
     let loop_combi = |n: usize| {
-        if n == 2 {
-            1
-        } else {
-            fact[n - 1] * inv[2] % M
-        }
+        if n == 2 { 1 } else { fact[n - 1] * inv[2] % M }
     };
 
     let line_combi = |n: usize| {
-        if n == 1 {
-            1
-        } else {
-            fact[n] * inv[2] % M
-        }
+        if n == 1 { 1 } else { fact[n] * inv[2] % M }
     };
 
     let k = n - m;

@@ -81,17 +81,9 @@ fn main() {
     } else if x <= 3 && y <= 3 {
         1
     } else if y <= 3 {
-        if y > 0 || x % 2 > 0 {
-            2
-        } else {
-            1
-        }
+        if y > 0 || x % 2 > 0 { 2 } else { 1 }
     } else if x <= 3 {
-        if x > 0 || y % 2 > 0 {
-            2
-        } else {
-            1
-        }
+        if x > 0 || y % 2 > 0 { 2 } else { 1 }
     } else if x % 2 == 0 && y % 2 == 0 {
         2
     } else {

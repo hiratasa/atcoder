@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -153,8 +153,8 @@ where
     }
 }
 
-use rand::distr::Distribution;
 use rand::SeedableRng;
+use rand::distr::Distribution;
 
 fn main() {
     let (n, k) = read_tuple!(usize, usize);

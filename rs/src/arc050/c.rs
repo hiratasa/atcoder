@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, izip};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -121,11 +121,7 @@ fn modpowsum(x: usize, y: usize, m: usize) -> usize {
         let z = modpowsum(x, y / 2, m);
         let w = z * (modpow(x, y / 2, m) + 1) % m;
 
-        if y % 2 == 0 {
-            w
-        } else {
-            (w * x % m + 1) % m
-        }
+        if y % 2 == 0 { w } else { (w * x % m + 1) % m }
     }
 }
 

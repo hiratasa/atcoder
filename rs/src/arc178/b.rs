@@ -141,11 +141,7 @@ fn mat_pow(mat: &[[Mod998244353; 2]; 2], p: usize) -> [[Mod998244353; 2]; 2] {
         let t = mat_pow(mat, p / 2);
         let u = mat_mul(&t, &t);
 
-        if p % 2 == 0 {
-            u
-        } else {
-            mat_mul(&u, &mat)
-        }
+        if p % 2 == 0 { u } else { mat_mul(&u, &mat) }
     }
 }
 
@@ -352,11 +348,7 @@ impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
         assert!(!rhs.is_zero());
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {

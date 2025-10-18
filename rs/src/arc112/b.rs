@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -152,17 +152,9 @@ fn main() {
     let (b, c) = read_tuple!(i64, i64);
 
     let ans = if c == 1 {
-        if b == 0 {
-            1
-        } else {
-            2
-        }
+        if b == 0 { 1 } else { 2 }
     } else if c == 2 {
-        if b == 0 {
-            2
-        } else {
-            3
-        }
+        if b == 0 { 2 } else { 3 }
     } else if b > 0 {
         // 1) b < x
         //   -> 操作1 -> 操作2* -> 操作1

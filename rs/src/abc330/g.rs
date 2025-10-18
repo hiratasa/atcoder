@@ -1,6 +1,6 @@
 use std::iter::once;
 
-use itertools::{iproduct, Itertools};
+use itertools::{Itertools, iproduct};
 use itertools_num::ItertoolsNum;
 use proconio::input;
 use rustc_hash::FxHashMap;
@@ -600,11 +600,7 @@ impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
         assert!(!rhs.is_zero());
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {

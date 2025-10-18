@@ -144,11 +144,7 @@ fn main() {
             .take_while(|&t| t >= s - t)
             .filter_map(|t| {
                 if t == s {
-                    if ok_or_not[s] {
-                        Some(1)
-                    } else {
-                        None
-                    }
+                    if ok_or_not[s] { Some(1) } else { None }
                 } else {
                     dp[t].and_then(|d| dp[s - t].map(|d2| d + d2))
                 }

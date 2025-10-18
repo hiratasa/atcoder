@@ -1,4 +1,4 @@
-use itertools::{iproduct, Itertools};
+use itertools::{Itertools, iproduct};
 use proconio::{input, marker::Chars};
 
 fn main() {
@@ -44,11 +44,7 @@ fn main() {
                 .unique()
                 .count();
 
-            if c == 0 {
-                k + 1
-            } else {
-                k - c + 1
-            }
+            if c == 0 { k + 1 } else { k - c + 1 }
         })
         .fold((0, 0), |(a, b), c| (a + 1, b + c));
 
@@ -317,11 +313,7 @@ impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
         assert!(!rhs.is_zero());
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {

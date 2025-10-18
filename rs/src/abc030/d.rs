@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -170,11 +170,7 @@ fn main() {
     // eprintln!("{} {} {}", i0, i1, p);
 
     let k = if let Ok(k) = k.parse::<usize>() {
-        if k <= i0 {
-            k
-        } else {
-            (k - i0) % p + i0
-        }
+        if k <= i0 { k } else { (k - i0) % p + i0 }
     } else {
         let r = k.chars().fold(0usize, |kk, c| {
             (kk * 10 + c.to_digit(10).unwrap() as usize) % p

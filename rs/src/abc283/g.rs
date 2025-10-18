@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -184,11 +184,7 @@ fn main() {
     let mut b = a.citer().fold(vec![], |mut b: Vec<usize>, x| {
         let y = b.citer().fold(x, |y, z| {
             let idx = 63 - z.leading_zeros();
-            if y & (1 << idx) > 0 {
-                y ^ z
-            } else {
-                y
-            }
+            if y & (1 << idx) > 0 { y ^ z } else { y }
         });
 
         if y != 0 {

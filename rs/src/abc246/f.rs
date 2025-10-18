@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -385,11 +385,7 @@ fn main() {
 
             let x = Mod::new(m as usize).pow(l);
 
-            if bs.count_ones() % 2 == 1 {
-                x
-            } else {
-                -x
-            }
+            if bs.count_ones() % 2 == 1 { x } else { -x }
         })
         .sum::<Mod>();
 

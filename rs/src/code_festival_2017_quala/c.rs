@@ -4,11 +4,11 @@ use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -106,11 +106,7 @@ fn main() {
             let (n2, m) = (n2.saturating_sub(m / 2), m - 2 * min(n2, m / 2));
             let (n1, m) = (n1.saturating_sub(m), m - min(n1, m));
 
-            if m == 0 {
-                Some((n4, n2, n1))
-            } else {
-                None
-            }
+            if m == 0 { Some((n4, n2, n1)) } else { None }
         })
         .is_some();
 

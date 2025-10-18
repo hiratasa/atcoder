@@ -98,11 +98,7 @@ fn solve0(a: i128, b: i128, c: i128, d: i128) -> (i128, i128) {
 }
 
 fn gcd(a: i128, b: i128) -> i128 {
-    if b == 0 {
-        a
-    } else {
-        gcd(b, a % b)
-    }
+    if b == 0 { a } else { gcd(b, a % b) }
 }
 
 #[allow(dead_code)]
@@ -146,7 +142,7 @@ where
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},
@@ -163,6 +159,6 @@ use proconio::{
     input, input_interactive,
     marker::{Chars, Usize1},
 };
-use rand::{rngs::SmallRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng};
 #[allow(unused_imports)]
 use rustc_hash::{FxHashMap, FxHashSet};

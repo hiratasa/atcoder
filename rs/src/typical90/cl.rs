@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -650,14 +650,14 @@ impl<T: Convolution> std::ops::Mul for &FormalPowerSeries<T> {
 // O(n logn) (nはselfの次数)
 // これは形式的冪級数ではなく多項式クラスに定義すべき？
 impl<
-        T: Copy
-            + Default
-            + Inverse
-            + Convolution
-            + std::ops::Add<T, Output = T>
-            + std::ops::Mul<u32, Output = T>
-            + std::ops::Neg<Output = T>,
-    > std::ops::Div for &FormalPowerSeries<T>
+    T: Copy
+        + Default
+        + Inverse
+        + Convolution
+        + std::ops::Add<T, Output = T>
+        + std::ops::Mul<u32, Output = T>
+        + std::ops::Neg<Output = T>,
+> std::ops::Div for &FormalPowerSeries<T>
 {
     type Output = FormalPowerSeries<T>;
 

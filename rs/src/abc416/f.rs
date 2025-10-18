@@ -69,7 +69,7 @@ fn dfs(g: &Graph, v: usize, p: usize, a: &[i64], dp: &mut [[[i64; 3]; 6]]) {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

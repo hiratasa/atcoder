@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -344,11 +344,7 @@ where
 impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
@@ -439,11 +435,7 @@ fn primitive_root(m: usize) -> usize {
 }
 
 fn gcd(x: usize, y: usize) -> usize {
-    if x == 0 {
-        y
-    } else {
-        gcd(y % x, x)
-    }
+    if x == 0 { y } else { gcd(y % x, x) }
 }
 
 fn main() {

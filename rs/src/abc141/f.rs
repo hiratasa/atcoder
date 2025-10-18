@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -172,11 +172,7 @@ fn main() {
             let b = basis.citer().fold(b, |b, c| {
                 let idx = (c + 1).next_power_of_two().trailing_zeros() - 1;
 
-                if b & (1 << idx) > 0 {
-                    b ^ c
-                } else {
-                    b
-                }
+                if b & (1 << idx) > 0 { b ^ c } else { b }
             });
 
             if b != 0 {
@@ -193,11 +189,7 @@ fn main() {
         let idx = (b + 1).next_power_of_two().trailing_zeros() - 1;
 
         assert!(x & (1 << idx) == 0);
-        if y & (1 << idx) == 0 {
-            y ^ b
-        } else {
-            y
-        }
+        if y & (1 << idx) == 0 { y ^ b } else { y }
     });
 
     let ans = x + (y << 1);

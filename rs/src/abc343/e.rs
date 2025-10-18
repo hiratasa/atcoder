@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use itertools::{iproduct, Itertools};
+use itertools::{Itertools, iproduct};
 use proconio::input;
 
 fn main() {

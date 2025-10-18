@@ -39,35 +39,42 @@ fn main() {
                 b
             });
 
-        let Ok(parents) = b.iter().map(|(row, _)| {
-            if row.count_ones() as usize == n {
-                Ok(None)
-            } else {
-                let mut found = None;
-                for (i, (row2, _)) in b.iter().enumerate() {
-                    if row2 & row == *row && row2 != row {
-                        let z = row2.count_ones();
-                        if matches!(found, Some((_, w)) if w > z) || found.is_none() {
-                            found = Some((i, z));
-                        } else if matches!(found, Some((_, w)) if w == z) {
-                            return Err(());
+        let Ok(parents) = b
+            .iter()
+            .map(|(row, _)| {
+                if row.count_ones() as usize == n {
+                    Ok(None)
+                } else {
+                    let mut found = None;
+                    for (i, (row2, _)) in b.iter().enumerate() {
+                        if row2 & row == *row && row2 != row {
+                            let z = row2.count_ones();
+                            if matches!(found, Some((_, w)) if w > z) || found.is_none() {
+                                found = Some((i, z));
+                            } else if matches!(found, Some((_, w)) if w == z) {
+                                return Err(());
+                            }
                         }
                     }
+                    Ok(found.map(|(i, _)| i))
                 }
-                Ok(found.map(|(i, _)| i))
-            }
-        }).collect::<Result<Vec<Option<usize>>, _>>() else { 
+            })
+            .collect::<Result<Vec<Option<usize>>, _>>()
+        else {
             println!("0");
             continue;
         };
 
         let m = b.len();
-        let children = parents.iter().enumerate().fold(vec![vec![]; m], |mut children, (i, &p)| {
-            if let Some(p) = p {
-                children[p].push(i);
-            }
-            children
-        });
+        let children = parents
+            .iter()
+            .enumerate()
+            .fold(vec![vec![]; m], |mut children, (i, &p)| {
+                if let Some(p) = p {
+                    children[p].push(i);
+                }
+                children
+            });
 
         if check(&children, &b, 0, &BitSet::new(n)).is_none() {
             println!("0");
@@ -75,14 +82,18 @@ fn main() {
         }
 
         type Mod = Mod998244353;
-        let ans = b.iter().enumerate().map(|(i, (_, x))| {
-            let k = if i == 0 {
-                x.count_ones() as usize - 1
-            } else {
-                x.count_ones() as usize
-            };
-            (1..=k).map(Mod::new).product::<Mod>()
-        }).product::<Mod>();
+        let ans = b
+            .iter()
+            .enumerate()
+            .map(|(i, (_, x))| {
+                let k = if i == 0 {
+                    x.count_ones() as usize - 1
+                } else {
+                    x.count_ones() as usize
+                };
+                (1..=k).map(Mod::new).product::<Mod>()
+            })
+            .product::<Mod>();
         println!("{ans}");
     }
 }
@@ -103,7 +114,7 @@ fn check(children: &[Vec<usize>], b: &[(BitSet, BitSet)], v: usize, p: &BitSet) 
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},
@@ -326,11 +337,7 @@ impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
         assert!(!rhs.is_zero());
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {

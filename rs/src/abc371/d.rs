@@ -32,11 +32,7 @@ fn main() {
             let i0 = *idxs.range(l..).next().unwrap().1;
             let i1 = *idxs.range(..=r).next_back().unwrap().1;
 
-            if i0 <= i1 {
-                st.query(i0..=i1).0
-            } else {
-                0
-            }
+            if i0 <= i1 { st.query(i0..=i1).0 } else { 0 }
         })
         .for_each(|ans| {
             println!("{ans}");
@@ -45,7 +41,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

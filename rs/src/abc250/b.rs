@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -168,11 +168,7 @@ fn main() {
                 for j2 in 0..b {
                     let color = (i + j) % 2;
 
-                    if color == 0 {
-                        print!(".")
-                    } else {
-                        print!("#")
-                    }
+                    if color == 0 { print!(".") } else { print!("#") }
                 }
             }
             println!();

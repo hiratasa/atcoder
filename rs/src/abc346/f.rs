@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, iter::once};
 
-use itertools::{repeat_n, Itertools};
+use itertools::{Itertools, repeat_n};
 use itertools_num::ItertoolsNum;
 use proconio::{input, marker::Chars};
 
@@ -68,7 +68,7 @@ fn solve(n: usize, s: &[usize], t: &[usize]) -> usize {
             let k2 = k + nums[c][pos];
 
             let m = m.checked_add((k2 - 1) / nums[c][sl])?;
-            let r = k2 - (k2-1) / nums[c][sl] * nums[c][sl];
+            let r = k2 - (k2 - 1) / nums[c][sl] * nums[c][sl];
 
             let next_pos = nums[c]
                 .binary_search_by(|&s| s.cmp(&r).then(Ordering::Greater))

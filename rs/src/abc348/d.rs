@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, iter::once};
 
-use itertools::{iproduct, Itertools};
+use itertools::{Itertools, iproduct};
 use proconio::{
     input,
     marker::{Chars, Usize1},

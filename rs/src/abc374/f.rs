@@ -15,11 +15,7 @@ fn main() {
     let mut tt = t.clone();
     tt.dedup();
     let get = |ii: usize| {
-        if ii == 0 {
-            0
-        } else {
-            tt[ii - 1]
-        }
+        if ii == 0 { 0 } else { tt[ii - 1] }
     };
 
     let mut init = vec![vec![vec![usize::MAX; n + 1]; 2]];
@@ -176,7 +172,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

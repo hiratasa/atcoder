@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -383,11 +383,7 @@ define_monoid!(Swap, bool, false, std::ops::BitXor::bitxor);
 
 impl Operator<(usize, usize)> for Swap {
     fn apply(op: &Self::Item, v: &(usize, usize)) -> (usize, usize) {
-        if *op {
-            (v.1, v.0)
-        } else {
-            *v
-        }
+        if *op { (v.1, v.0) } else { *v }
     }
 }
 

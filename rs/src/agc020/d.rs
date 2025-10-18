@@ -1,13 +1,13 @@
 #[allow(unused_imports)]
-use std::io::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
+#[allow(unused_imports)]
+use std::io::*;
+#[allow(unused_imports)]
+use std::mem::*;
+#[allow(unused_imports)]
+use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
 
@@ -28,7 +28,6 @@ fn read_cols<T: FromStr>() -> Vec<T> {
         .map(|s| s.parse().ok().unwrap())
         .collect()
 }
-
 
 fn print_chars(s: &str, pos: usize, len: usize, c: usize, d: usize) {
     assert!(c <= d);
@@ -60,7 +59,6 @@ fn solve_query2(a: usize, b: usize, c: usize, d: usize) {
     let mut vb = b;
     let mut pos = 0;
 
-
     if pos <= d && va >= len_longest && (va - len_longest + 1) * len_longest >= vb {
         print_chars("A", pos, len_longest, c, d);
         pos += len_longest;
@@ -70,7 +68,8 @@ fn solve_query2(a: usize, b: usize, c: usize, d: usize) {
     // len_longestの定義から.
     // 等号が成り立つときは、(va, vb) == (0, 0) まで回る
     assert!(vb * len_longest >= va);
-    while pos <= d && va >= len_longest && (va - len_longest + 1) * len_longest >= vb - 1 && vb >= 1 {
+    while pos <= d && va >= len_longest && (va - len_longest + 1) * len_longest >= vb - 1 && vb >= 1
+    {
         print_chars("B", pos, 1, c, d);
         pos += 1;
         vb -= 1;
@@ -82,7 +81,9 @@ fn solve_query2(a: usize, b: usize, c: usize, d: usize) {
     }
 
     assert!(vb * len_longest > va || (va == 0 && vb == 0));
-    assert!(va < len_longest || (va - len_longest + 1) * len_longest < vb - 1 || (va == 0 && vb == 0));
+    assert!(
+        va < len_longest || (va - len_longest + 1) * len_longest < vb - 1 || (va == 0 && vb == 0)
+    );
 
     if pos <= d && vb >= 2 && va > (vb - 2) / len_longest {
         print_chars("B", pos, 1, c, d);
@@ -100,7 +101,9 @@ fn solve_query2(a: usize, b: usize, c: usize, d: usize) {
 
     assert!((va == 0 && vb == 0) || (vb == 1 && va < len_longest) || va * len_longest < vb);
 
-    if pos <= d /* && k */{
+    if pos <= d
+    /* && k */
+    {
         let len_b = vb - va * len_longest;
         assert!(len_b <= len_longest);
         print_chars("B", pos, vb - va * len_longest, c, d);
@@ -119,7 +122,7 @@ fn solve_query2(a: usize, b: usize, c: usize, d: usize) {
         vb -= len_longest;
     }
 
-    // (a - len_longest * (n - 1)) >= b - (n - 1) かつ 
+    // (a - len_longest * (n - 1)) >= b - (n - 1) かつ
     // ⇔ n <= (a - b) / (len_longest - 1) + 1
     // が成り立つ最大のnまでは A^{len_longest}B の繰り返し
     /*

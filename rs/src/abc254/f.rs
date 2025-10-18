@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -402,11 +402,7 @@ macro_rules! define_monoid {
 define_monoid!(Gcd, i64, 0, gcd);
 
 fn gcd(a: i64, b: i64) -> i64 {
-    if a == 0 {
-        b
-    } else {
-        gcd(b % a, a)
-    }
+    if a == 0 { b } else { gcd(b % a, a) }
 }
 
 fn main() {

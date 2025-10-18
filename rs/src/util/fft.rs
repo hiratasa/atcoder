@@ -1,4 +1,4 @@
-use super::modulo::{pow_mod, Mod, Mod1811939329, Mod2013265921, Mod469762049, Modulus};
+use super::modulo::{Mod, Mod469762049, Mod1811939329, Mod2013265921, Modulus, pow_mod};
 use itertools::izip;
 use num::complex::Complex64;
 
@@ -138,7 +138,10 @@ impl<M> Butterfly<Mod<M>> for ModButterfly<M>
 where
     M: Modulus,
 {
-    type RootSupplier<'a> = ModRootSupplier<'a, M> where M: 'a;
+    type RootSupplier<'a>
+        = ModRootSupplier<'a, M>
+    where
+        M: 'a;
 
     fn get_roots<'a>(&'a self, h: usize) -> ModRootSupplier<'a, M> {
         let mut w_pows = self.w_pows.borrow_mut();

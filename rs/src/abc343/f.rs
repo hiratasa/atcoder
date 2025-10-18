@@ -23,7 +23,7 @@ fn main() {
 
             let ans = st.query(l - 1..r);
 
-            println!("{}", ans.0 .1 .1);
+            println!("{}", ans.0.1.1);
         }
     }
 }
@@ -320,7 +320,7 @@ define_monoid!(
     ((usize, usize), (usize, usize)),
     ((0, 0), (0, 0)),
     |lhs: ((usize, usize), (usize, usize)), rhs: ((usize, usize), (usize, usize))| {
-        if lhs.0 .0 == rhs.0 .0 {
+        if lhs.0.0 == rhs.0.0 {
             (process(lhs.0, rhs.0), process(lhs.1, rhs.1))
         } else if lhs.0 > rhs.0 {
             (lhs.0, process(lhs.1, rhs.0))

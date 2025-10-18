@@ -1,9 +1,9 @@
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::iproduct;
-#[allow(unused_imports)]
 use itertools::Itertools;
+#[allow(unused_imports)]
+use itertools::iproduct;
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]

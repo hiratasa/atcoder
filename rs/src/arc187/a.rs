@@ -75,7 +75,7 @@ fn solve(a: &mut [usize], k: usize, x: usize, i0: usize, ops: &mut Vec<usize>) -
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

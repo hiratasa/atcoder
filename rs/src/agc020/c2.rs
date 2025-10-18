@@ -1,13 +1,13 @@
 #[allow(unused_imports)]
-use std::io::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::*;
+#[allow(unused_imports)]
+use std::io::*;
+#[allow(unused_imports)]
+use std::mem::*;
+#[allow(unused_imports)]
+use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
 
@@ -88,7 +88,8 @@ impl BitSet {
 
         for i in 0..byte_size {
             storage.push(0);
-            if shift_elem + 1 <= i && i < other.storage.len() + shift_elem + 1
+            if shift_elem + 1 <= i
+                && i < other.storage.len() + shift_elem + 1
                 && shift % unit_size_bit > 0
             {
                 storage[i] |=
@@ -156,7 +157,8 @@ fn main() {
     //  and if S_i <= S/2, then S_{2^n-1-i} >= S/2.
     //  By this fact, minimum S_k where satisfies S_k >= S/2
     //  is the median of partial sums.
-    let sums = nums.iter()
+    let sums = nums
+        .iter()
         .scan(0, |sum, &num| {
             *sum += num;
             Some(*sum)

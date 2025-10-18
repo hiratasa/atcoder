@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -175,11 +175,7 @@ where
 }
 
 fn gcd(x: usize, y: usize) -> usize {
-    if x == 0 {
-        y
-    } else {
-        gcd(y % x, x)
-    }
+    if x == 0 { y } else { gcd(y % x, x) }
 }
 
 fn main() {
@@ -202,11 +198,7 @@ fn main() {
                 .find(|&(_, z)| z % 3 > 0)
                 .unwrap();
 
-            if y == 1 {
-                Some(m2 + m3)
-            } else {
-                None
-            }
+            if y == 1 { Some(m2 + m3) } else { None }
         })
         .sum::<Option<usize>>();
 

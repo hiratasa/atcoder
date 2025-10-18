@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -297,11 +297,7 @@ fn main() {
             let ans = if g == s {
                 Some(0)
             } else if a == 0 {
-                if g == b {
-                    Some(1)
-                } else {
-                    None
-                }
+                if g == b { Some(1) } else { None }
             } else if a % p == 1 {
                 if b == 0 {
                     None

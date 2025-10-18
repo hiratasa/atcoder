@@ -218,8 +218,8 @@ fn test_segment_has_intersection() {
 
 #[test]
 fn test_segment_intersection_random() {
-    use rand::distr::Distribution;
     use rand::SeedableRng;
+    use rand::distr::Distribution;
 
     let mut rng = rand::rngs::SmallRng::from_os_rng();
     let dist = rand::distr::Uniform::new(-1000.0, 1000.0).unwrap();

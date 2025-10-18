@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -195,17 +195,9 @@ fn calc(s: &[char], p: usize, fibs: &[usize]) -> Option<usize> {
     assert!(s.len() == fibs[p]);
 
     if p == 1 {
-        if s[0] == 'b' {
-            Some(0)
-        } else {
-            None
-        }
+        if s[0] == 'b' { Some(0) } else { None }
     } else if p == 2 {
-        if s[0] == 'a' {
-            Some(0)
-        } else {
-            None
-        }
+        if s[0] == 'a' { Some(0) } else { None }
     } else {
         if let Some(q) = calc(&s[..fibs[p - 1]], p - 1, fibs) {
             let qq = 2 * q;

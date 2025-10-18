@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -364,11 +364,7 @@ impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
         assert!(!rhs.is_zero());
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
@@ -443,15 +439,14 @@ fn main() {
     let mut init = vec![Mod::zero(); m + 1];
     init[m] = Mod::one();
 
-    let dp = (1..n+m)
+    let dp = (1..n + m)
         .map(|t| {
-            (0..n).filter_map(|i| 
+            (0..n)
+                .filter_map(|i|
                 // i - j + m == t
-                (i + m).checked_sub(t).filter(|&j| j < m).map(|j| (i, j))
-            ).find(|&(i, j)| s[i][j] == '#').map_or(
-                usize::MAX,
-                |(_, j)| j
-            )
+                (i + m).checked_sub(t).filter(|&j| j < m).map(|j| (i, j)))
+                .find(|&(i, j)| s[i][j] == '#')
+                .map_or(usize::MAX, |(_, j)| j)
         })
         .scan(usize::MAX, |k, l| {
             *k = min(*k, l);
@@ -461,14 +456,18 @@ fn main() {
         .fold(init, |prev, (t, l)| {
             let t = t + 1;
 
-            let mi = (0..n).filter_map(|i| 
+            let mi = (0..n)
+                .filter_map(|i|
                 // i - j + m == t
-                (i + m).checked_sub(t).filter(|&j| j < m)
-            ).min().unwrap();
-            let ma = (0..n).filter_map(|i| 
+                (i + m).checked_sub(t).filter(|&j| j < m))
+                .min()
+                .unwrap();
+            let ma = (0..n)
+                .filter_map(|i|
                 // i - j + m == t
-                (i + m).checked_sub(t).filter(|&j| j < m)
-            ).max().unwrap();
+                (i + m).checked_sub(t).filter(|&j| j < m))
+                .max()
+                .unwrap();
 
             let mut next = vec![Mod::zero(); ma + 2];
 

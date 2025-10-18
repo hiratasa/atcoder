@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -384,11 +384,7 @@ fn main() {
                 let x = if m < l {
                     Mod::zero()
                 } else if m == 0 {
-                    if l == 0 {
-                        Mod::one()
-                    } else {
-                        Mod::zero()
-                    }
+                    if l == 0 { Mod::one() } else { Mod::zero() }
                 } else {
                     dp2[2 * (m - l)]
                 };

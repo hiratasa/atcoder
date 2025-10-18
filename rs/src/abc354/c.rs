@@ -16,11 +16,7 @@ fn main() {
         .scan(usize::MAX, |min, (i, (a, c))| {
             *min = cmp::min(*min, c);
 
-            if *min < c {
-                Some(None)
-            } else {
-                Some(Some(i))
-            }
+            if *min < c { Some(None) } else { Some(Some(i)) }
         })
         .flatten()
         .sorted()

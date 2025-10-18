@@ -22,17 +22,9 @@ fn main() {
                     _ => {
                         *i += 1;
                         if idx == 0 {
-                            if *i <= md {
-                                Some('D')
-                            } else {
-                                Some('R')
-                            }
+                            if *i <= md { Some('D') } else { Some('R') }
                         } else {
-                            if *i <= mr {
-                                Some('R')
-                            } else {
-                                Some('D')
-                            }
+                            if *i <= mr { Some('R') } else { Some('D') }
                         }
                     }
                 })
@@ -63,7 +55,7 @@ fn main() {
 use std::array;
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

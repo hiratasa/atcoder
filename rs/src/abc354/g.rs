@@ -1,4 +1,4 @@
-use itertools::{izip, Itertools};
+use itertools::{Itertools, izip};
 use proconio::input;
 
 fn main() {

@@ -41,7 +41,7 @@ fn main() {
                     st.update(x..y, d);
                 }
 
-                Some(n + 1 - st.query(0..=n).0 .1)
+                Some(n + 1 - st.query(0..=n).0.1)
             },
         )
         .sum::<usize>();
@@ -327,6 +327,6 @@ define_monoid!(Sum, i64, 0, std::ops::Add::add);
 
 impl Operator<MinCount> for Sum {
     fn apply(&self, v: &MinCount) -> MinCount {
-        MinCount((v.0 .0 + self.0, v.0 .1))
+        MinCount((v.0.0 + self.0, v.0.1))
     }
 }

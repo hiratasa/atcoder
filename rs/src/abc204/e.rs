@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -321,11 +321,7 @@ fn calc_min_arv(c: usize, d: usize) -> (usize, usize) {
 fn calc_arv(c: usize, d: usize, t: usize) -> usize {
     let (t0, w) = calc_min_arv(c, d);
 
-    if t <= t0 {
-        w
-    } else {
-        c + t + d / (t + 1)
-    }
+    if t <= t0 { w } else { c + t + d / (t + 1) }
 }
 
 fn dijkstra1(g: &Graph, src: usize, dst: usize) -> Option<usize> {

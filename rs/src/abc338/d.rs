@@ -1,4 +1,4 @@
-use std::cmp::{max, min, Ordering};
+use std::cmp::{Ordering, max, min};
 
 use itertools::Itertools;
 use itertools_num::ItertoolsNum;

@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -185,11 +185,7 @@ fn main() {
 
     let calc = |x: i64| {
         let x = max(x, 0);
-        if x <= d {
-            x
-        } else {
-            0
-        }
+        if x <= d { x } else { 0 }
     };
 
     let add = |set: &mut BTreeSet<(i64, bool)>, x: i64, ty: bool| {

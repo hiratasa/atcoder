@@ -286,11 +286,7 @@ impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
         assert!(!rhs.is_zero());
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
@@ -456,7 +452,10 @@ impl<M> Butterfly<Mod<M>> for ModButterfly<M>
 where
     M: Modulus,
 {
-    type RootSupplier < 'a > = ModRootSupplier < 'a , M > where M : 'a ;
+    type RootSupplier<'a>
+        = ModRootSupplier<'a, M>
+    where
+        M: 'a;
     fn get_roots<'a>(&'a self, h: usize) -> ModRootSupplier<'a, M> {
         let mut w_pows = self.w_pows.borrow_mut();
         if h >= w_pows.len() {

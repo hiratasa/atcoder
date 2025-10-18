@@ -56,11 +56,7 @@ fn solve(n: i64, k: i64) -> bool {
 }
 
 fn gcd(a: usize, b: usize) -> usize {
-    if a == 0 {
-        b
-    } else {
-        gcd(b % a, a)
-    }
+    if a == 0 { b } else { gcd(b % a, a) }
 }
 
 #[allow(dead_code)]
@@ -80,7 +76,7 @@ fn extgcd(a: i64, b: i64) -> (i64, i64, i64) {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

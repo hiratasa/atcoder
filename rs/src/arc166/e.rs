@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -134,11 +134,7 @@ impl Readable for Digits {
 }
 
 fn gcd(a: usize, b: usize) -> usize {
-    if a == 0 {
-        b
-    } else {
-        gcd(b % a, a)
-    }
+    if a == 0 { b } else { gcd(b % a, a) }
 }
 
 #[allow(dead_code)]
@@ -297,11 +293,7 @@ fn main() {
                     let det0 = c * b - d * a;
                     let det1 = f * a - e * b;
                     if det1 == 0 {
-                        if b - r >= det0 {
-                            Some((c, e))
-                        } else {
-                            None
-                        }
+                        if b - r >= det0 { Some((c, e)) } else { None }
                     } else if b - r + u * det1 >= det0 {
                         let idx = (det0.saturating_sub(b - r) + det1 - 1) / det1;
 

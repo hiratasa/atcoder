@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -366,11 +366,7 @@ fn main() {
     .collect_vec();
 
     let combi = move |n: usize, k: usize| {
-        if k > n {
-            Mod::zero()
-        } else {
-            combi[n][k]
-        }
+        if k > n { Mod::zero() } else { combi[n][k] }
     };
 
     (2..=2 * k)
@@ -385,11 +381,7 @@ fn main() {
             (0..=p)
                 .map(|j| {
                     let x = combi(p, j) * combi(n + k - 1 - 2 * j, k - 1);
-                    if j % 2 == 0 {
-                        x
-                    } else {
-                        -x
-                    }
+                    if j % 2 == 0 { x } else { -x }
                 })
                 .sum::<Mod>()
         })

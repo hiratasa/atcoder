@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -352,7 +352,7 @@ fn main() {
     .map(|(n, m, ab)| {
         let g = Graph::from_edges1_undirected(n, ab);
 
-         if n % 2 > 0 {
+        if n % 2 > 0 {
             (n % 4 / 2 + m) % 2 > 0
         } else {
             let x = (n % 4 / 2 + m + 1) % 2;

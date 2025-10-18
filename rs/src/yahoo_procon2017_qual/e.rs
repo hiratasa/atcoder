@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -796,11 +796,7 @@ fn main() {
                 .map(|i| {
                     let r = lr[i].1;
                     let x = st2d.query(..=(r - i as i64), ..=(r + i as i64));
-                    if x == Max::id() {
-                        0
-                    } else {
-                        x.0
-                    }
+                    if x == Max::id() { 0 } else { x.0 }
                 })
                 .max()
                 .unwrap();

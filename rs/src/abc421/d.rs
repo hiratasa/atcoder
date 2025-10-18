@@ -68,11 +68,7 @@ fn main() {
 
             let ret = if *r == 0 {
                 if *c == 0 {
-                    if delta == (0, 0) {
-                        Some(x)
-                    } else {
-                        Some(0)
-                    }
+                    if delta == (0, 0) { Some(x) } else { Some(0) }
                 } else {
                     if delta.0 == 0 && check(*c, delta.1).is_some() {
                         Some(1)
@@ -106,7 +102,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

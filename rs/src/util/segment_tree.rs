@@ -1201,8 +1201,8 @@ mod test {
 
     #[test]
     fn test_segtree_random() {
-        use rand::distr::Distribution;
         use rand::SeedableRng;
+        use rand::distr::Distribution;
 
         let mut rng = rand::rngs::SmallRng::from_os_rng();
 
@@ -1280,8 +1280,8 @@ mod test {
 
     #[test]
     fn test_lazy_segtree_random() {
-        use rand::distr::Distribution;
         use rand::SeedableRng;
+        use rand::distr::Distribution;
 
         let mut rng = rand::rngs::SmallRng::from_os_rng();
 
@@ -1422,10 +1422,10 @@ mod test {
 
     #[test]
     fn test_sparse_segtree_random() {
-        use rand::distr::Distribution;
-        use rand::seq::IteratorRandom;
         use rand::Rng;
         use rand::SeedableRng;
+        use rand::distr::Distribution;
+        use rand::seq::IteratorRandom;
 
         let mut rng = rand::rngs::SmallRng::seed_from_u64(42);
 
@@ -1490,10 +1490,10 @@ mod test {
 
     #[test]
     fn test_sparse_segtree_2d_random() {
-        use rand::distr::Distribution;
-        use rand::seq::IteratorRandom;
         use rand::Rng;
         use rand::SeedableRng;
+        use rand::distr::Distribution;
+        use rand::seq::IteratorRandom;
 
         let mut rng = rand::rngs::SmallRng::seed_from_u64(42);
 
@@ -1584,7 +1584,7 @@ mod test {
 
     #[test]
     fn test_segtree_beats() {
-        use rand::{rngs::SmallRng, Rng, SeedableRng};
+        use rand::{Rng, SeedableRng, rngs::SmallRng};
         use std::cmp::*;
 
         #[derive(PartialEq, Eq)]

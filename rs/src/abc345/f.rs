@@ -47,7 +47,7 @@ fn main() {
         }
     }
 
-    if k > sizes.iter().map(|&s| s/2*2).sum::<usize>() {
+    if k > sizes.iter().map(|&s| s / 2 * 2).sum::<usize>() {
         println!("No");
         return;
     }
@@ -66,9 +66,7 @@ fn main() {
 
         // assert!(children[v].is_empty());
 
-        let Some((idx, p)) = parents[v] else {
-            continue 
-        };
+        let Some((idx, p)) = parents[v] else { continue };
 
         while matches!(children[p].last(), Some(&(_, u)) if u == v || used[u]) {
             children[p].pop();
@@ -291,17 +289,20 @@ fn dfs(
         children[p].push((idx, v));
     }
 
-    1 + g.out_edges[v].iter().map(|e| {
-        dfs(
-            g,
-            e.to,
-            v,
-            e.label,
-            d + 1,
-            visited,
-            parents,
-            children,
-            depths,
-        )
-    }).sum::<usize>()
+    1 + g.out_edges[v]
+        .iter()
+        .map(|e| {
+            dfs(
+                g,
+                e.to,
+                v,
+                e.label,
+                d + 1,
+                visited,
+                parents,
+                children,
+                depths,
+            )
+        })
+        .sum::<usize>()
 }

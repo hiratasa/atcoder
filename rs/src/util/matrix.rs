@@ -1,5 +1,5 @@
 #[allow(unused_imports)]
-use itertools::{izip, Itertools};
+use itertools::{Itertools, izip};
 #[allow(unused_imports)]
 use num::{One, Zero};
 #[allow(unused_imports)]
@@ -537,7 +537,7 @@ mod tests {
 
     #[test]
     fn test_calc_det_a_xb_vs_lagrange_interpolation() {
-        use rand::{rngs::SmallRng, Rng, SeedableRng};
+        use rand::{Rng, SeedableRng, rngs::SmallRng};
 
         let mut rng = SmallRng::seed_from_u64(42);
 
@@ -564,7 +564,7 @@ mod tests {
     // 完全に一様な入力だと非正則な例があまり出ないので、0の割合を増やす
     #[test]
     fn test_calc_det_a_xb_vs_lagrange_interpolation_zero() {
-        use rand::{rngs::SmallRng, Rng, SeedableRng};
+        use rand::{Rng, SeedableRng, rngs::SmallRng};
 
         let mut rng = SmallRng::seed_from_u64(42);
 

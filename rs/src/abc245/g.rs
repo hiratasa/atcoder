@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -378,13 +378,7 @@ fn main() {
                     .find(|&(_, x)| x != a[i])
                     .map(|(cost, _)| cost)
             })
-            .map(|ans| {
-                if let Some(ans) = ans {
-                    ans as i64
-                } else {
-                    -1
-                }
-            })
+            .map(|ans| { if let Some(ans) = ans { ans as i64 } else { -1 } })
             .join(" ")
     );
 }

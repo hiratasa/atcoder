@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -187,11 +187,7 @@ fn main() {
                 let w = j1 - j0 + 1;
 
                 dp[i0][i1][j0][j1] = if w == 1 && h == 1 {
-                    if s[i0][j0] == '#' {
-                        1
-                    } else {
-                        0
-                    }
+                    if s[i0][j0] == '#' { 1 } else { 0 }
                 } else if w <= h {
                     assert!(i0 < i1);
                     (i0..i1)

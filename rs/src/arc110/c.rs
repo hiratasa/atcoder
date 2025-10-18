@@ -100,11 +100,7 @@ fn main() {
             if pp < i {
                 ans.extend((pp + 1..=i).rev());
             }
-            if ans.len() >= n {
-                None
-            } else {
-                Some(ans)
-            }
+            if ans.len() >= n { None } else { Some(ans) }
         });
     // verify
     if ans.is_none() {

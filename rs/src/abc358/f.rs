@@ -130,7 +130,7 @@ fn solve(n: usize, m: usize, k: usize) -> Option<(Vec<Vec<bool>>, Vec<Vec<bool>>
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::*,
     mem::{replace, take},

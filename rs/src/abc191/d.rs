@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -189,11 +189,7 @@ where
 
 fn floor_sqrt(x: i64) -> i64 {
     let r = lower_bound_int(1, x, |s| (s.saturating_pow(2)).cmp(&x));
-    if r * r > x {
-        r - 1
-    } else {
-        r
-    }
+    if r * r > x { r - 1 } else { r }
 }
 
 fn main() {

@@ -55,13 +55,7 @@ fn main() {
         "{}",
         order
             .into_iter()
-            .map(|x| {
-                if let Some(x) = x {
-                    (x as i64) + 1
-                } else {
-                    -1
-                }
-            })
+            .map(|x| { if let Some(x) = x { (x as i64) + 1 } else { -1 } })
             .join(" ")
     );
 }

@@ -4,11 +4,11 @@ use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -80,7 +80,7 @@ fn main() {
                 *ma = (nums[i], Reverse(i));
             }
 
-            Some(ma.1 .0)
+            Some(ma.1.0)
         })
         .for_each(|ans| {
             println!("{}", ans + 1);

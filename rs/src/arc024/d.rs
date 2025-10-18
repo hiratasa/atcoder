@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -204,9 +204,10 @@ fn main() {
 
     assert!(n + m <= 10000);
     assert!(chain(&xy, &ans).sorted().dedup().count() == n + m);
-    assert!(ans
-        .citer()
-        .all(|(x, y)| 1 <= x && x <= 1000 && 1 <= y && y <= 1000));
+    assert!(
+        ans.citer()
+            .all(|(x, y)| 1 <= x && x <= 1000 && 1 <= y && y <= 1000)
+    );
 
     println!("{}", ans.len());
     for (x, y) in ans {

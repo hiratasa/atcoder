@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -204,11 +204,7 @@ fn main() {
     let a = read_mat::<usize>(n);
 
     fn calc_selected(i: usize, k: usize, n: usize) -> usize {
-        if i < k % n {
-            k / n + 1
-        } else {
-            k / n
-        }
+        if i < k % n { k / n + 1 } else { k / n }
     }
 
     let ans = (0..n)

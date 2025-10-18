@@ -39,11 +39,7 @@ fn main() {
             .try_fold(i, |c, j| {
                 let c = nexts[j][c % n] + c / n * n;
 
-                if c > n + i {
-                    None
-                } else {
-                    Some(c)
-                }
+                if c > n + i { None } else { Some(c) }
             })
             .is_some()
     };
@@ -68,7 +64,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

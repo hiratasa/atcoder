@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -155,11 +155,7 @@ fn main() {
 
     let dir = |x: i64, y: i64| {
         if y == 0 {
-            if x > 0 {
-                0
-            } else {
-                2
-            }
+            if x > 0 { 0 } else { 2 }
         } else if y > 0 {
             1
         } else {

@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -344,11 +344,7 @@ where
 impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
@@ -645,11 +641,7 @@ impl Monoid for Update {
     }
 
     fn op(lhs: &Self::Item, rhs: &Self::Item) -> Self::Item {
-        if *lhs == usize::MAX {
-            *rhs
-        } else {
-            *lhs
-        }
+        if *lhs == usize::MAX { *rhs } else { *lhs }
     }
 }
 

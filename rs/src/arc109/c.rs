@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -184,11 +184,7 @@ fn main() {
                     let i0 = prev[j] % n;
                     let i1 = prev[(j + m) % n] % n;
 
-                    if win(s[i0], s[i1]) {
-                        i0
-                    } else {
-                        i1
-                    }
+                    if win(s[i0], s[i1]) { i0 } else { i1 }
                 })
                 .collect(),
             (2 * m) % n,

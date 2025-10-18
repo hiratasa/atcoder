@@ -394,11 +394,7 @@ mod scc {
         // size()より小さいとfalse, size()以上だとtrue
         #[allow(dead_code)]
         fn to_v(&self, a: usize, f: bool) -> usize {
-            if f {
-                a + self.size()
-            } else {
-                a
-            }
+            if f { a + self.size() } else { a }
         }
 
         #[allow(dead_code)]

@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -217,11 +217,7 @@ fn solve(x: i64, y: i64, k: i64) -> Option<Vec<(i64, i64)>> {
                     Some((x, yy + k - (x - xx)))
                 }
             } else {
-                if yy < y {
-                    Some((xx, yy + k))
-                } else {
-                    None
-                }
+                if yy < y { Some((xx, yy + k)) } else { None }
             }
         })
         .skip(1)
@@ -293,10 +289,11 @@ fn main() {
     let (x, y) = read_tuple!(i64, i64);
 
     if let Some(ans) = solve(x, y, k) {
-        assert!(ans
-            .citer()
-            .tuple_windows()
-            .all(|((x0, y0), (x1, y1))| { (x0 - x1).abs() + (y0 - y1).abs() == k }));
+        assert!(
+            ans.citer()
+                .tuple_windows()
+                .all(|((x0, y0), (x1, y1))| { (x0 - x1).abs() + (y0 - y1).abs() == k })
+        );
 
         println!("{}", ans.len());
         for (x, y) in ans {

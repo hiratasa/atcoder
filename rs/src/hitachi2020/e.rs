@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -219,11 +219,12 @@ fn solve0(n: usize, m: usize) -> (Vec<Vec<Vec<bool>>>, usize) {
             .map(|(s, c)| {
                 assert!(s.len() == 1);
 
-                vec![s[0]
-                    .citer()
-                    .chain(once(c))
-                    .chain(s[0].citer())
-                    .collect::<Vec<_>>()]
+                vec![
+                    s[0].citer()
+                        .chain(once(c))
+                        .chain(s[0].citer())
+                        .collect::<Vec<_>>(),
+                ]
             })
             .map(|s| {
                 let l = calc(&s);
@@ -291,11 +292,12 @@ fn solve1(n: usize, m: usize) -> (Vec<Vec<Vec<bool>>>, usize) {
                 .map(|(s, c)| {
                     assert!(s.len() == 1);
 
-                    vec![s[0]
-                        .citer()
-                        .chain(once(c))
-                        .chain(s[0].citer())
-                        .collect::<Vec<_>>()]
+                    vec![
+                        s[0].citer()
+                            .chain(once(c))
+                            .chain(s[0].citer())
+                            .collect::<Vec<_>>(),
+                    ]
                 })
                 .map(|s| {
                     let l = calc(&s);

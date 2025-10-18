@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -387,11 +387,7 @@ impl<M: Modulus> num::One for Mod<M> {
 }
 
 fn gcd(x: i64, y: i64) -> i64 {
-    if x == 0 {
-        y
-    } else {
-        gcd(y % x, x)
-    }
+    if x == 0 { y } else { gcd(y % x, x) }
 }
 
 fn count_lattice_point_on(x0: i64, y0: i64, x1: i64, y1: i64) -> i64 {

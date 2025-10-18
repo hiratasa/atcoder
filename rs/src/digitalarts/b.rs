@@ -116,11 +116,7 @@ fn main() {
         let t = s.chars().sorted().collect::<String>();
         let u = s.chars().sorted_by_key(|&c| Reverse(c)).collect::<String>();
 
-        if s == t {
-            u
-        } else {
-            t
-        }
+        if s == t { u } else { t }
     };
 
     println!("{}", ans);

@@ -102,11 +102,7 @@ fn pow(m: &Vec<Vec<usize>>, i: usize) -> Vec<Vec<usize>> {
         let t = pow(m, i / 2);
         let t = multiply(&t, &t);
 
-        if i % 2 == 0 {
-            t
-        } else {
-            multiply(&t, m)
-        }
+        if i % 2 == 0 { t } else { multiply(&t, m) }
     }
 }
 

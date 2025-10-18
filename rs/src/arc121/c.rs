@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -203,11 +203,7 @@ fn main() {
             .try_fold((p, vec![]), |(mut p, mut ops), _| {
                 if p.len() == 2 {
                     assert!(ops.is_empty());
-                    if p[0] == 1 {
-                        Err(vec![])
-                    } else {
-                        Err(vec![1])
-                    }
+                    if p[0] == 1 { Err(vec![]) } else { Err(vec![1]) }
                 } else if p.len() == 3 {
                     ops.extend(solve3(&p, ops.len() % 2 == 0));
                     Err(ops)

@@ -39,7 +39,7 @@ mod test {
     use super::*;
 
     #[allow(unused_imports)]
-    use rand::{rngs::SmallRng, Rng, SeedableRng};
+    use rand::{Rng, SeedableRng, rngs::SmallRng};
 
     #[test]
     fn test_slide_min() {

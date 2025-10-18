@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -187,11 +187,7 @@ fn main() {
             let x = if x <= a0 { x + m } else { x };
 
             assert!(a0 < x);
-            if x <= a1 {
-                a1 - x + 1
-            } else {
-                a1 - a0
-            }
+            if x <= a1 { a1 - x + 1 } else { a1 - a0 }
         })
         .sum::<usize>();
 

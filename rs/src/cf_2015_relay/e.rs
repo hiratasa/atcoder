@@ -96,11 +96,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -183,11 +183,7 @@ fn main() {
 
     let ans = iterate((hn, mn), |&(h, m)| {
         let m = m + 1;
-        if m == 60 {
-            (h + 1, 0)
-        } else {
-            (h, m)
-        }
+        if m == 60 { (h + 1, 0) } else { (h, m) }
     })
     .take_while(|&(h, m)| (h, m) < (12, 1))
     .any(|(h, m)| (h, m) <= (ht, mt) || ((h + 6) % 12, (m + 30) % 60) <= (ht, mt));

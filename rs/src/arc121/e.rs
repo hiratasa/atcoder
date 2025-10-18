@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -684,11 +684,7 @@ fn main() {
         .map(|i| {
             let x = t[i] * fact[n - i];
 
-            if i % 2 == 0 {
-                x
-            } else {
-                -x
-            }
+            if i % 2 == 0 { x } else { -x }
         })
         .sum::<Mod>();
     println!("{}", ans);

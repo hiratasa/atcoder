@@ -16,7 +16,7 @@ use std::usize;
 use std::io::{BufWriter, Write};
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -140,11 +140,7 @@ where
 }
 
 fn gcd(x: u32, y: u32) -> u32 {
-    if x == 0 {
-        y
-    } else {
-        gcd(y % x, x)
-    }
+    if x == 0 { y } else { gcd(y % x, x) }
 }
 
 use proconio::input;

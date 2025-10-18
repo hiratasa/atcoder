@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -162,11 +162,7 @@ fn main() {
                     .find(|&(kkk, _)| kkk % x > 0)
                     .unwrap();
                 *kk = kkk;
-                if d == 0 {
-                    Some(None)
-                } else {
-                    Some(Some(x))
-                }
+                if d == 0 { Some(None) } else { Some(Some(x)) }
             }
         })
         .flatten()
@@ -176,11 +172,7 @@ fn main() {
         .take_while(|&x| x * x <= k)
         .flat_map(|x| {
             if k % x == 0 {
-                if x * x == k {
-                    vec![x]
-                } else {
-                    vec![x, k / x]
-                }
+                if x * x == k { vec![x] } else { vec![x, k / x] }
             } else {
                 vec![]
             }

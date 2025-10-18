@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -174,11 +174,7 @@ fn difference(n: &[u32], m: &[u32]) -> Option<Vec<u32>> {
                 .rev()
                 .skip_while(|&d| d == 0)
                 .collect::<Vec<_>>();
-            if r.is_empty() {
-                None
-            } else {
-                Some(r)
-            }
+            if r.is_empty() { None } else { Some(r) }
         }
     }
 }
@@ -266,11 +262,7 @@ fn main() {
                         }
                     });
 
-                if ok {
-                    Some(diff)
-                } else {
-                    None
-                }
+                if ok { Some(diff) } else { None }
             }
         })
         .unwrap();

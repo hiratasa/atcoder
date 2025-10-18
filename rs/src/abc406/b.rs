@@ -7,11 +7,7 @@ fn main() {
     let ans = a.into_iter().fold(1usize, |x, y| {
         let z = x.saturating_mul(y);
 
-        if z >= 10usize.pow(k) {
-            1
-        } else {
-            z
-        }
+        if z >= 10usize.pow(k) { 1 } else { z }
     });
 
     println!("{ans}");
@@ -19,7 +15,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

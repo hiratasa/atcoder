@@ -52,9 +52,5 @@ fn main() {
 }
 
 fn gcd(a: u128, b: u128) -> u128 {
-    if a == 0 {
-        b
-    } else {
-        gcd(b % a, a)
-    }
+    if a == 0 { b } else { gcd(b % a, a) }
 }

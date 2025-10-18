@@ -79,11 +79,7 @@ fn is_prime(n: usize) -> bool {
 }
 
 fn gcd(a: usize, b: usize) -> usize {
-    if a == 0 {
-        b
-    } else {
-        gcd(b % a, a)
-    }
+    if a == 0 { b } else { gcd(b % a, a) }
 }
 
 // 非自明な約数を返す

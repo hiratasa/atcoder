@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -161,11 +161,7 @@ fn f(n: usize, r: usize) -> usize {
             let lower = 1 << i;
             let upper = min(r, (1 << (i + 1)) - 1);
 
-            if upper < lower {
-                0
-            } else {
-                upper - lower + 1
-            }
+            if upper < lower { 0 } else { upper - lower + 1 }
         })
         .sum()
 }

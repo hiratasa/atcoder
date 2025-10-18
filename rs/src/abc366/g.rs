@@ -13,7 +13,9 @@ fn main() {
     let mut bits = vec![];
     for i in 0..n {
         let b = bits.len();
-        let Some(idx) = (b..n).find(|&idx| sets[idx] & (1<<i) > 0) else { continue };
+        let Some(idx) = (b..n).find(|&idx| sets[idx] & (1 << i) > 0) else {
+            continue;
+        };
         sets.swap(b, idx);
 
         (0..n).filter(|&j| j != b).for_each(|j| {
@@ -64,7 +66,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

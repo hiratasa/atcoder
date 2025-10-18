@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -195,11 +195,7 @@ fn main() {
                     m.checked_sub(abs_diff(i, ni).pow(2)).and_then(|d| {
                         let s = (d as f64).sqrt() as usize;
 
-                        if s * s == d {
-                            Some((ni, s))
-                        } else {
-                            None
-                        }
+                        if s * s == d { Some((ni, s)) } else { None }
                     })
                 })
                 .flat_map(|(ni, d)| {

@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -160,11 +160,7 @@ where
 }
 
 fn gcd(x: usize, y: usize) -> usize {
-    if x == 0 {
-        y
-    } else {
-        gcd(y % x, x)
-    }
+    if x == 0 { y } else { gcd(y % x, x) }
 }
 
 fn main() {
@@ -188,22 +184,14 @@ fn main() {
                                 let gg = gcd(g, x / d);
                                 map.insert(d, gg);
 
-                                if gg == 1 {
-                                    1
-                                } else {
-                                    0
-                                }
+                                if gg == 1 { 1 } else { 0 }
                             } else {
                                 0
                             }
                         } else {
                             map.insert(d, x / d);
 
-                            if x / d == 1 {
-                                1
-                            } else {
-                                0
-                            }
+                            if x / d == 1 { 1 } else { 0 }
                         }
                     })
                     .sum::<usize>(),

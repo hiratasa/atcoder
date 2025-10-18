@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, izip};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -96,11 +96,7 @@ fn main() {
         .take_while(|&(_d, m, _r)| m > 0)
         .map(|(d, m, r)| {
             let a = (m + 8) / 10 * d;
-            if m % 10 == 1 {
-                a + r + 1
-            } else {
-                a
-            }
+            if m % 10 == 1 { a + r + 1 } else { a }
         })
         .sum::<usize>();
     println!("{}", ans);

@@ -13,11 +13,7 @@ fn main() {
             let i = p.iter().position(|&x| x == a).unwrap();
             let j = p.iter().position(|&x| x == b).unwrap();
 
-            if i < j {
-                a
-            } else {
-                b
-            }
+            if i < j { a } else { b }
         })
         .for_each(|ans| {
             println!("{ans}");

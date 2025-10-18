@@ -63,11 +63,7 @@ fn main() {
             .rev()
             .scan(x, |x, (ordered_float::OrderedFloat(v), m)| {
                 *x = x.saturating_sub(m);
-                if *x == 0 {
-                    Some(Some(v))
-                } else {
-                    Some(None)
-                }
+                if *x == 0 { Some(Some(v)) } else { Some(None) }
             })
             .flatten()
             .next()
@@ -79,7 +75,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

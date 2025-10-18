@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -256,11 +256,7 @@ fn main() {
                 .filter_map(|(_c, it)| {
                     let v = it.map(|t| t.1).collect::<Vec<_>>();
 
-                    if v.len() < 2 {
-                        None
-                    } else {
-                        Some(v[0] + v[1])
-                    }
+                    if v.len() < 2 { None } else { Some(v[0] + v[1]) }
                 })
                 .max()
         })

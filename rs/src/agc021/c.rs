@@ -1,15 +1,15 @@
 #[allow(unused_imports)]
-use std::io::*;
-#[allow(unused_imports)]
-use std::str::*;
-#[allow(unused_imports)]
-use std::mem::*;
-#[allow(unused_imports)]
 use std::cmp::*;
 #[allow(unused_imports)]
 use std::collections::HashMap;
 #[allow(unused_imports)]
 use std::collections::VecDeque;
+#[allow(unused_imports)]
+use std::io::*;
+#[allow(unused_imports)]
+use std::mem::*;
+#[allow(unused_imports)]
+use std::str::*;
 #[allow(unused_imports)]
 use std::usize;
 
@@ -43,7 +43,7 @@ fn main() {
     // 右隅に縦ブロックを置いた配置が可能とすると、以下のいずれか
     //    最右列がそれ以外空
     //    最右列でその上に縦ブロックがある
-    //    
+    //
 
     // height % 2 == 0 && height / 2 <= num_tall
     //  => can be success if (height, width - 1, num_wide, num_tall - height / 2)

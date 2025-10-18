@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -371,11 +371,7 @@ fn main() {
         .map(|(i, aa)| {
             let c = fact[i] * fact[n - i];
 
-            if (n - i) % 2 == 0 {
-                aa / c
-            } else {
-                -aa / c
-            }
+            if (n - i) % 2 == 0 { aa / c } else { -aa / c }
         })
         .collect_vec();
     // eprintln!("{:?}", b);

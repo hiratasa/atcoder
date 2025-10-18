@@ -608,7 +608,7 @@ impl<B: BitVector, const H: usize> WaveletMatrix<B, H> {
 mod tests {
     use super::*;
     use itertools::Itertools;
-    use rand::{rngs::SmallRng, Rng, SeedableRng};
+    use rand::{Rng, SeedableRng, rngs::SmallRng};
 
     #[test]
     fn test_bit_vector_by_ranks() {

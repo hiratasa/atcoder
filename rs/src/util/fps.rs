@@ -151,14 +151,14 @@ impl<T: Convolution> std::ops::Mul for &FormalPowerSeries<T> {
 // O(n logn) (nはselfの次数)
 // これは形式的冪級数ではなく多項式クラスに定義すべき？
 impl<
-        T: Copy
-            + Default
-            + Inverse
-            + Convolution
-            + std::ops::Add<T, Output = T>
-            + std::ops::Mul<u32, Output = T>
-            + std::ops::Neg<Output = T>,
-    > std::ops::Div for &FormalPowerSeries<T>
+    T: Copy
+        + Default
+        + Inverse
+        + Convolution
+        + std::ops::Add<T, Output = T>
+        + std::ops::Mul<u32, Output = T>
+        + std::ops::Neg<Output = T>,
+> std::ops::Div for &FormalPowerSeries<T>
 {
     type Output = FormalPowerSeries<T>;
 

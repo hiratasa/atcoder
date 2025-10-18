@@ -4,11 +4,11 @@ use std::{cmp::*, collections::*, f64, i64, io, iter::*, mem::*, str::*, usize};
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -283,11 +283,7 @@ impl<M: Modulus> std::ops::Div<Mod<M>> for Mod<M> {
     type Output = Self;
     fn div(self, rhs: Mod<M>) -> Self {
         assert!(!rhs.is_zero());
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl<M: Modulus> std::ops::Div<usize> for Mod<M> {
@@ -401,11 +397,7 @@ fn main() {
         .filter_map(|i| {
             let r = k.checked_sub(i * a)?;
 
-            if r % b == 0 {
-                Some((i, r / b))
-            } else {
-                None
-            }
+            if r % b == 0 { Some((i, r / b)) } else { None }
         })
         .map(|(i, j)| combi(n, i) * combi(n, j))
         .sum::<Mod>();

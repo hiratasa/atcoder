@@ -1,4 +1,4 @@
-use itertools::{iproduct, Itertools};
+use itertools::{Itertools, iproduct};
 use proconio::{input, marker::Chars};
 use rustc_hash::FxHashMap;
 

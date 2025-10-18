@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -173,11 +173,7 @@ fn main() {
                             .unwrap();
                         let n2 = min(n1, n.citer().collect::<String>().parse::<usize>().unwrap());
 
-                        if n0 > n2 {
-                            0
-                        } else {
-                            n2 - n0 + 1
-                        }
+                        if n0 > n2 { 0 } else { n2 - n0 + 1 }
                     })
                     .sum::<usize>()
             } else {

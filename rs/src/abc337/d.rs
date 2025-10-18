@@ -35,11 +35,7 @@ fn main() {
         .filter_map(|(i0, j0, i1, j1)| {
             let z = t[i1][j1] + t[i0][j0] - t[i0][j1] - t[i1][j0];
 
-            if z < 0 {
-                None
-            } else {
-                Some(z)
-            }
+            if z < 0 { None } else { Some(z) }
         })
         .min();
 

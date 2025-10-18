@@ -1,4 +1,4 @@
-use itertools::{iterate, Itertools};
+use itertools::{Itertools, iterate};
 use itertools_num::ItertoolsNum;
 
 // 0..n のindexを、s[i..]が辞書順になるように並べる

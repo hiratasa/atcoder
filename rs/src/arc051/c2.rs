@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -166,11 +166,7 @@ impl Mod {
             self
         } else {
             let r = self.pow(p / 2);
-            if p % 2 == 0 {
-                r * r
-            } else {
-                r * r * self
-            }
+            if p % 2 == 0 { r * r } else { r * r * self }
         }
     }
     fn inv(self) -> Self {
@@ -254,11 +250,7 @@ impl std::ops::MulAssign<usize> for Mod {
 impl std::ops::Div for Mod {
     type Output = Self;
     fn div(self, rhs: Mod) -> Self {
-        if self.0 == 0 {
-            self
-        } else {
-            self * rhs.inv()
-        }
+        if self.0 == 0 { self } else { self * rhs.inv() }
     }
 }
 impl std::ops::DivAssign for Mod {

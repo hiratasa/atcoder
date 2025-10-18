@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -153,11 +153,7 @@ const COMBI: [[usize; 3]; 3] = [[1, 0, 0], [1, 1, 0], [1, 2, 1]];
 // Lucas's theorem
 fn combi3(n: usize, r: usize) -> usize {
     successors(Some((n, r)), |&(n, r)| {
-        if n == 0 {
-            None
-        } else {
-            Some((n / 3, r / 3))
-        }
+        if n == 0 { None } else { Some((n / 3, r / 3)) }
     })
     .map(|(nn, rr)| (nn % 3, rr % 3))
     .map(|(nn, rr)| COMBI[nn][rr])

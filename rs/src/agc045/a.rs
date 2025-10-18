@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -189,11 +189,7 @@ fn main() {
                 let x = mat.citer().fold(x, |x, y| {
                     let idx = y.trailing_zeros();
 
-                    if x & (1 << idx) > 0 {
-                        x ^ y
-                    } else {
-                        x
-                    }
+                    if x & (1 << idx) > 0 { x ^ y } else { x }
                 });
 
                 if t == 0 {
@@ -209,11 +205,7 @@ fn main() {
 
                     Some(mat)
                 } else {
-                    if x == 0 {
-                        Some(mat)
-                    } else {
-                        None
-                    }
+                    if x == 0 { Some(mat) } else { None }
                 }
             })
             .is_some();

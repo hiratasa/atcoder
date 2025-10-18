@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -162,11 +162,7 @@ fn main() {
         // eprintln!("{} {} {}{}", x, ans, c0, c1);
         if c0 == '0' {
             if c1 == '0' {
-                if x != 0 {
-                    (x, ans + 1)
-                } else {
-                    (x, ans)
-                }
+                if x != 0 { (x, ans + 1) } else { (x, ans) }
             } else {
                 if x <= 0 {
                     (x - 1, ans)

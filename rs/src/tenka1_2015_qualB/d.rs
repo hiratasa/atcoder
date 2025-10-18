@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -211,17 +211,9 @@ fn merge(
 
     let is_expected_order = {
         if b0 {
-            if b1 {
-                l0 < l1
-            } else {
-                false
-            }
+            if b1 { l0 < l1 } else { false }
         } else {
-            if b1 {
-                true
-            } else {
-                unreachable!()
-            }
+            if b1 { true } else { unreachable!() }
         }
     };
 

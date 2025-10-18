@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -190,11 +190,7 @@ fn shuffle(a: &mut [usize], l: usize, r: usize) {
 
 fn calc(n: usize, k: usize) -> usize {
     if n == 2 {
-        if k == 1 {
-            2
-        } else {
-            1
-        }
+        if k == 1 { 2 } else { 1 }
     } else {
         let l = n.next_power_of_two();
         let m = l / 2 - (l - n);

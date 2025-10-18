@@ -46,7 +46,7 @@ fn dfs(g: &Graph<bool>, v: usize, color: bool, colors: &mut [Option<bool>]) -> b
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

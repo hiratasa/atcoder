@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -196,11 +196,7 @@ fn main() {
                 (i, c)
             } else {
                 let d = query(a0.citer().map(|j| if j == i { c_idx + n } else { j }));
-                if d == c {
-                    (i, !c)
-                } else {
-                    (i, c)
-                }
+                if d == c { (i, !c) } else { (i, c) }
             }
         })
         .chain(a1.citer().map(|i| {
@@ -208,11 +204,7 @@ fn main() {
                 (i, !c)
             } else {
                 let d = query(a0.citer().map(|j| if j == c_idx { i } else { j }));
-                if d == c {
-                    (i, c)
-                } else {
-                    (i, !c)
-                }
+                if d == c { (i, c) } else { (i, !c) }
             }
         }))
         .sorted()

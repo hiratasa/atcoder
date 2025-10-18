@@ -14,7 +14,7 @@ use std::str::*;
 use std::usize;
 
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, izip};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -96,11 +96,7 @@ fn next_date(y: usize, m: usize, d: usize) -> (usize, usize, usize) {
     let months = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
     let last_day_of_month = if m == 2 {
-        if is_leap_year(y) {
-            29
-        } else {
-            28
-        }
+        if is_leap_year(y) { 29 } else { 28 }
     } else {
         months[m - 1]
     };

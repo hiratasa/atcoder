@@ -20,11 +20,7 @@ fn main() {
             } else if a2 == a3 {
                 let x1 = 10usize.pow(a1 as u32 - 1);
                 let x2 = 10usize.pow(a2 as u32 - 1);
-                if swap {
-                    Some((x2, x1))
-                } else {
-                    Some((x1, x2))
-                }
+                if swap { Some((x2, x1)) } else { Some((x1, x2)) }
             } else {
                 let k: usize = a1 + a2 - a3;
                 let t = 10usize.pow(k as u32);
@@ -51,11 +47,7 @@ fn main() {
                     }
                 };
 
-                if swap {
-                    Some((x2, x1))
-                } else {
-                    Some((x1, x2))
-                }
+                if swap { Some((x2, x1)) } else { Some((x1, x2)) }
             }
         })
         .for_each(|ans| {
@@ -69,16 +61,12 @@ fn main() {
 }
 
 fn gcd(a: usize, b: usize) -> usize {
-    if a == 0 {
-        b
-    } else {
-        gcd(b % a, a)
-    }
+    if a == 0 { b } else { gcd(b % a, a) }
 }
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},
@@ -95,6 +83,6 @@ use proconio::{
     input, input_interactive,
     marker::{Chars, Usize1},
 };
-use rand::{rngs::SmallRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng};
 #[allow(unused_imports)]
 use rustc_hash::{FxHashMap, FxHashSet};

@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -189,11 +189,7 @@ fn main() {
     .try_fold(
         (0, 0),
         |_, (i, j, second)| {
-            if second {
-                None
-            } else {
-                Some((i, j))
-            }
+            if second { None } else { Some((i, j)) }
         },
     );
 

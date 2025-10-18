@@ -106,9 +106,5 @@ fn main() {
         .windows(2)
         .map(|ss| ss.into_iter().collect::<String>())
         .any(|w| w == "AC");
-    if ans {
-        println!("Yes")
-    } else {
-        println!("No")
-    }
+    if ans { println!("Yes") } else { println!("No") }
 }

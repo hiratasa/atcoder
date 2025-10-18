@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -157,11 +157,7 @@ fn main() {
         .sorted_by_key(|&(a, b)| Reverse(a + b))
         .scan(false, |turn, (a, b)| {
             *turn = !*turn;
-            if *turn {
-                Some(a)
-            } else {
-                Some(-b)
-            }
+            if *turn { Some(a) } else { Some(-b) }
         })
         .sum::<i64>();
     println!("{}", ans);

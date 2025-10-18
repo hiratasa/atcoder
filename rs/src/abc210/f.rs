@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -367,11 +367,7 @@ mod scc {
         // size()より小さいとfalse, size()以上だとtrue
         #[allow(dead_code)]
         pub fn to_v(&self, a: usize, f: bool) -> usize {
-            if f {
-                a + self.size()
-            } else {
-                a
-            }
+            if f { a + self.size() } else { a }
         }
 
         #[allow(dead_code)]

@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -327,8 +327,8 @@ impl LineSegment {
     }
 }
 
-use rand::distr::Distribution;
 use rand::SeedableRng;
+use rand::distr::Distribution;
 
 fn draw_svg(m: i32, ax: i32, ay: i32, bx: i32, by: i32, xy: &Vec<(i32, i32)>) {
     let w = (2 * m + 1) as usize;

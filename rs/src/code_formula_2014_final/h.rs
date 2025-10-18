@@ -16,7 +16,7 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
@@ -153,9 +153,9 @@ fn main() {
     // let mut ab = read_vec(n, || read_tuple!(usize, usize));
     // let mut ab = (0..n).map(|i| (i, i)).collect::<Vec<_>>();
 
-    use rand::rngs::SmallRng;
     use rand::Rng;
     use rand::SeedableRng;
+    use rand::rngs::SmallRng;
     let mut rng = SmallRng::seed_from_u64(42);
     let mut ab = repeat_with(|| (rng.random_range(1..50001), rng.random_range(1..50001)))
         .take(n)

@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -361,17 +361,9 @@ fn main() {
 
     for i in 0..n {
         let ans = if k % 2 == 0 {
-            if g.adjs(i).any(|j| t[j]) {
-                true
-            } else {
-                false
-            }
+            if g.adjs(i).any(|j| t[j]) { true } else { false }
         } else {
-            if t[i] {
-                true
-            } else {
-                false
-            }
+            if t[i] { true } else { false }
         };
 
         if ans {

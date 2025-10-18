@@ -47,11 +47,7 @@ fn main() {
         .chain((0..n).scan(0, |s, i| {
             if a[i] == 1 {
                 *s += c[i];
-                if b[i] == 0 {
-                    Some(*s - c[i])
-                } else {
-                    Some(0)
-                }
+                if b[i] == 0 { Some(*s - c[i]) } else { Some(0) }
             } else {
                 Some(0)
             }
@@ -63,11 +59,7 @@ fn main() {
         .chain((0..n).scan(0, |s, i| {
             if b[i] == 1 {
                 *s += c[i];
-                if a[i] == 0 {
-                    Some(*s)
-                } else {
-                    Some(0)
-                }
+                if a[i] == 0 { Some(*s) } else { Some(0) }
             } else {
                 Some(0)
             }
@@ -88,7 +80,7 @@ fn main() {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},

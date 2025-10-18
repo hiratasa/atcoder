@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn test_lagrange_interpolation_random() {
-        use rand::{rngs::SmallRng, Rng, SeedableRng};
+        use rand::{Rng, SeedableRng, rngs::SmallRng};
 
         let mut rng = SmallRng::seed_from_u64(42);
 

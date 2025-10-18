@@ -1,6 +1,6 @@
 use std::mem::replace;
 
-use itertools::{iterate, Itertools};
+use itertools::{Itertools, iterate};
 use proconio::input;
 
 fn main() {

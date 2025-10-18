@@ -20,11 +20,11 @@ use std::usize;
 #[allow(unused_imports)]
 use bitset_fixed::BitSet;
 #[allow(unused_imports)]
-use itertools::{chain, iproduct, iterate, izip, repeat_n, Itertools};
+use itertools::{Itertools, chain, iproduct, iterate, izip, repeat_n};
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
 #[allow(unused_imports)]
-use rand::{rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, seq::IteratorRandom, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::FxHashMap;
 #[allow(unused_imports)]
@@ -190,11 +190,7 @@ fn calc(
         r
     } else {
         let r = if d == 0 {
-            if x <= 1 && from_root {
-                Some(0)
-            } else {
-                None
-            }
+            if x <= 1 && from_root { Some(0) } else { None }
         } else if from_root && (k.pow(d as u32 + 1) - 1) / (k - 1) == x {
             Some(0)
         } else {
@@ -209,11 +205,7 @@ fn calc(
                 calc(d - 1, k, x, true, memo).map(|r| r + 1)
             };
             let r2 = if x == 1 {
-                if from_root {
-                    Some(2)
-                } else {
-                    Some(1)
-                }
+                if from_root { Some(2) } else { Some(1) }
             } else if from_root {
                 calc(d - 1, k, x - 1, true, memo).map(|r| r + 1)
             } else {

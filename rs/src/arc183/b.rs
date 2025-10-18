@@ -39,11 +39,7 @@ fn solve() -> bool {
                     *i += 1;
                 }
 
-                if *i == n {
-                    Some(false)
-                } else {
-                    Some(true)
-                }
+                if *i == n { Some(false) } else { Some(true) }
             })
             .all(|ok| ok)
     } else {
@@ -74,7 +70,7 @@ fn solve() -> bool {
 
 #[allow(unused_imports)]
 use std::{
-    cmp::{max, min, Ordering, Reverse},
+    cmp::{Ordering, Reverse, max, min},
     collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     iter::{once, once_with, repeat, repeat_with, successors},
     mem::{replace, swap, take},
