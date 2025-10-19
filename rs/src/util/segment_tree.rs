@@ -1761,7 +1761,7 @@ mod test {
                 v.sum += v.num * self.add;
 
                 // chmin
-                if matches!(v.max2_val, Some(x) if x >= self.chmin) {
+                if v.max2_val.is_some_and(|x| x >= self.chmin) {
                     return None;
                 }
                 if self.chmin <= v.min_val {
@@ -1779,7 +1779,7 @@ mod test {
                 }
 
                 // chmax
-                if matches!(v.min2_val, Some(x) if x <= self.chmax) {
+                if v.min2_val.is_some_and(|x| x <= self.chmax) {
                     return None;
                 }
                 if self.chmax >= v.max_val {
