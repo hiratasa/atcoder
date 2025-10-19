@@ -12,15 +12,15 @@ fn suffix_array<T: Ord>(s: &[T]) -> Vec<usize> {
     let sa0 = (0..n)
         .sorted_by_key(|&i| (&s[i], std::cmp::Reverse(i)))
         .collect_vec();
-    let (rank0, max_rank) = sa0
-        .chunk_by(|&i, &j| s[i] == s[j])
-        .enumerate()
-        .fold((vec![0; n], 0), |(mut rank, _), (r, chunk)| {
+    let (rank0, max_rank) = sa0.chunk_by(|&i, &j| s[i] == s[j]).enumerate().fold(
+        (vec![0; n], 0),
+        |(mut rank, _), (r, chunk)| {
             for &idx in chunk {
                 rank[idx] = r;
             }
             (rank, r)
-        });
+        },
+    );
 
     iterate(2, |len| len * 2)
         .take_while(|&len| len / 2 < n)
