@@ -4,9 +4,6 @@ use itertools_num::ItertoolsNum;
 // 0..n のindexを、s[i..]が辞書順になるように並べる
 // O(NlogN)
 // 定数倍が遅そう（各stepのsa構築時のランダムアクセスがきついっぽい）
-// * 領域を使い回すようにする
-// * group_byをやめる
-// でいくらかマシになる
 // O(N)のアルゴリズムもある(SA-IS)
 #[allow(dead_code)]
 fn suffix_array<T: Ord>(s: &[T]) -> Vec<usize> {
@@ -16,12 +13,10 @@ fn suffix_array<T: Ord>(s: &[T]) -> Vec<usize> {
         .sorted_by_key(|&i| (&s[i], std::cmp::Reverse(i)))
         .collect_vec();
     let (rank0, max_rank) = sa0
-        .iter()
-        .group_by(|&&i| &s[i])
-        .into_iter()
+        .chunk_by(|&i, &j| s[i] == s[j])
         .enumerate()
-        .fold((vec![0; n], 0), |(mut rank, _), (r, (_, it))| {
-            for &idx in it {
+        .fold((vec![0; n], 0), |(mut rank, _), (r, chunk)| {
+            for &idx in chunk {
                 rank[idx] = r;
             }
             (rank, r)
@@ -62,12 +57,10 @@ fn suffix_array<T: Ord>(s: &[T]) -> Vec<usize> {
 
                 let to_key = |i: usize| (prev_rank.get(i), prev_rank.get(i + len / 2));
                 let (rank, max_rank) = sa
-                    .iter()
-                    .group_by(|&&i| to_key(i))
-                    .into_iter()
+                    .chunk_by(|&i, &j| to_key(i) == to_key(j))
                     .enumerate()
-                    .fold((vec![0; n], 0), |(mut rank, _), (r, (_, it))| {
-                        for &idx in it {
+                    .fold((vec![0; n], 0), |(mut rank, _), (r, chunk)| {
+                        for &idx in chunk {
                             rank[idx] = r;
                         }
                         (rank, r)
