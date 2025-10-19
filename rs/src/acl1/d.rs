@@ -136,6 +136,7 @@ fn read_vec<R, F: FnMut() -> R>(n: usize, mut f: F) -> Vec<R> {
     (0..n).map(|_| f()).collect()
 }
 
+#[allow(dead_code)]
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,

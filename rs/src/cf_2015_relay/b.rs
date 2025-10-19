@@ -180,6 +180,7 @@ fn println_opt<T: std::fmt::Display>(ans: Option<T>) {
     }
 }
 
+#[allow(dead_code)]
 trait IterCopyExt<'a, T>: IntoIterator<Item = &'a T> + Sized
 where
     T: 'a + Copy,
