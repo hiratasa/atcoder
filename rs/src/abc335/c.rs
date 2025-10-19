@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use proconio::{input, marker::Usize1};
 
 fn main() {

@@ -1,4 +1,4 @@
-use std::cmp::{max, min};
+use std::cmp::max;
 
 use proconio::{input, marker::Usize1};
 

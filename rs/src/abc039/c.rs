@@ -158,7 +158,7 @@ fn main() {
         "Do", "#", "Re", "#", "Mi", "Fa", "#", "So", "#", "La", "#", "Si",
     ];
 
-    let ans = izip!((0..L), K.iter())
+    let ans = izip!(0..L, K.iter())
         .find(|&(i, _)| {
             izip!(s.citer(), T.chars().cycle().skip(i).take(s.len())).all(|(c1, c2)| c1 == c2)
         })

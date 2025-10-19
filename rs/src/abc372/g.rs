@@ -4,7 +4,7 @@ fn main() {
         cases: [[(i128, i128, i128)]; t],
     };
 
-    for mut case in cases {
+    for case in cases {
         let ans = solve(case);
         println!("{ans}");
     }
@@ -125,7 +125,6 @@ use proconio::{
     input, input_interactive,
     marker::{Chars, Usize1},
 };
-use rand::{Rng, SeedableRng, rngs::SmallRng};
 #[allow(unused_imports)]
 use rustc_hash::{FxHashMap, FxHashSet};
 

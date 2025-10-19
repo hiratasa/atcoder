@@ -4,7 +4,6 @@ use proconio::{
     input,
     marker::{Chars, Usize1},
 };
-use rand::{SeedableRng, rngs::SmallRng};
 
 use num::{One, Zero};
 #[allow(dead_code)]

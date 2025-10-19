@@ -176,7 +176,7 @@ fn main() {
                 }
 
                 if k >= 2 && digits.len() <= k - 2 {
-                    iproduct!((b'0'..=b'9'), (b'0'..=b'9'))
+                    iproduct!(b'0'..=b'9', b'0'..=b'9')
                         .map(|(d1, d2)| {
                             b.chars()
                                 .chain(once(d1 as char))
@@ -189,7 +189,7 @@ fn main() {
                         .map(|x| (x - aa).abs())
                         .min()
                 } else if digits.len() == k - 1 {
-                    iproduct!((b'0'..=b'9'), (b'0'..=b'9'))
+                    iproduct!(b'0'..=b'9', b'0'..=b'9')
                         .map(|(d1, d2)| (d1 as char, d2 as char))
                         .filter(|&(d1, d2)| {
                             digits.contains(&d1) || digits.contains(&d2) || d1 == d2

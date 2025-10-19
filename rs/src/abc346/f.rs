@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, iter::once};
 
-use itertools::{Itertools, repeat_n};
+use itertools::repeat_n;
 use itertools_num::ItertoolsNum;
 use proconio::{input, marker::Chars};
 

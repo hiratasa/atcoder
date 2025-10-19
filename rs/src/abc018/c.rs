@@ -221,7 +221,7 @@ fn main() {
     // eprintln!("{:?}", t);
     // eprintln!("{:?}", cs);
 
-    let ans = iproduct!((2 * (k - 1)..w), (k - 1..w - (k - 1)))
+    let ans = iproduct!(2 * (k - 1)..w, k - 1..w - (k - 1))
         // .inspect(|t| eprintln!("{:?}", t))
         .map(|(i, j)| (i + j, w - 1 + i - j))
         // .inspect(|t| eprintln!("{:?}", t))

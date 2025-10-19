@@ -395,7 +395,7 @@ fn main() {
     let (fact, _, inv_fact) = generate_fact(n);
 
     let t = nums.citer().fold(vec![Mod::one()], |t, m| {
-        iproduct!(t.citer().enumerate(), (0..=m)).fold(
+        iproduct!(t.citer().enumerate(), 0..=m).fold(
             vec![Mod::zero(); t.len() + m],
             |mut t2, ((i, tt), j)| {
                 t2[i + j] = t2[i + j] + tt * fact[i + j] * inv_fact[i] * inv_fact[j];

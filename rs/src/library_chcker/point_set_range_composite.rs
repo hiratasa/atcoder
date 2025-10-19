@@ -64,7 +64,7 @@ where
         }
     }
 
-    fn query(&self, mut a: usize, mut b: usize) -> M::Item {
+    fn query(&self, a: usize, b: usize) -> M::Item {
         let mut left = M::id();
         let mut right = M::id();
 

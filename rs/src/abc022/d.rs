@@ -249,7 +249,7 @@ fn convex_hull(points: &Vec<Vector>) -> Vec<usize> {
                 ch
             });
     let t = lower_ch.len();
-    let mut ch = idxs.iter().rev().map(|&i| (i, &points[i])).skip(1).fold(
+    let ch = idxs.iter().rev().map(|&i| (i, &points[i])).skip(1).fold(
         lower_ch,
         |mut ch: Vec<usize>, (i, p)| {
             while ch.len() >= t + 1

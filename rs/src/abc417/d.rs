@@ -7,7 +7,7 @@ fn main() {
     };
 
     const K: usize = 1000;
-    let (vals, mut uf, mut que, offset) = pab.into_iter().fold(
+    let (vals, mut uf, que, offset) = pab.into_iter().fold(
         (
             vec![None; K + 1],
             UnionFind::new(q),
@@ -72,7 +72,6 @@ fn main() {
     }
 }
 
-use std::collections::BTreeSet;
 #[allow(unused_imports)]
 use std::{
     cmp::{Ordering, Reverse, max, min},

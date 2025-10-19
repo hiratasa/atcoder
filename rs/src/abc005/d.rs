@@ -207,7 +207,7 @@ fn main() {
             .map(|w| (w, pp / w))
             .filter(|&(w, h)| h > 0)
             .filter_map(|(w, h)| {
-                iproduct!((0..n), (0..n))
+                iproduct!(0..n, 0..n)
                     .map(|(i, j)| (i, j, min(i + w, n), min(j + h, n)))
                     .map(|(i, j, i2, j2)| c[i2][j2] + c[i][j] - c[i][j2] - c[i2][j])
                     .max()

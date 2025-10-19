@@ -202,7 +202,7 @@ fn main() {
         read::<String>().chars().map(|c| c == 'o').collect_vec()
     });
 
-    let ans = iproduct!((0..10), (0..10)).any(|(i, j)| {
+    let ans = iproduct!(0..10, 0..10).any(|(i, j)| {
         let mut a2 = a.clone();
         a2[i][j] = true;
 

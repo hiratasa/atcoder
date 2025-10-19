@@ -190,7 +190,7 @@ fn main() {
 
     let c = read_mat::<usize>(h);
 
-    let ans = iproduct!((0..h), (0..w))
+    let ans = iproduct!(0..h, 0..w)
         .map(|(ci, cj)| {
             let sums = (0..2)
                 .map(|e| {

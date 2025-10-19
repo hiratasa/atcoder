@@ -142,7 +142,7 @@ fn main() {
     let (n, c) = read_tuple!(usize, usize);
     let a = read_vec(n, || read::<usize>());
 
-    let ans = c * iproduct!((1..=10), (1..=10))
+    let ans = c * iproduct!(1..=10, 1..=10)
         .filter(|(c1, c2)| c1 != c2)
         .map(|(c1, c2)| {
             a.citer()

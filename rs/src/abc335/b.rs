@@ -1,4 +1,4 @@
-use itertools::{Itertools, iproduct};
+use itertools::iproduct;
 use proconio::input;
 
 fn main() {

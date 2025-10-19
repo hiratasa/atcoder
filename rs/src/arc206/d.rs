@@ -13,7 +13,7 @@ fn main() {
                     (3..=n - 4)
                         .chain((n - 1..=n).rev())
                         .chain((1..=2).rev())
-                        .chain((n - 3..=n - 2))
+                        .chain(n - 3..=n - 2)
                         .collect::<Vec<_>>(),
                 ),
                 (1, 1) => Some(vec![1]),

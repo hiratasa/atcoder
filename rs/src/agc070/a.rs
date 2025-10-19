@@ -27,7 +27,6 @@ fn main() {
     println!("{}", s.iter().rev().join(""));
 }
 
-use std::collections::BTreeSet;
 #[allow(unused_imports)]
 use std::{
     cmp::{Ordering, Reverse, max, min},

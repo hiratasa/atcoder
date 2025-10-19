@@ -263,7 +263,7 @@ fn main() {
         b: [Usize1; m],
     };
 
-    let mut g = Graph::from_edges_undirected(n, izip!(a, b));
+    let g = Graph::from_edges_undirected(n, izip!(a, b));
 
     if (0..n)
         .scan(vec![None; n], |colors, i| {

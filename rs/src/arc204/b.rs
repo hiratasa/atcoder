@@ -104,6 +104,5 @@ use proconio::{
     input, input_interactive,
     marker::{Chars, Usize1},
 };
-use rand::{Rng, SeedableRng, rngs::SmallRng, seq::SliceRandom};
 #[allow(unused_imports)]
 use rustc_hash::{FxHashMap, FxHashSet};

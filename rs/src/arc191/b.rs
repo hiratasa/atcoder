@@ -47,7 +47,6 @@ use bitset_fixed::BitSet;
 use itertools::*;
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
-use num::PrimInt;
 #[allow(unused_imports)]
 use proconio::{
     input, input_interactive,

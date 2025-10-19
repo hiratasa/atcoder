@@ -160,13 +160,10 @@ use bitset_fixed::BitSet;
 use itertools::*;
 #[allow(unused_imports)]
 use itertools_num::ItertoolsNum;
-use num::{Num, One, Zero};
-use num_traits::ops::overflowing::OverflowingMul;
 #[allow(unused_imports)]
 use proconio::{
     input, input_interactive,
     marker::{Chars, Usize1},
 };
-use rand::{Rng, SeedableRng, rngs::SmallRng};
 #[allow(unused_imports)]
 use rustc_hash::{FxHashMap, FxHashSet};
