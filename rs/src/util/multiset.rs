@@ -102,7 +102,7 @@ where
         self.m.iter().flat_map(|(v, m)| (0..*m).map(move |_| v))
     }
 
-    fn range<'a, K, R>(&'a self, range: R) -> impl 'a + DoubleEndedIterator<Item = &T>
+    fn range<'a, K, R>(&'a self, range: R) -> impl 'a + DoubleEndedIterator<Item = &'a T>
     where
         K: Ord + ?Sized,
         R: std::ops::RangeBounds<K>,
