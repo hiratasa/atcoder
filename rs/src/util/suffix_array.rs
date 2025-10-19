@@ -112,6 +112,45 @@ fn lcp_array(s: &[char], sa: &[usize], sa_rank: &[usize]) -> Vec<usize> {
 
 #[test]
 fn test_suffix_array() {
-    let s = b"abcdabcaca";
-    assert_eq!(suffix_array(s), vec![9, 4, 0, 7, 5, 1, 8, 6, 2, 3]);
+    let cases = [
+        (b"" as &[u8], vec![]),
+        (b"a", vec![0]),
+        (b"aaaaaa", vec![5, 4, 3, 2, 1, 0]),
+        (b"abababab", vec![6, 4, 2, 0, 7, 5, 3, 1]),
+        (b"abcdabcaca", vec![9, 4, 0, 7, 5, 1, 8, 6, 2, 3]),
+    ];
+
+    for (s, sa) in cases {
+        assert_eq!(suffix_array(s), sa, "s = {s:?}");
+    }
+}
+
+#[test]
+fn test_suffix_array_random() {
+    for _ in 0..100 {
+        let n = 1000;
+
+        let s = (0..n).map(|_| rand::random::<u8>()).collect::<Vec<_>>();
+
+        let expected = (0..n).sorted_by_key(|&i| &s[i..]).collect::<Vec<_>>();
+
+        assert_eq!(suffix_array(&s), expected, "s = {s:?}");
+    }
+}
+
+#[test]
+fn measure_suffix_array_large() {
+    use rand::{Rng, SeedableRng, rngs::SmallRng};
+
+    let mut rng = SmallRng::seed_from_u64(42);
+
+    let n = 100000;
+
+    let s = (0..n)
+        .map(|_| rng.random_range(0..1 << 8))
+        .collect::<Vec<_>>();
+
+    for _ in 0..100 {
+        let _ = suffix_array(&s);
+    }
 }
