@@ -17970,3 +17970,31 @@ path = "src/agc430/b.rs"
 [[bin]]
 name = "agc074-c"
 path = "src/agc430/c.rs"
+
+[[bin]]
+name = "abc430-a"
+path = "src/abc430/a.rs"
+
+[[bin]]
+name = "abc430-b"
+path = "src/abc430/b.rs"
+
+[[bin]]
+name = "abc430-c"
+path = "src/abc430/c.rs"
+
+[[bin]]
+name = "abc430-d"
+path = "src/abc430/d.rs"
+
+[[bin]]
+name = "abc430-e"
+path = "src/abc430/e.rs"
+
+[[bin]]
+name = "abc430-f"
+path = "src/abc430/f.rs"
+
+[[bin]]
+name = "abc430-g"
+path = "src/abc430/g.rs"
