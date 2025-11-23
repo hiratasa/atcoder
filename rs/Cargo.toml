@@ -18090,3 +18090,31 @@ path = "src/arc210/d.rs"
 [[bin]]
 name = "arc210-e"
 path = "src/arc210/e.rs"
+
+[[bin]]
+name = "abc433-a"
+path = "src/abc433/a.rs"
+
+[[bin]]
+name = "abc433-b"
+path = "src/abc433/b.rs"
+
+[[bin]]
+name = "abc433-c"
+path = "src/abc433/c.rs"
+
+[[bin]]
+name = "abc433-d"
+path = "src/abc433/d.rs"
+
+[[bin]]
+name = "abc433-e"
+path = "src/abc433/e.rs"
+
+[[bin]]
+name = "abc433-f"
+path = "src/abc433/f.rs"
+
+[[bin]]
+name = "abc433-g"
+path = "src/abc433/g.rs"
