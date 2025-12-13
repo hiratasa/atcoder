@@ -1,7 +1,6 @@
 {
     "rust-analyzer.linkedProjects": [
-        "./rs/Cargo.toml",
-        "./rs-ignored/Cargo.toml",
+        "./rs/Cargo.toml"
     ],
     "rust-analyzer.debug.engineSettings": {
         "cppdbg": {
