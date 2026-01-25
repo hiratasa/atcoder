@@ -18282,3 +18282,31 @@ path = "src/abc441/f.rs"
 [[bin]]
 name = "abc441-g"
 path = "src/abc441/g.rs"
+
+[[bin]]
+name = "abc442-a"
+path = "src/abc442/a.rs"
+
+[[bin]]
+name = "abc442-b"
+path = "src/abc442/b.rs"
+
+[[bin]]
+name = "abc442-c"
+path = "src/abc442/c.rs"
+
+[[bin]]
+name = "abc442-d"
+path = "src/abc442/d.rs"
+
+[[bin]]
+name = "abc442-e"
+path = "src/abc442/e.rs"
+
+[[bin]]
+name = "abc442-f"
+path = "src/abc442/f.rs"
+
+[[bin]]
+name = "abc442-g"
+path = "src/abc442/g.rs"
