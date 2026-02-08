@@ -18326,3 +18326,31 @@ path = "src/arc213/c.rs"
 [[bin]]
 name = "arc213-d"
 path = "src/arc213/d.rs"
+
+[[bin]]
+name = "abc444-a"
+path = "src/abc444/a.rs"
+
+[[bin]]
+name = "abc444-b"
+path = "src/abc444/b.rs"
+
+[[bin]]
+name = "abc444-c"
+path = "src/abc444/c.rs"
+
+[[bin]]
+name = "abc444-d"
+path = "src/abc444/d.rs"
+
+[[bin]]
+name = "abc444-e"
+path = "src/abc444/e.rs"
+
+[[bin]]
+name = "abc444-f"
+path = "src/abc444/f.rs"
+
+[[bin]]
+name = "abc444-g"
+path = "src/abc444/g.rs"
