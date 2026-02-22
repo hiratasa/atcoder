@@ -18398,3 +18398,31 @@ path = "src/abc445/f.rs"
 [[bin]]
 name = "abc445-g"
 path = "src/abc445/g.rs"
+
+[[bin]]
+name = "abc446-a"
+path = "src/abc446/a.rs"
+
+[[bin]]
+name = "abc446-b"
+path = "src/abc446/b.rs"
+
+[[bin]]
+name = "abc446-c"
+path = "src/abc446/c.rs"
+
+[[bin]]
+name = "abc446-d"
+path = "src/abc446/d.rs"
+
+[[bin]]
+name = "abc446-e"
+path = "src/abc446/e.rs"
+
+[[bin]]
+name = "abc446-f"
+path = "src/abc446/f.rs"
+
+[[bin]]
+name = "abc446-g"
+path = "src/abc446/g.rs"
