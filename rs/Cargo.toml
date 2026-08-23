@@ -19142,3 +19142,31 @@ path = "src/arc227/e.rs"
 [[bin]]
 name = "arc227-f"
 path = "src/arc227/f.rs"
+
+[[bin]]
+name = "abc472-a"
+path = "src/abc472/a.rs"
+
+[[bin]]
+name = "abc472-b"
+path = "src/abc472/b.rs"
+
+[[bin]]
+name = "abc472-c"
+path = "src/abc472/c.rs"
+
+[[bin]]
+name = "abc472-d"
+path = "src/abc472/d.rs"
+
+[[bin]]
+name = "abc472-e"
+path = "src/abc472/e.rs"
+
+[[bin]]
+name = "abc472-f"
+path = "src/abc472/f.rs"
+
+[[bin]]
+name = "abc472-g"
+path = "src/abc472/g.rs"
